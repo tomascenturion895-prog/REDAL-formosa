@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useCart } from "@/lib/cart/cart-context";
 import type { Database } from "@/lib/supabase/types";
 import { PageHeader } from "@/components/layout/page-header";
 
@@ -13,10 +14,12 @@ export default function EmprendimientoPage() {
   const params = useParams();
   const id = params.id as string;
   const supabase = createClient();
+  const { addItem } = useCart();
   const [emprendimiento, setEmprendimiento] = useState<Emprendimiento | null>(null);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [addedProductId, setAddedProductId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -122,8 +125,19 @@ export default function EmprendimientoPage() {
                     </span>
                   </div>
 
-                  <button className="mt-4 w-full rounded-control bg-highlight px-3 py-2 text-sm font-medium text-on-highlight hover:opacity-90 transition-opacity">
-                    Agregar al carrito
+                  <button
+                    onClick={() => {
+                      addItem(producto, 1);
+                      setAddedProductId(producto.id);
+                      setTimeout(() => setAddedProductId(null), 2000);
+                    }}
+                    className={`mt-4 w-full rounded-control px-3 py-2 text-sm font-medium transition-all ${
+                      addedProductId === producto.id
+                        ? "bg-success text-on-success"
+                        : "bg-highlight text-on-highlight hover:opacity-90"
+                    }`}
+                  >
+                    {addedProductId === producto.id ? "✓ Agregado" : "Agregar al carrito"}
                   </button>
                 </div>
               </div>

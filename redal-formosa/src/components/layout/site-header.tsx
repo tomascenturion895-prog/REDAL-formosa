@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { siteName } from "@/lib/navigation";
 import { NavLinks } from "./nav-links";
-import { UserMenu } from "./user-menu";
+import { HeaderActions } from "./header-actions";
 
 export function SiteHeader() {
   return (
@@ -14,7 +14,7 @@ export function SiteHeader() {
         <div className="order-3 w-full sm:order-none sm:w-auto sm:flex-1">
           <NavLinks />
         </div>
-        <UserMenu />
+        <HeaderActions />
       </div>
     </header>
   );
