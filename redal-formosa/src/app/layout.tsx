@@ -1,7 +1,9 @@
-import type { Metadata, Viewport } from "next";
+import type { Viewport } from "next";
 import { Bricolage_Grotesque, Figtree } from "next/font/google";
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { CartProvider } from "@/lib/cart/cart-context";
+import { PWAInstaller } from "@/components/pwa/pwa-installer";
+import { defaultMetadata } from "@/lib/seo/metadata";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -18,14 +20,7 @@ const bricolage = Bricolage_Grotesque({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "REDAL Formosa | Red de Abastecimiento Local",
-    template: "%s | REDAL Formosa",
-  },
-  description:
-    "Conectando a pequeños y medianos productores agroecológicos de Formosa con familias y comercios B2B.",
-};
+export const metadata = defaultMetadata;
 
 export const viewport: Viewport = {
   themeColor: [
@@ -44,12 +39,15 @@ export default function RootLayout({
       lang="es-AR"
       className={`${figtree.variable} ${bricolage.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-sans">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
+      <body className="min-h-full flex flex-col">
         <AuthProvider>
           <CartProvider>
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            <Footer />
+            {children}
+            <PWAInstaller />
           </CartProvider>
         </AuthProvider>
       </body>
