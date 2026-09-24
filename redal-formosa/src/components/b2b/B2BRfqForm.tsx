@@ -26,8 +26,9 @@ export function B2BRfqForm() {
     setSubmitted(true);
   };
 
-  const handleWhatsAppDirect = () => {
-    const text = `*SOLICITUD COTIZACIÓN B2B - REDAL FORMOSA*\n` +
+  const getWhatsAppDirectUrl = () => {
+    const text =
+      `*SOLICITUD COTIZACIÓN B2B - REDAL FORMOSA*\n` +
       `• *Comercio:* ${formData.razonSocial || "No especificado"}\n` +
       `• *Tipo:* ${formData.tipoComercio}\n` +
       `• *Localidad de Entrega:* ${formData.localidadEntrega}\n` +
@@ -37,8 +38,7 @@ export function B2BRfqForm() {
       `• *Frecuencia:* ${formData.frecuenciaRequerida}\n` +
       `• *Detalle:* ${formData.mensajeAdicional || "Sin observaciones adicionales"}`;
 
-    const url = `https://wa.me/5493704589214?text=${encodeURIComponent(text)}`;
-    window.open(url, "_blank");
+    return `https://wa.me/5493704589214?text=${encodeURIComponent(text)}`;
   };
 
   return (
@@ -72,13 +72,14 @@ export function B2BRfqForm() {
             en contacto a la brevedad con la lista de precios y condiciones de entrega.
           </p>
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={handleWhatsAppDirect}
+            <a
+              href={getWhatsAppDirectUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 text-xs font-bold shadow-sm transition-colors"
             >
               Agilizar envío por WhatsApp
-            </button>
+            </a>
             <button
               type="button"
               onClick={() => setSubmitted(false)}
@@ -271,13 +272,14 @@ export function B2BRfqForm() {
             >
               Enviar Solicitud de Cotización
             </button>
-            <button
-              type="button"
-              onClick={handleWhatsAppDirect}
+            <a
+              href={getWhatsAppDirectUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 px-5 py-3 text-xs font-bold transition-all"
             >
               Consultar por WhatsApp directamente
-            </button>
+            </a>
           </div>
         </form>
       )}

@@ -115,6 +115,7 @@ export function ProductCatalog({ products, producer }: ProductCatalogProps) {
             </svg>
             <input
               type="text"
+              aria-label="Buscar productos en el catálogo"
               placeholder="Buscar mandioca, acelga, tomate, miel..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -124,6 +125,7 @@ export function ProductCatalog({ products, producer }: ProductCatalogProps) {
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
+                aria-label="Limpiar búsqueda"
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-zinc-600"
               >
                 ✕
@@ -137,8 +139,11 @@ export function ProductCatalog({ products, producer }: ProductCatalogProps) {
               Ordenar por:
             </span>
             <select
+              aria-label="Ordenar productos"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) =>
+                setSortBy(e.target.value as "featured" | "price_asc" | "price_desc")
+              }
               className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-xs font-semibold text-zinc-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="featured">Destacados / Cosecha</option>

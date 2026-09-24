@@ -30,6 +30,12 @@ export function DeliveryInfoSection({
             🏡
           </span>
         );
+      default:
+        return (
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-sm">
+            📍
+          </span>
+        );
     }
   };
 
