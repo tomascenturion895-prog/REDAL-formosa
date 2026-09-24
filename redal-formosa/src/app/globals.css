@@ -1,26 +1,233 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ==========================================================================
+   Tokens de diseño — RedAL Formosa
+   Capa 1 (@theme static): escalas crudas (primary, accent, neutral) + forma/tipografía.
+   Capa 2 (:root):         tokens semánticos que cambian en modo oscuro.
+   Capa 3 (@theme inline): expone los semánticos como utilidades (bg-surface, text-muted…).
+   En componentes usar SIEMPRE los semánticos; las escalas crudas solo para casos puntuales.
+   ========================================================================== */
+
+@theme static {
+  /* --- Color: primary "monte" (verde profundo, acciones y marca) --- */
+  --color-primary-50: #edf8f5;
+  --color-primary-100: #d2eee7;
+  --color-primary-200: #a8ddd0;
+  --color-primary-300: #74c5b3;
+  --color-primary-400: #44a992;
+  --color-primary-500: #2a8e79;
+  --color-primary-600: #1f7362;
+  --color-primary-700: #1b5c50;
+  --color-primary-800: #184a41;
+  --color-primary-900: #143d36;
+  --color-primary-950: #09231f;
+
+  /* --- Color: accent "sol" (ámbar, destacados y llamadas de atención) --- */
+  --color-accent-50: #fff8e6;
+  --color-accent-100: #ffedbf;
+  --color-accent-200: #ffdb80;
+  --color-accent-300: #ffc53d;
+  --color-accent-400: #f5a70f;
+  --color-accent-500: #db8a06;
+  --color-accent-600: #b86a04;
+  --color-accent-700: #935007;
+  --color-accent-800: #78400c;
+  --color-accent-900: #64350e;
+  --color-accent-950: #391a04;
+
+  /* --- Color: neutral "piedra" (grises con leve tinte verde) --- */
+  --color-neutral-50: #f7f8f7;
+  --color-neutral-100: #eef0ee;
+  --color-neutral-200: #dfe2df;
+  --color-neutral-300: #c7ccc8;
+  --color-neutral-400: #9aa19c;
+  --color-neutral-500: #6f7772;
+  --color-neutral-600: #565d59;
+  --color-neutral-700: #424845;
+  --color-neutral-800: #2c312f;
+  --color-neutral-900: #1c201f;
+  --color-neutral-950: #0f1211;
+
+  /* --- Tipografía: escala fluida para títulos (xs–2xl siguen los defaults de Tailwind) --- */
+  --text-heading: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
+  --text-heading--line-height: 1.3;
+  --text-heading--letter-spacing: -0.01em;
+  --text-heading--font-weight: 600;
+
+  --text-title: clamp(1.625rem, 1.3rem + 1.4vw, 2.25rem);
+  --text-title--line-height: 1.15;
+  --text-title--letter-spacing: -0.02em;
+  --text-title--font-weight: 700;
+
+  --text-display: clamp(2.25rem, 1.6rem + 3vw, 3.75rem);
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 700;
+
+  /* --- Forma: radios por jerarquía (no un solo radio para todo) --- */
+  --radius-control: 0.625rem; /* botones, inputs, selects */
+  --radius-card: 1rem; /* tarjetas de producto/emprendimiento */
+  --radius-sheet: 1.5rem; /* modales, paneles, bottom sheets */
+
+  /* --- Sombras --- */
+  --shadow-card: 0 1px 2px rgb(15 18 17 / 0.06), 0 2px 8px rgb(15 18 17 / 0.05);
+  --shadow-pop: 0 8px 24px -4px rgb(15 18 17 / 0.16);
+
+  /* --- Layout --- */
+  --container-page: 72rem; /* max-w-page: ancho de página */
+  --container-narrow: 28rem; /* max-w-narrow: login, formularios */
+  --spacing-gutter: clamp(1rem, 4vw, 2rem);
+  --spacing-section: clamp(3rem, 8vw, 6rem);
+
+  /* --- Movimiento --- */
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Tokens semánticos: valores por modo ------------------------------------ */
+:root {
+  --background: var(--color-neutral-50);
+  --surface: #ffffff;
+  --surface-muted: var(--color-neutral-100);
+  --foreground: var(--color-neutral-900);
+  --muted: var(--color-neutral-600);
+  --border: var(--color-neutral-200);
+  --border-strong: var(--color-neutral-300);
+
+  --action: var(--color-primary-700);
+  --action-hover: var(--color-primary-800);
+  --on-action: #ffffff;
+  --link: var(--color-primary-700);
+  --highlight: var(--color-accent-400);
+  --on-highlight: var(--color-neutral-950);
+  --ring: var(--color-primary-500);
+
+  --success: var(--color-primary-700);
+  --success-soft: var(--color-primary-50);
+  --warning: var(--color-accent-700);
+  --warning-soft: var(--color-accent-50);
+  --danger: #b3311f;
+  --danger-soft: #fbe9e5;
+  --info: #2563a8;
+  --info-soft: #e4eefa;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: var(--color-neutral-950);
+    --surface: var(--color-neutral-900);
+    --surface-muted: var(--color-neutral-800);
+    --foreground: var(--color-neutral-50);
+    --muted: var(--color-neutral-400);
+    --border: var(--color-neutral-800);
+    --border-strong: var(--color-neutral-700);
+
+    --action: var(--color-primary-400);
+    --action-hover: var(--color-primary-300);
+    --on-action: var(--color-neutral-950);
+    --link: var(--color-primary-300);
+    --highlight: var(--color-accent-300);
+    --on-highlight: var(--color-neutral-950);
+    --ring: var(--color-primary-400);
+
+    --success: var(--color-primary-300);
+    --success-soft: #10302a;
+    --warning: var(--color-accent-300);
+    --warning-soft: #33240a;
+    --danger: #f08070;
+    --danger-soft: #3a1a15;
+    --info: #7db3ee;
+    --info-soft: #13233a;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+@theme inline {
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-figtree), ui-sans-serif,
+    system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-action: var(--action);
+  --color-action-hover: var(--action-hover);
+  --color-on-action: var(--on-action);
+  --color-link: var(--link);
+  --color-highlight: var(--highlight);
+  --color-on-highlight: var(--on-highlight);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+}
+
+/* Utilidad de layout: contenedor de página con gutter fluido */
+@utility page-container {
+  margin-inline: auto;
+  max-width: var(--container-page);
+  padding-inline: var(--spacing-gutter);
+}
+
+@layer base {
+  html {
+    color-scheme: light dark;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  *,
+  ::before,
+  ::after,
+  ::file-selector-button {
+    border-color: var(--border);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-accent-300);
+    color: var(--color-neutral-950);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
