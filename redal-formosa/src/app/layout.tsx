@@ -5,6 +5,8 @@ import { CartProvider } from "@/lib/cart/cart-context";
 import { PWAInstaller } from "@/components/pwa/pwa-installer";
 import { defaultMetadata } from "@/lib/seo/metadata";
 import "./globals.css";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 
 const figtree = Figtree({
   variable: "--font-figtree",
@@ -27,7 +29,11 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="es-AR"
