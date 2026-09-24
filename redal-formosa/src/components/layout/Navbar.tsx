@@ -63,11 +63,10 @@ export function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`relative px-3.5 py-2 text-sm font-semibold rounded-lg transition-all ${
-                  active
+                className={`relative px-3.5 py-2 text-sm font-semibold rounded-lg transition-all ${active
                     ? "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60"
                     : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100/70 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800/60"
-                }`}
+                  }`}
               >
                 {link.label}
                 {link.badge && (
@@ -106,7 +105,7 @@ export function Navbar() {
                 d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
               />
             </svg>
-            Ver Catálogo Demo
+            Ver Catálogo
           </Link>
         </div>
 
