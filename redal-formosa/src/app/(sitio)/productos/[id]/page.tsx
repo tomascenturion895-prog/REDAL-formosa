@@ -8,6 +8,7 @@ import { StarRating } from "@/components/ratings/star-rating";
 import { RatingForm } from "@/components/ratings/rating-form";
 import { RatingsList } from "@/components/ratings/ratings-list";
 import { WishlistButton } from "@/components/wishlist/wishlist-button";
+import { RecommendationsCarousel } from "@/components/recommendations/recommendations-carousel";
 import { PageHeader } from "@/components/layout/page-header";
 import type { Database } from "@/lib/supabase/types";
 
@@ -169,6 +170,16 @@ export default function ProductoDetailPage() {
             </a>
           </div>
         </div>
+      </div>
+
+      {/* Recomendaciones similares */}
+      <div className="mt-12">
+        <RecommendationsCarousel
+          title="🔗 Productos similares"
+          type="similar"
+          productId={productoId}
+          limit={6}
+        />
       </div>
     </div>
   );
