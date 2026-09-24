@@ -3,6 +3,8 @@ import { Bricolage_Grotesque, Figtree } from "next/font/google";
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { CartProvider } from "@/lib/cart/cart-context";
 import "./globals.css";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 
 const figtree = Figtree({
   variable: "--font-figtree",
@@ -18,11 +20,11 @@ const bricolage = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   title: {
-    default: "RedAL Formosa",
-    template: "%s | RedAL Formosa",
+    default: "REDAL Formosa | Red de Abastecimiento Local",
+    template: "%s | REDAL Formosa",
   },
   description:
-    "Productos y servicios de emprendedores de Formosa, en un solo lugar.",
+    "Conectando a pequeños y medianos productores agroecológicos de Formosa con familias y comercios B2B.",
 };
 
 export const viewport: Viewport = {
@@ -32,15 +34,23 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="es-AR"
       className={`${figtree.variable} ${bricolage.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-sans">
         <AuthProvider>
-          <CartProvider>{children}</CartProvider>
+          <CartProvider>
+            <Navbar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </CartProvider>
         </AuthProvider>
       </body>
     </html>
