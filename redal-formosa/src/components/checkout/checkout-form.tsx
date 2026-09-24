@@ -90,11 +90,44 @@ export function CheckoutForm({ monto, direccion, onSuccess }: CheckoutFormProps)
 
       if (pagoErr) throw pagoErr;
 
+      // Obtener items del pedido para la preferencia
+      const { data: pedidoItems, error: itemsErr } = await supabase
+        .from("pedido_items")
+        .select("*, producto:productos(*)")
+        .eq("pedido_id", pedido.id);
+
+      if (itemsErr) throw itemsErr;
+
+      // Crear preferencia en MercadoPago
+      const mpResponse = await fetch("/api/checkout/create-preference", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pedidoId: pedido.id,
+          monto: monto,
+          items: pedidoItems?.map((item: any) => ({
+            nombre: item.producto?.nombre || "Producto",
+            cantidad: item.cantidad,
+            precio_unitario: item.precio_unitario,
+            producto_id: item.producto_id,
+          })) || [],
+        }),
+      });
+
+      if (!mpResponse.ok) {
+        throw new Error("Error creating MercadoPago preference");
+      }
+
+      const { initPoint, sandboxUrl } = await mpResponse.json();
+      const mpUrl = initPoint || sandboxUrl;
+
+      if (!mpUrl) {
+        throw new Error("No payment URL available");
+      }
+
       // Redirigir a MercadoPago
-      // En producción, aquí integrar la preferencia de MercadoPago
-      // Por ahora, simular éxito
       clearCart();
-      onSuccess?.(pedido.id);
+      window.location.href = mpUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al procesar el pedido");
     } finally {
