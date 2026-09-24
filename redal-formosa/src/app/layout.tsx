@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Figtree } from "next/font/google";
 import { AuthProvider } from "@/lib/auth/auth-context";
+import { CartProvider } from "@/lib/cart/cart-context";
 import "./globals.css";
 
 const figtree = Figtree({
@@ -38,7 +39,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${figtree.variable} ${bricolage.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <CartProvider>{children}</CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );
