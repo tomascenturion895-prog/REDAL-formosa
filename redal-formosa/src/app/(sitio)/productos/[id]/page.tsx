@@ -7,6 +7,7 @@ import { ratingsService } from "@/lib/ratings/ratings-service";
 import { StarRating } from "@/components/ratings/star-rating";
 import { RatingForm } from "@/components/ratings/rating-form";
 import { RatingsList } from "@/components/ratings/ratings-list";
+import { WishlistButton } from "@/components/wishlist/wishlist-button";
 import { PageHeader } from "@/components/layout/page-header";
 import type { Database } from "@/lib/supabase/types";
 
@@ -148,6 +149,10 @@ export default function ProductoDetailPage() {
             <p className="font-semibold text-foreground mb-4">
               {producto.disponible ? "✓ Disponible" : "No disponible"}
             </p>
+
+            <div className="mb-4">
+              <WishlistButton productId={productoId} />
+            </div>
 
             <a
               href="/emprendimientos"
