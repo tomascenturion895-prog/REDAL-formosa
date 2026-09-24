@@ -108,7 +108,13 @@ function ConfirmacionContent() {
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-col sm:flex-row">
+            <a
+              href={`/tracking/${pedido.id}`}
+              className="flex-1 rounded-control bg-highlight px-4 py-3 font-medium text-on-highlight text-center hover:opacity-90"
+            >
+              📍 Seguir pedido en vivo
+            </a>
             <a
               href="/emprendimientos"
               className="flex-1 rounded-control bg-action px-4 py-3 font-medium text-on-action text-center hover:bg-action-hover"
