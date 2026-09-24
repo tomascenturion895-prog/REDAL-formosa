@@ -1,7 +1,9 @@
-import type { Metadata, Viewport } from "next";
+import type { Viewport } from "next";
 import { Bricolage_Grotesque, Figtree } from "next/font/google";
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { CartProvider } from "@/lib/cart/cart-context";
+import { PWAInstaller } from "@/components/pwa/pwa-installer";
+import { defaultMetadata } from "@/lib/seo/metadata";
 import "./globals.css";
 
 const figtree = Figtree({
@@ -16,14 +18,7 @@ const bricolage = Bricolage_Grotesque({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "RedAL Formosa",
-    template: "%s | RedAL Formosa",
-  },
-  description:
-    "Productos y servicios de emprendedores de Formosa, en un solo lugar.",
-};
+export const metadata = defaultMetadata;
 
 export const viewport: Viewport = {
   themeColor: [
@@ -38,9 +33,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="es-AR"
       className={`${figtree.variable} ${bricolage.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
       <body className="min-h-full flex flex-col">
         <AuthProvider>
-          <CartProvider>{children}</CartProvider>
+          <CartProvider>
+            {children}
+            <PWAInstaller />
+          </CartProvider>
         </AuthProvider>
       </body>
     </html>
