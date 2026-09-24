@@ -4,8 +4,12 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCart } from "@/lib/cart/cart-context";
+import { ratingsService } from "@/lib/ratings/ratings-service";
 import type { Database } from "@/lib/supabase/types";
 import { PageHeader } from "@/components/layout/page-header";
+import { StarRating } from "@/components/ratings/star-rating";
+import { RatingForm } from "@/components/ratings/rating-form";
+import { RatingsList } from "@/components/ratings/ratings-list";
 
 type Emprendimiento = Database["public"]["Tables"]["emprendimientos"]["Row"];
 type Producto = Database["public"]["Tables"]["productos"]["Row"];
@@ -20,6 +24,7 @@ export default function EmprendimientoPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
+  const [ratingStats, setRatingStats] = useState<{ [key: string]: any }>({});
 
   useEffect(() => {
     loadData();
@@ -46,6 +51,16 @@ export default function EmprendimientoPage() {
 
       if (prodsErr) throw prodsErr;
       setProductos(prods || []);
+
+      // Cargar estadísticas de calificaciones
+      if (prods) {
+        const stats: { [key: string]: any } = {};
+        for (const prod of prods) {
+          const stat = await ratingsService.getProductStats((prod as any).id);
+          stats[(prod as any).id] = stat;
+        }
+        setRatingStats(stats);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error cargando datos");
     } finally {
@@ -115,6 +130,23 @@ export default function EmprendimientoPage() {
                   <p className="text-sm text-muted mt-1 line-clamp-2">
                     {producto.descripcion}
                   </p>
+
+                  <div className="mt-3 mb-3">
+                    {ratingStats[producto.id] && ratingStats[producto.id].total_ratings > 0 ? (
+                      <div className="flex items-center gap-2">
+                        <StarRating
+                          rating={ratingStats[producto.id].promedio_puntuacion}
+                          interactive={false}
+                          size="sm"
+                        />
+                        <span className="text-xs text-muted">
+                          ({ratingStats[producto.id].total_ratings})
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted">Sin calificaciones aún</p>
+                    )}
+                  </div>
 
                   <div className="mt-4 flex items-center justify-between">
                     <span className="font-semibold text-action text-lg">
