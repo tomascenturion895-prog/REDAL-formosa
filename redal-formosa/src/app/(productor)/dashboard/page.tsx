@@ -1,160 +1,115 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAuth } from "@/lib/auth/auth-context";
-import { createClient } from "@/lib/supabase/client";
+import { useState } from "react";
+import Link from "next/link";
+
+import { useRequireAuth } from "@/lib/auth/use-require-auth";
+import { useAsync } from "@/lib/hooks/use-async";
+import { producerRepository } from "@/lib/producer/producer-repository";
 import { ProductForm } from "@/components/productor/product-form";
 import { ProductList } from "@/components/productor/product-list";
-import type { Database } from "@/lib/supabase/types";
-
-type Emprendimiento = Database["public"]["Tables"]["emprendimientos"]["Row"];
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PlusIcon, StoreIcon } from "@/components/ui/icons";
 
 export default function ProductorDashboard() {
-  const { user, loading: authLoading } = useAuth();
-  const supabase = createClient();
-  const [emprendimientos, setEmprendimientos] = useState<Emprendimiento[]>([]);
-  const [selectedEmprendimiento, setSelectedEmprendimiento] = useState<string>("");
-  const [loading, setLoading] = useState(true);
+  const { user, pending } = useRequireAuth();
+  const { data: emprendimientos, loading } = useAsync(() => producerRepository.ownEmprendimientos(user!.id), [user?.id], {
+    enabled: Boolean(user),
+  });
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [listVersion, setListVersion] = useState(0);
 
-  useEffect(() => {
-    if (user) {
-      loadEmprendimientos();
-    }
-  }, [user]);
+  if (pending || loading) return <div aria-busy="true" className="h-40" />;
 
-  const loadEmprendimientos = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("emprendimientos")
-        .select("*")
-        .eq("owner_id", user?.id || "")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      const emps = (data || []) as Emprendimiento[];
-      setEmprendimientos(emps);
-      if (emps && emps.length > 0) {
-        setSelectedEmprendimiento(emps[0].id);
-      }
-    } catch (err) {
-      console.error("Error cargando emprendimientos:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (authLoading || loading) {
-    return <div className="text-center py-12">Cargando...</div>;
-  }
-
-  if (!user) {
+  if (!emprendimientos || emprendimientos.length === 0) {
     return (
-      <div className="max-w-narrow mx-auto text-center py-12">
-        <p className="text-muted">Debes estar logueado para acceder a tu dashboard.</p>
-      </div>
+      <EmptyState
+        icon={<StoreIcon size={36} />}
+        title="Todavía no tenés un emprendimiento"
+        description="Creá el perfil de tu emprendimiento para empezar a vender."
+        action={
+          <Link href="/setup" className="btn btn-primary">
+            Sumar mi emprendimiento
+          </Link>
+        }
+      />
     );
   }
 
-  if (emprendimientos.length === 0) {
-    return (
-      <div className="max-w-narrow mx-auto text-center py-12">
-        <h1 className="text-title mb-4">No tienes emprendimientos</h1>
-        <p className="text-muted">Completa tu perfil para comenzar a vender.</p>
-        <a
-          href="/setup"
-          className="mt-6 inline-block rounded-control bg-action px-6 py-3 font-medium text-on-action hover:bg-action-hover"
-        >
-          Completar perfil
-        </a>
-      </div>
-    );
-  }
+  const selected = emprendimientos.find((e) => e.id === selectedId) ?? emprendimientos[0];
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-title mb-4">Mi catálogo</h1>
-
-        <div className="mb-6 p-4 rounded-card border border-border bg-surface">
-          <label className="block text-sm font-medium text-foreground mb-2">
-            Selecciona un emprendimiento
-          </label>
-          <select
-            value={selectedEmprendimiento}
-            onChange={(e) => setSelectedEmprendimiento(e.target.value)}
-            className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {emprendimientos.map((emp) => (
-              <option key={emp.id} value={emp.id}>
-                {emp.nombre}
-              </option>
-            ))}
-          </select>
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-title">Mi emprendimiento</h1>
+          {emprendimientos.length > 1 ? (
+            <div className="mt-2">
+              <label htmlFor="emp-select" className="sr-only">
+                Emprendimiento
+              </label>
+              <select id="emp-select" value={selected.id} onChange={(e) => setSelectedId(e.target.value)} className="field !w-auto">
+                {emprendimientos.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <p className="mt-1 text-muted">{selected.nombre}</p>
+          )}
         </div>
+        <button type="button" className="btn btn-primary" onClick={() => setShowForm((v) => !v)}>
+          <PlusIcon size={18} />
+          {showForm ? "Cerrar formulario" : "Nuevo producto"}
+        </button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-heading">Productos</h2>
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="text-sm rounded-control bg-highlight px-3 py-1 font-medium text-on-highlight hover:opacity-90"
-            >
-              {showForm ? "Cerrar" : "+ Nuevo"}
-            </button>
-          </div>
+      <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
+        <section aria-labelledby="products-title" className="space-y-4">
+          <h2 id="products-title" className="text-heading">
+            Productos
+          </h2>
 
-          {selectedEmprendimiento && (
-            <>
-              {showForm && (
-                <div className="mb-6 rounded-card border border-border bg-surface p-6">
-                  <ProductForm
-                    emprendimientoId={selectedEmprendimiento}
-                    onSuccess={() => {
-                      setShowForm(false);
-                    }}
-                  />
-                </div>
-              )}
-
-              <ProductList emprendimientoId={selectedEmprendimiento} />
-            </>
-          )}
-        </div>
-
-        <div className="rounded-card border border-border bg-surface p-4">
-          <h3 className="text-heading mb-3">Información</h3>
-          {emprendimientos.find((e) => e.id === selectedEmprendimiento) && (
-            <div className="space-y-2 text-sm">
-              <div>
-                <p className="text-muted">Nombre</p>
-                <p className="font-medium">
-                  {emprendimientos.find((e) => e.id === selectedEmprendimiento)?.nombre}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted">Teléfono</p>
-                <p className="font-medium">
-                  {emprendimientos.find((e) => e.id === selectedEmprendimiento)?.telefono ||
-                    "No especificado"}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted">Email</p>
-                <p className="font-medium">
-                  {emprendimientos.find((e) => e.id === selectedEmprendimiento)?.email ||
-                    "No especificado"}
-                </p>
-              </div>
-              <button className="mt-4 w-full text-sm rounded-control border border-border px-3 py-2 text-foreground hover:bg-surface-muted">
-                Editar
-              </button>
+          {showForm && (
+            <div className="card space-y-4 p-6">
+              <Alert tone="info">Los productos nuevos se publican cuando un administrador los revisa.</Alert>
+              <ProductForm
+                emprendimientoId={selected.id}
+                onSuccess={() => {
+                  setShowForm(false);
+                  setListVersion((v) => v + 1);
+                }}
+              />
             </div>
           )}
-        </div>
+
+          <ProductList key={`${selected.id}-${listVersion}`} emprendimientoId={selected.id} />
+        </section>
+
+        <aside className="card h-fit space-y-4 p-5 text-sm">
+          <h2 className="text-heading">Datos de contacto</h2>
+          <dl className="space-y-3">
+            <div>
+              <dt className="text-muted">Teléfono</dt>
+              <dd className="font-medium">{selected.telefono || "Sin cargar"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">Email</dt>
+              <dd className="font-medium">{selected.email || "Sin cargar"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">Dirección</dt>
+              <dd className="font-medium">{selected.direccion || "Sin cargar"}</dd>
+            </div>
+          </dl>
+          <Link href={`/emprendimientos/${selected.id}`} className="btn btn-secondary btn-sm w-full">
+            Ver cómo lo ven los compradores
+          </Link>
+        </aside>
       </div>
     </div>
   );

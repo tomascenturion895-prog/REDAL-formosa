@@ -1,86 +1,76 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { useAuth } from "@/lib/auth/auth-context";
-import { wishlistService } from "@/lib/wishlist/wishlist-service";
+import { useAsync } from "@/lib/hooks/use-async";
+import { wishlistRepository } from "@/lib/wishlist/wishlist-repository";
+import { HeartIcon } from "@/components/ui/icons";
 
 interface WishlistButtonProps {
   productId: string;
+  /** Si el listado ya conoce el estado, se pasa para evitar una consulta por tarjeta. */
+  favorite?: boolean;
   onToggle?: (isFavorite: boolean) => void;
-  size?: "sm" | "md" | "lg";
+  variant?: "icon" | "full";
 }
 
-export function WishlistButton({ productId, onToggle, size = "md" }: WishlistButtonProps) {
+export function WishlistButton({ productId, favorite, onToggle, variant = "icon" }: WishlistButtonProps) {
+  const router = useRouter();
   const { user } = useAuth();
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [own, setOwn] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    checkFavorite();
-  }, [user, productId]);
+  // Solo consulta por su cuenta cuando el padre no le informó el estado.
+  const { data: fetched } = useAsync(() => wishlistRepository.isFavorite(user!.id, productId), [user?.id, productId], {
+    enabled: favorite === undefined && Boolean(user),
+  });
+  const isFavorite = favorite ?? own ?? fetched ?? false;
 
-  const checkFavorite = async () => {
+  const toggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!user) {
-      setLoading(false);
+      router.push("/login");
       return;
     }
-
+    const next = !isFavorite;
+    setBusy(true);
     try {
-      const isFav = await wishlistService.isInWishlist(user.id, productId);
-      setIsFavorite(isFav);
-    } catch (err) {
-      console.error("Error checking favorite:", err);
+      if (next) await wishlistRepository.add(user.id, productId);
+      else await wishlistRepository.remove(user.id, productId);
+      setOwn(next);
+      onToggle?.(next);
+    } catch (error) {
+      console.error(error);
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   };
 
-  const handleToggle = async () => {
-    if (!user) {
-      alert("Debes iniciar sesión");
-      return;
-    }
+  const label = isFavorite ? "Quitar de favoritos" : "Guardar en favoritos";
 
-    setLoading(true);
-    try {
-      if (isFavorite) {
-        await wishlistService.removeFromWishlist(user.id, productId);
-        setIsFavorite(false);
-        onToggle?.(false);
-      } else {
-        await wishlistService.addToWishlist(user.id, productId);
-        setIsFavorite(true);
-        onToggle?.(true);
-      }
-    } catch (err) {
-      console.error("Error toggling favorite:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sizeClasses = {
-    sm: "text-sm px-2 py-1",
-    md: "text-base px-3 py-2",
-    lg: "text-lg px-4 py-3",
-  };
+  if (variant === "full") {
+    return (
+      <button type="button" onClick={toggle} disabled={busy} aria-pressed={isFavorite} className="btn btn-secondary w-full">
+        <HeartIcon filled={isFavorite} className={isFavorite ? "text-danger" : ""} />
+        {isFavorite ? "En tus favoritos" : "Guardar en favoritos"}
+      </button>
+    );
+  }
 
   return (
     <button
-      onClick={handleToggle}
-      disabled={loading}
-      className={`
-        rounded-control border transition-all
-        ${isFavorite
-          ? "bg-highlight border-highlight text-on-highlight"
-          : "border-border bg-surface text-foreground hover:border-highlight"
-        }
-        font-medium disabled:opacity-60
-        ${sizeClasses[size]}
-      `}
+      type="button"
+      onClick={toggle}
+      disabled={busy}
+      aria-pressed={isFavorite}
+      aria-label={label}
+      title={label}
+      className="flex h-9 w-9 items-center justify-center rounded-full bg-surface/95 text-foreground shadow-card transition-colors hover:bg-surface disabled:opacity-60"
     >
-      <span className="mr-2">{isFavorite ? "❤️" : "🤍"}</span>
-      {isFavorite ? "Favorito" : "Agregar"}
+      <HeartIcon size={18} filled={isFavorite} className={isFavorite ? "text-danger" : ""} />
     </button>
   );
 }

@@ -1,175 +1,80 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { useAuth } from "@/lib/auth/auth-context";
-import { RepartidorTracker } from "@/components/tracking/repartidor-tracker";
-import { PageHeader } from "@/components/layout/page-header";
-import type { Database } from "@/lib/supabase/types";
+import { useState } from "react";
 
-type Pedido = Database["public"]["Tables"]["pedidos"]["Row"];
+import { useRequireAuth } from "@/lib/auth/use-require-auth";
+import { deliveryRepository } from "@/lib/delivery/delivery-repository";
+import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/domain/order-status";
+import { FORMOSA_CENTER } from "@/lib/domain/geo";
+import { useAsync } from "@/lib/hooks/use-async";
+import { PageHeader } from "@/components/layout/page-header";
+import { RepartidorTracker } from "@/components/tracking/repartidor-tracker";
+import { EmptyState } from "@/components/ui/empty-state";
+import { TruckIcon } from "@/components/ui/icons";
+
+async function loadAssignments(userId: string) {
+  const courier = await deliveryRepository.findByUser(userId);
+  const orders = courier ? await deliveryRepository.activeOrders(courier.id) : [];
+  return { courier, orders };
+}
 
 export default function RepartidorTrackingPage() {
-  const { user } = useAuth();
-  const supabase = createClient();
+  const { user, pending } = useRequireAuth();
+  const { data, loading } = useAsync(() => loadAssignments(user!.id), [user?.id], { enabled: Boolean(user) });
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const [repartidor, setRepartidor] = useState<any>(null);
-  const [asignedPedidos, setAsignedPedidos] = useState<Pedido[]>([]);
-  const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  if (pending || loading) return <div className="h-40" aria-busy="true" />;
 
-  useEffect(() => {
-    loadData();
-  }, [user?.id]);
-
-  const loadData = async () => {
-    if (!user) {
-      setError("No autorizado");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      // Obtener datos del repartidor
-      const { data: repartidorData, error: repartidorErr } = await supabase
-        .from("repartidores")
-        .select("*")
-        .eq("usuario_id", user.id)
-        .single();
-
-      if (repartidorErr && repartidorErr.code !== "PGRST116") throw repartidorErr;
-
-      if (!repartidorData) {
-        setError("No eres un repartidor registrado");
-        return;
-      }
-
-      setRepartidor(repartidorData);
-
-      // Obtener pedidos asignados
-      const { data: pedidosData, error: pedidosErr } = await (supabase
-        .from("pedidos")
-        .select("*")
-        .eq("repartidor_id", (repartidorData as any).id)
-        .in("estado", ["confirmado", "en_entrega"]) as any);
-
-      if (pedidosErr) throw pedidosErr;
-      setAsignedPedidos(pedidosData || []);
-
-      if (pedidosData && pedidosData.length > 0) {
-        setSelectedPedido(pedidosData[0]);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error cargando datos");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
+  if (!data?.courier) {
     return (
-      <div className="page-container py-section">
-        <div className="text-center">Cargando...</div>
-      </div>
+      <EmptyState
+        icon={<TruckIcon size={36} />}
+        title="Tu cuenta no es de repartidor"
+        description="Este panel es para quienes hacen entregas en RedAL."
+      />
     );
   }
 
-  if (error) {
-    return (
-      <div className="page-container py-section">
-        <div className="text-center text-danger">{error}</div>
-      </div>
-    );
-  }
+  const { courier, orders } = data;
+  const selected = orders.find((o) => o.id === selectedId) ?? orders[0];
 
   return (
-    <div className="page-container py-section">
-      <PageHeader
-        title="Mi Seguimiento"
-        description="Gestiona tu ubicación y pedidos en entrega"
-      />
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PageHeader title="Mis entregas" description="Tu ubicación se comparte con quien espera el pedido mientras esta pantalla esté abierta." />
 
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Información del repartidor */}
-        <div className="rounded-card border border-border bg-surface p-6">
-          <h2 className="text-heading mb-4">👤 Mi Información</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-sm text-muted">Nombre</p>
-              <p className="font-semibold text-foreground mt-1">
-                {repartidor?.nombre || "No registrado"}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted">Teléfono</p>
-              <p className="font-semibold text-foreground mt-1">
-                {repartidor?.telefono || "No registrado"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Pedidos asignados */}
-        {asignedPedidos.length > 0 ? (
-          <>
-            <div className="rounded-card border border-border bg-surface p-6">
-              <h2 className="text-heading mb-4">📋 Pedidos en Entrega</h2>
-
-              <div className="space-y-3">
-                {asignedPedidos.map((pedido) => (
-                  <button
-                    key={pedido.id}
-                    onClick={() => setSelectedPedido(pedido)}
-                    className={`w-full text-left p-4 rounded-control border transition-colors ${
-                      selectedPedido?.id === pedido.id
-                        ? "border-action bg-action-soft"
-                        : "border-border bg-surface-muted hover:bg-surface"
-                    }`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-semibold">{pedido.numero_pedido}</p>
-                        <p className="text-sm text-muted mt-1">
-                          {pedido.direccion_entrega}
-                        </p>
-                      </div>
-                      <span
-                        className={`text-sm font-medium px-2 py-1 rounded-control ${
-                          (pedido.estado as any) === "en_entrega"
-                            ? "bg-info-soft text-info"
-                            : "bg-success-soft text-success"
-                        }`}
-                      >
-                        {(pedido.estado as any) === "en_entrega" ? "En entrega" : "Confirmado"}
-                      </span>
+      {orders.length === 0 ? (
+        <EmptyState icon={<TruckIcon size={36} />} title="No tenés pedidos asignados" description="Cuando te asignen uno, aparece acá." />
+      ) : (
+        <>
+          <ul className="space-y-3">
+            {orders.map((order) => (
+              <li key={order.id}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(order.id)}
+                  aria-pressed={selected.id === order.id}
+                  className={`card w-full p-4 text-left transition-colors ${selected.id === order.id ? "border-action" : "hover:border-border-strong"}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">{order.numero_pedido}</p>
+                      <p className="mt-1 text-sm text-muted">{order.direccion_entrega}</p>
                     </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${ORDER_STATUS_TONE[order.estado]}`}>
+                      {ORDER_STATUS_LABEL[order.estado]}
+                    </span>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
 
-            {/* Tracking del pedido seleccionado */}
-            {selectedPedido && (
-              <div>
-                <h2 className="text-heading mb-4">🗺️ Tracking en Vivo</h2>
-                <RepartidorTracker
-                  repartidorId={repartidor.id}
-                  destino={{ lat: -25.4971, lng: -55.504 }}
-                  isRepartidor={true}
-                />
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="rounded-card border border-border bg-surface-muted p-6 text-center">
-            <p className="text-muted">
-              No tienes pedidos asignados en este momento
-            </p>
-          </div>
-        )}
-      </div>
+          <RepartidorTracker repartidorId={courier.id} destino={selected.entrega ?? FORMOSA_CENTER} isRepartidor />
+          {!selected.entrega && (
+            <p className="text-sm text-muted">Este pedido no tiene ubicación exacta: el mapa muestra el centro de Formosa como referencia.</p>
+          )}
+        </>
+      )}
     </div>
   );
 }

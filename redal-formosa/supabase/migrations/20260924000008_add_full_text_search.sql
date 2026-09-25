@@ -1,64 +1,68 @@
--- Agregar columna tsvector para búsqueda full-text
-ALTER TABLE productos ADD COLUMN search_vector tsvector
-  GENERATED ALWAYS AS (
-    setweight(to_tsvector('spanish', COALESCE(nombre, '')), 'A') ||
-    setweight(to_tsvector('spanish', COALESCE(descripcion, '')), 'B') ||
-    setweight(to_tsvector('spanish', COALESCE(unidad, '')), 'C')
-  ) STORED;
+-- REDAL: búsqueda full-text de productos (español) con filtros.
 
--- Crear índice GIN para búsqueda eficiente
-CREATE INDEX idx_productos_search_vector ON productos USING gin(search_vector);
+alter table public.productos
+  add column if not exists search_vector tsvector
+  generated always as (
+    setweight(to_tsvector('spanish', coalesce(nombre, '')), 'A') ||
+    setweight(to_tsvector('spanish', coalesce(descripcion, '')), 'B') ||
+    setweight(to_tsvector('spanish', coalesce(unidad, '')), 'C')
+  ) stored;
 
--- Función de búsqueda con filtros
-CREATE OR REPLACE FUNCTION search_productos(
-  search_query TEXT,
-  price_min NUMERIC DEFAULT 0,
-  price_max NUMERIC DEFAULT 999999,
-  disponible_only BOOLEAN DEFAULT FALSE
+create index if not exists idx_productos_search_vector
+  on public.productos using gin (search_vector);
+
+-- security invoker (por defecto): respeta las políticas RLS de productos,
+-- así que solo devuelve productos aprobados y disponibles al público.
+create or replace function public.search_productos(
+  search_query text,
+  price_min numeric default 0,
+  price_max numeric default 999999999,
+  disponible_only boolean default false
 )
-RETURNS TABLE (
-  id UUID,
-  nombre TEXT,
-  descripcion TEXT,
-  precio NUMERIC,
-  unidad TEXT,
-  disponible BOOLEAN,
-  imagen_principal TEXT,
-  creado_en TIMESTAMP WITH TIME ZONE,
-  relevance REAL
-) AS $$
-BEGIN
-  RETURN QUERY
-  SELECT
-    p.id,
-    p.nombre,
-    p.descripcion,
-    p.precio,
-    p.unidad,
-    p.disponible,
-    p.imagen_principal,
-    p.creado_en,
-    ts_rank(p.search_vector, plainto_tsquery('spanish', search_query))::REAL as relevance
-  FROM productos p
-  WHERE
-    (search_query = '' OR p.search_vector @@ plainto_tsquery('spanish', search_query))
-    AND p.precio BETWEEN price_min AND price_max
-    AND (NOT disponible_only OR p.disponible = TRUE)
-    AND p.validado = TRUE
-  ORDER BY relevance DESC, p.creado_en DESC
-  LIMIT 50;
-END;
-$$ LANGUAGE plpgsql;
+returns table (
+  id uuid,
+  nombre text,
+  descripcion text,
+  precio numeric,
+  unidad text,
+  disponible boolean,
+  imagen_url text,
+  emprendimiento_id uuid,
+  created_at timestamptz,
+  relevance real
+)
+language sql
+stable
+as $$
+  select
+    p.id, p.nombre, p.descripcion, p.precio, p.unidad, p.disponible,
+    p.imagen_url, p.emprendimiento_id, p.created_at,
+    (case
+      when btrim(search_query) = '' then 0
+      else ts_rank(p.search_vector, websearch_to_tsquery('spanish', search_query))
+    end)::real
+  from public.productos p
+  where (
+      btrim(search_query) = ''
+      or p.search_vector @@ websearch_to_tsquery('spanish', search_query)
+      or p.nombre ilike '%' || search_query || '%'
+    )
+    and p.precio between price_min and price_max
+    and (not disponible_only or p.disponible)
+  order by 10 desc, p.created_at desc
+  limit 50;
+$$;
 
--- View con categorías y estadísticas por categoría
-CREATE OR REPLACE VIEW categoria_stats AS
-SELECT
-  COALESCE(categoria, 'Sin categoría') as categoria,
-  COUNT(*) as total_productos,
-  AVG(precio) as precio_promedio,
-  MIN(precio) as precio_minimo,
-  MAX(precio) as precio_maximo,
-  COUNT(*) FILTER (WHERE disponible = TRUE) as disponibles
-FROM productos
-WHERE validado = TRUE
-GROUP BY categoria;
+create or replace view public.categoria_stats
+with (security_invoker = true) as
+select
+  c.id,
+  c.nombre as categoria,
+  c.slug,
+  count(p.id) as total_productos,
+  coalesce(round(avg(p.precio), 2), 0) as precio_promedio,
+  coalesce(min(p.precio), 0) as precio_minimo,
+  coalesce(max(p.precio), 0) as precio_maximo
+from public.categorias c
+left join public.productos p on p.categoria_id = c.id and p.disponible
+group by c.id, c.nombre, c.slug;

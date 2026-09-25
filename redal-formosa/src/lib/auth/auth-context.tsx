@@ -2,12 +2,19 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
+
 import { createClient } from "@/lib/supabase/client";
+import type { UserRole } from "@/lib/supabase/types";
+import { useAsync } from "@/lib/hooks/use-async";
+import { profileRepository } from "./profile-repository";
+
+export type { UserRole };
 
 interface AuthContextType {
   user: User | null;
+  role: UserRole | null;
+  /** true mientras se resuelve la sesión y, si hay una, su rol. */
   loading: boolean;
-  error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -15,38 +22,29 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
 
   useEffect(() => {
-    const getUser = async () => {
-      try {
-        const {
-          data: { user },
-          error: err,
-        } = await supabase.auth.getUser();
-        if (err) throw err;
-        setUser(user);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Error desconocido");
-      } finally {
-        setLoading(false);
-      }
-    };
+    const supabase = createClient();
 
-    getUser();
+    // getUser() valida la sesión contra el servidor; onAuthStateChange mantiene el estado al iniciar/cerrar sesión.
+    supabase.auth
+      .getUser()
+      .then(({ data }) => setUser(data.user))
+      .finally(() => setLoading(false));
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+    } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
 
     return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, []);
+
+  const { data: role, loading: roleLoading } = useAsync(() => profileRepository.roleOf(user!.id), [user?.id], {
+    enabled: Boolean(user),
+  });
 
   return (
-    <AuthContext.Provider value={{ user, loading, error }}>
+    <AuthContext.Provider value={{ user, role: user ? (role ?? null) : null, loading: loading || roleLoading }}>
       {children}
     </AuthContext.Provider>
   );

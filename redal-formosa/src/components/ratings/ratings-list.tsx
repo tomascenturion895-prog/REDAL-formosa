@@ -1,112 +1,66 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ratingsService } from "@/lib/ratings/ratings-service";
 import { useAuth } from "@/lib/auth/auth-context";
+import { formatDate } from "@/lib/format";
+import { useAsync } from "@/lib/hooks/use-async";
+import { ratingsRepository } from "@/lib/ratings/ratings-repository";
 import { StarRating } from "./star-rating";
 
-type Calificacion = any;
-
 interface RatingsListProps {
-  productoId?: string;
-  repartidorId?: string;
+  productoId: string;
   limit?: number;
 }
 
-export function RatingsList({
-  productoId,
-  repartidorId,
-  limit = 10,
-}: RatingsListProps) {
+export function RatingsList({ productoId, limit = 10 }: RatingsListProps) {
   const { user } = useAuth();
-  const [ratings, setRatings] = useState<Calificacion[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: ratings, error, loading, reload } = useAsync(
+    () => ratingsRepository.listForProduct(productoId, limit),
+    [productoId, limit],
+  );
 
-  useEffect(() => {
-    loadRatings();
-  }, [productoId, repartidorId]);
-
-  const loadRatings = async () => {
-    try {
-      setLoading(true);
-      let data: Calificacion[] = [];
-
-      if (productoId) {
-        data = await ratingsService.getProductRatings(productoId, limit);
-      } else if (repartidorId) {
-        data = await ratingsService.getRepartidorRatings(repartidorId, limit);
-      }
-
-      setRatings(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error cargando calificaciones");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return <div className="text-center text-muted">Cargando calificaciones...</div>;
-  }
+  if (loading && !ratings) return <div aria-busy="true" className="h-16" />;
 
   if (error) {
-    return <div className="text-center text-danger text-sm">{error}</div>;
+    return <p className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">No pudimos cargar las calificaciones.</p>;
   }
 
-  if (ratings.length === 0) {
+  if (!ratings || ratings.length === 0) {
     return (
-      <div className="rounded-card border border-border bg-surface-muted p-6 text-center">
-        <p className="text-muted">Aún no hay calificaciones</p>
-      </div>
+      <p className="card border-dashed px-5 py-8 text-center text-sm text-muted">
+        Todavía nadie lo calificó. Sé la primera persona.
+      </p>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <ul className="space-y-3">
       {ratings.map((rating) => (
-        <div
-          key={rating.id}
-          className="rounded-card border border-border bg-surface p-4"
-        >
-          <div className="flex items-start justify-between mb-2">
+        <li key={rating.id} className="card p-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <StarRating rating={rating.puntuacion} interactive={false} size="sm" />
-              <p className="text-xs text-muted mt-1">
-                {new Date(rating.creado_en).toLocaleDateString("es-AR")}
-              </p>
+              <StarRating rating={rating.puntuacion} size="sm" />
+              {rating.creado_en && <p className="mt-1 text-xs text-muted">{formatDate(rating.creado_en)}</p>}
             </div>
 
             {user?.id === rating.usuario_id && (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    // TODO: Implementar edición
-                  }}
-                  className="text-xs text-link hover:underline"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={async () => {
-                    if (confirm("¿Eliminar calificación?")) {
-                      await ratingsService.deleteRating(rating.id);
-                      loadRatings();
-                    }
-                  }}
-                  className="text-xs text-danger hover:underline"
-                >
-                  Eliminar
-                </button>
-              </div>
+              <button
+                type="button"
+                className="text-xs font-medium text-danger hover:underline"
+                onClick={async () => {
+                  if (window.confirm("¿Eliminar tu calificación?")) {
+                    await ratingsRepository.delete(rating.id);
+                    reload();
+                  }
+                }}
+              >
+                Eliminar
+              </button>
             )}
           </div>
 
-          {rating.comentario && (
-            <p className="text-foreground text-sm">{rating.comentario}</p>
-          )}
-        </div>
+          {rating.comentario && <p className="mt-2 text-sm">{rating.comentario}</p>}
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }

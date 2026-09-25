@@ -1,182 +1,101 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { useCart } from "@/lib/cart/cart-context";
-import { ratingsService } from "@/lib/ratings/ratings-service";
-import type { Database } from "@/lib/supabase/types";
-import { PageHeader } from "@/components/layout/page-header";
-import { StarRating } from "@/components/ratings/star-rating";
-import { RatingForm } from "@/components/ratings/rating-form";
-import { RatingsList } from "@/components/ratings/ratings-list";
 
-type Emprendimiento = Database["public"]["Tables"]["emprendimientos"]["Row"];
-type Producto = Database["public"]["Tables"]["productos"]["Row"];
+import { catalogRepository } from "@/lib/catalog/catalog-repository";
+import { useAsync } from "@/lib/hooks/use-async";
+import { ProductGrid } from "@/components/catalog/product-grid";
+import { EmptyState } from "@/components/ui/empty-state";
+import { MapPinIcon, PackageIcon, StoreIcon } from "@/components/ui/icons";
+
+async function loadStore(id: string) {
+  const [emprendimiento, productos] = await Promise.all([
+    catalogRepository.getEmprendimiento(id),
+    catalogRepository.listAvailableProducts(id),
+  ]);
+  const ratings = await catalogRepository.getRatingSummaries(productos.map((p) => p.id));
+  return { emprendimiento, productos, ratings };
+}
 
 export default function EmprendimientoPage() {
-  const params = useParams();
-  const id = params.id as string;
-  const supabase = createClient();
-  const { addItem } = useCart();
-  const [emprendimiento, setEmprendimiento] = useState<Emprendimiento | null>(null);
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [addedProductId, setAddedProductId] = useState<string | null>(null);
-  const [ratingStats, setRatingStats] = useState<{ [key: string]: any }>({});
+  const { id } = useParams<{ id: string }>();
+  const { data, loading } = useAsync(() => loadStore(id), [id]);
 
-  useEffect(() => {
-    loadData();
-  }, [id]);
+  if (loading) return <div className="page-container py-section" aria-busy="true" />;
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-
-      const { data: emp, error: empErr } = await supabase
-        .from("emprendimientos")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (empErr) throw empErr;
-      setEmprendimiento(emp);
-
-      const { data: prods, error: prodsErr } = await supabase
-        .from("productos")
-        .select("*")
-        .eq("emprendimiento_id", id)
-        .eq("disponible", true);
-
-      if (prodsErr) throw prodsErr;
-      setProductos(prods || []);
-
-      // Cargar estadísticas de calificaciones
-      if (prods) {
-        const stats: { [key: string]: any } = {};
-        for (const prod of prods) {
-          const stat = await ratingsService.getProductStats((prod as any).id);
-          stats[(prod as any).id] = stat;
-        }
-        setRatingStats(stats);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error cargando datos");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return <div className="text-center py-12">Cargando...</div>;
-  }
-
+  const emprendimiento = data?.emprendimiento;
   if (!emprendimiento) {
     return (
-      <div className="page-container py-section text-center">
-        <p className="text-muted">Emprendimiento no encontrado</p>
+      <div className="page-container py-section">
+        <EmptyState
+          icon={<StoreIcon size={36} />}
+          title="No encontramos este emprendimiento"
+          action={
+            <Link href="/emprendimientos" className="btn btn-primary">
+              Ver emprendimientos
+            </Link>
+          }
+        />
       </div>
     );
   }
 
   return (
     <div className="page-container py-section">
-      <PageHeader
-        title={emprendimiento.nombre}
-        description={emprendimiento.descripcion || ""}
-        actions={
-          <a
-            href={`mailto:${emprendimiento.email}`}
-            className="rounded-control bg-action px-4 py-2 text-sm font-medium text-on-action hover:bg-action-hover"
-          >
-            Contactar
-          </a>
-        }
-      />
+      <nav aria-label="Ubicación" className="mb-6 text-sm text-muted">
+        <Link href="/emprendimientos" className="hover:text-foreground">
+          Emprendimientos
+        </Link>
+      </nav>
 
-      {emprendimiento.telefono && (
-        <p className="mb-6 text-sm text-muted">
-          <span className="font-medium">Teléfono:</span> {emprendimiento.telefono}
-        </p>
-      )}
-
-      <div className="mb-8">
-        <h2 className="text-heading mb-4">Productos ({productos.length})</h2>
-
-        {productos.length === 0 ? (
-          <div className="rounded-card border border-border bg-surface-muted p-8 text-center">
-            <p className="text-muted">No hay productos disponibles</p>
+      <header className="flex flex-wrap items-start justify-between gap-6 border-b border-border pb-8">
+        <div className="flex items-start gap-4">
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-card bg-primary-100 font-display text-3xl font-bold text-primary-800">
+            {emprendimiento.nombre.charAt(0).toUpperCase()}
+          </span>
+          <div>
+            <h1 className="text-title">{emprendimiento.nombre}</h1>
+            {emprendimiento.descripcion && <p className="mt-2 max-w-prose text-muted">{emprendimiento.descripcion}</p>}
+            {emprendimiento.direccion && (
+              <p className="mt-3 flex items-center gap-1.5 text-sm text-muted">
+                <MapPinIcon size={16} />
+                {emprendimiento.direccion}
+              </p>
+            )}
           </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {productos.map((producto) => (
-              <div
-                key={producto.id}
-                className="rounded-card border border-border bg-surface overflow-hidden shadow-card hover:shadow-pop transition-shadow"
-              >
-                {producto.imagen_url && (
-                  <img
-                    src={producto.imagen_url}
-                    alt={producto.nombre}
-                    className="w-full h-40 object-cover"
-                  />
-                )}
+        </div>
 
-                <div className="p-4">
-                  <h3 className="font-medium text-foreground line-clamp-2">
-                    {producto.nombre}
-                  </h3>
-                  <p className="text-sm text-muted mt-1 line-clamp-2">
-                    {producto.descripcion}
-                  </p>
-
-                  <div className="mt-3 mb-3">
-                    {ratingStats[producto.id] && ratingStats[producto.id].total_ratings > 0 ? (
-                      <div className="flex items-center gap-2">
-                        <StarRating
-                          rating={ratingStats[producto.id].promedio_puntuacion}
-                          interactive={false}
-                          size="sm"
-                        />
-                        <span className="text-xs text-muted">
-                          ({ratingStats[producto.id].total_ratings})
-                        </span>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted">Sin calificaciones aún</p>
-                    )}
-                  </div>
-
-                  <div className="mt-4 flex items-center justify-between">
-                    <span className="font-semibold text-action text-lg">
-                      ${producto.precio}
-                    </span>
-                    <span className="text-xs text-muted bg-surface-muted px-2 py-1 rounded-control">
-                      {producto.unidad}
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      addItem(producto, 1);
-                      setAddedProductId(producto.id);
-                      setTimeout(() => setAddedProductId(null), 2000);
-                    }}
-                    className={`mt-4 w-full rounded-control px-3 py-2 text-sm font-medium transition-all ${
-                      addedProductId === producto.id
-                        ? "bg-success text-on-success"
-                        : "bg-highlight text-on-highlight hover:opacity-90"
-                    }`}
-                  >
-                    {addedProductId === producto.id ? "✓ Agregado" : "Agregar al carrito"}
-                  </button>
-                </div>
-              </div>
-            ))}
+        {(emprendimiento.email || emprendimiento.telefono) && (
+          <div className="flex flex-wrap gap-2">
+            {emprendimiento.email && (
+              <a href={`mailto:${emprendimiento.email}`} className="btn btn-secondary">
+                Escribirles
+              </a>
+            )}
+            {emprendimiento.telefono && (
+              <a href={`tel:${emprendimiento.telefono}`} className="btn btn-secondary">
+                Llamar
+              </a>
+            )}
           </div>
         )}
-      </div>
+      </header>
+
+      <section aria-labelledby="prods" className="pt-8">
+        <h2 id="prods" className="text-heading pb-5">
+          Productos ({data.productos.length})
+        </h2>
+        {data.productos.length === 0 ? (
+          <EmptyState
+            icon={<PackageIcon size={36} />}
+            title="Todavía no tiene productos publicados"
+            description="Volvé pronto o mirá otros emprendimientos."
+          />
+        ) : (
+          <ProductGrid products={data.productos} ratings={data.ratings} />
+        )}
+      </section>
     </div>
   );
 }

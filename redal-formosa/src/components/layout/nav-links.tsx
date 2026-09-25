@@ -9,7 +9,7 @@ export function NavLinks() {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Principal" className="-mx-1 flex gap-1 overflow-x-auto">
+    <nav aria-label="Principal" className="-mx-2 flex gap-1 overflow-x-auto py-1.5 md:mx-0 md:py-0">
       {mainNav.map(({ href, label }) => {
         const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
         return (

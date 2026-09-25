@@ -1,87 +1,124 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth/auth-context";
-import { adminService } from "@/lib/admin/admin-service";
+import { useState } from "react";
+
+import { adminRepository } from "@/lib/admin/admin-repository";
+import { formatDate, formatPrice } from "@/lib/format";
+import { useAsync } from "@/lib/hooks/use-async";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/ui/empty-state";
+import { CheckIcon } from "@/components/ui/icons";
+import { ProductImage } from "@/components/ui/product-image";
 
 export default function AdminProductosPage() {
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [procesando, setProcesando] = useState<string | null>(null);
+  const { data: products, error: loadError, reload } = useAsync(() => adminRepository.pendingProducts(), []);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    checkAdminAndLoad();
-  }, [user]);
-
-  const checkAdminAndLoad = async () => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
-    const admin = await adminService.isAdmin(user.id);
-    if (!admin) {
-      router.push("/");
-      return;
-    }
-
-    setIsAdmin(true);
-    loadProducts();
-  };
-
-  const loadProducts = async () => {
+  const resolve = async (id: string, action: () => Promise<void>) => {
+    setBusy(id);
+    setError(null);
     try {
-      const data = await adminService.getPendingProducts();
-      setProducts(data);
-    } catch (err) {
-      console.error("Error:", err);
+      await action();
+      setRejecting(null);
+      setReason("");
+      reload();
+    } catch {
+      setError("No se pudo guardar la decisión. Intentá de nuevo.");
     } finally {
-      setLoading(false);
+      setBusy(null);
     }
   };
 
-  const handleApprove = async (productId: string) => {
-    setProcesando(productId);
-    const success = await adminService.approveProduct(productId);
-    if (success) setProducts(products.filter((p) => p.id !== productId));
-    setProcesando(null);
-  };
+  if (loadError) return <Alert tone="error">No pudimos cargar los productos pendientes.</Alert>;
+  if (!products) return <div aria-busy="true" className="h-40" />;
 
-  if (authLoading || loading) return <div className="text-center py-12">Cargando...</div>;
-  if (!isAdmin) return <div className="text-center py-12 text-danger">No autorizado</div>;
+  if (products.length === 0) {
+    return (
+      <EmptyState
+        icon={<CheckIcon size={36} />}
+        title="No hay productos para revisar"
+        description="Los productos nuevos aparecen acá hasta que los apruebes."
+      />
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">📦 Validar Productos</h1>
-      {products.length === 0 ? (
-        <div className="rounded-card border border-border bg-surface-muted p-8 text-center">
-          <p className="text-muted">✓ Sin productos pendientes</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {products.map((p) => (
-            <div key={p.id} className="rounded-card border border-border bg-surface p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold">{p.nombre}</h3>
-                  <p className="text-sm text-muted mt-1">${p.precio}</p>
-                </div>
+    <div className="space-y-4">
+      {error && <Alert tone="error">{error}</Alert>}
+
+      <p className="text-sm text-muted">
+        {products.length} {products.length === 1 ? "producto esperando" : "productos esperando"} revisión.
+      </p>
+
+      <ul className="space-y-3">
+        {products.map((p) => (
+          <li key={p.id} className="card p-5">
+            <div className="flex flex-wrap gap-4">
+              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-control bg-surface-muted">
+                <ProductImage src={p.imagen_url} sizes="80px" iconSize={28} />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h2 className="font-display text-lg font-semibold">{p.nombre}</h2>
+                <p className="text-sm text-muted">
+                  {formatPrice(p.precio)} · {p.unidad} · de {p.emprendimiento_nombre}
+                  {p.productor_email ? ` (${p.productor_email})` : ""}
+                </p>
+                {p.descripcion && <p className="mt-2 line-clamp-2 text-sm">{p.descripcion}</p>}
+                <p className="mt-1 text-xs text-muted">Publicado el {formatDate(p.created_at)}</p>
+              </div>
+
+              <div className="flex items-start gap-2">
                 <button
-                  onClick={() => handleApprove(p.id)}
-                  disabled={procesando === p.id}
-                  className="rounded-control bg-success px-4 py-2 text-sm font-medium text-on-success hover:opacity-90 disabled:opacity-60"
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  disabled={busy === p.id}
+                  onClick={() => resolve(p.id, () => adminRepository.approveProduct(p.id))}
                 >
-                  ✓ Aprobar
+                  Aprobar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm"
+                  disabled={busy === p.id}
+                  onClick={() => setRejecting(rejecting === p.id ? null : p.id)}
+                >
+                  Rechazar
                 </button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+
+            {rejecting === p.id && (
+              <form
+                className="mt-4 space-y-3 border-t border-border pt-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void resolve(p.id, () => adminRepository.rejectProduct(p.id, reason.trim()));
+                }}
+              >
+                <label htmlFor={`reason-${p.id}`} className="block text-sm font-medium">
+                  Motivo del rechazo <span className="font-normal text-muted">(lo ve el emprendedor)</span>
+                </label>
+                <textarea
+                  id={`reason-${p.id}`}
+                  required
+                  rows={2}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  className="field"
+                  placeholder="Ej: la foto no muestra el producto"
+                />
+                <button type="submit" className="btn btn-danger btn-sm" disabled={busy === p.id || !reason.trim()}>
+                  Confirmar rechazo
+                </button>
+              </form>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

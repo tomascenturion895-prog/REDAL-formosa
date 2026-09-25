@@ -1,5 +1,9 @@
 "use client";
 
+import { useState } from "react";
+
+import { StarIcon } from "@/components/ui/icons";
+
 interface StarRatingProps {
   rating: number;
   maxStars?: number;
@@ -9,6 +13,8 @@ interface StarRatingProps {
   className?: string;
 }
 
+const PX = { sm: 16, md: 20, lg: 28 } as const;
+
 export function StarRating({
   rating,
   maxStars = 5,
@@ -17,44 +23,52 @@ export function StarRating({
   onRate,
   className = "",
 }: StarRatingProps) {
-  const sizeClasses = {
-    sm: "text-sm",
-    md: "text-base",
-    lg: "text-2xl",
-  };
+  const [hover, setHover] = useState<number | null>(null);
+  const shown = hover ?? Math.round(Math.min(Math.max(rating, 0), maxStars));
 
-  const displayRating = Math.min(Math.max(rating, 0), maxStars);
-  const fullStars = Math.floor(displayRating);
-  const hasHalfStar = displayRating % 1 >= 0.5;
+  if (!interactive) {
+    return (
+      <span
+        className={`inline-flex gap-0.5 ${className}`}
+        role="img"
+        aria-label={`${Number(rating).toFixed(1)} de ${maxStars} estrellas`}
+      >
+        {Array.from({ length: maxStars }).map((_, i) => (
+          <StarIcon
+            key={i}
+            size={PX[size]}
+            filled={i < shown}
+            className={i < shown ? "text-highlight" : "text-border-strong"}
+          />
+        ))}
+      </span>
+    );
+  }
 
   return (
-    <div className={`flex gap-1 ${className}`}>
+    <div className={`inline-flex gap-1 ${className}`} role="radiogroup" aria-label="Puntuación">
       {Array.from({ length: maxStars }).map((_, i) => {
-        const isFull = i < fullStars;
-        const isHalf = i === fullStars && hasHalfStar;
-
+        const value = i + 1;
         return (
           <button
-            key={i}
-            onClick={() => interactive && onRate?.(i + 1)}
-            disabled={!interactive}
-            className={`${sizeClasses[size]} transition-colors ${
-              interactive ? "cursor-pointer hover:opacity-70" : "cursor-default"
-            }`}
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={value === Math.round(rating)}
+            aria-label={`${value} ${value === 1 ? "estrella" : "estrellas"}`}
+            onClick={() => onRate?.(value)}
+            onMouseEnter={() => setHover(value)}
+            onMouseLeave={() => setHover(null)}
+            className="rounded p-0.5"
           >
-            {isFull ? (
-              <span className="text-highlight">★</span>
-            ) : isHalf ? (
-              <span className="text-highlight">◆</span>
-            ) : (
-              <span className="text-muted">☆</span>
-            )}
+            <StarIcon
+              size={PX[size]}
+              filled={value <= shown}
+              className={value <= shown ? "text-highlight" : "text-border-strong"}
+            />
           </button>
         );
       })}
-      <span className={`ml-2 font-medium text-foreground ${sizeClasses[size]}`}>
-        {displayRating.toFixed(1)}
-      </span>
     </div>
   );
 }

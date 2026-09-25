@@ -1,166 +1,103 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth/auth-context";
-import { orderHistoryService, type OrderSummary, type OrderDetail } from "@/lib/orders/order-history-service";
+import { useParams } from "next/navigation";
+
+import { useRequireAuth } from "@/lib/auth/use-require-auth";
+import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/domain/order-status";
+import { formatDate, formatPrice } from "@/lib/format";
+import { useAsync } from "@/lib/hooks/use-async";
+import { ordersRepository } from "@/lib/orders/orders-repository";
 import { OrderItem } from "@/components/orders/order-item";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PackageIcon, TruckIcon } from "@/components/ui/icons";
 
-export default function OrderDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
-  const orderId = params.id as string;
+async function loadOrder(orderId: string, userId: string) {
+  const [order, items] = await Promise.all([ordersRepository.get(orderId, userId), ordersRepository.details(orderId, userId)]);
+  return { order, items };
+}
 
-  const [order, setOrder] = useState<OrderSummary | null>(null);
-  const [items, setItems] = useState<OrderDetail[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function PedidoDetallePage() {
+  const { id: orderId } = useParams<{ id: string }>();
+  const { user, pending } = useRequireAuth();
 
-  useEffect(() => {
-    if (authLoading) return;
+  const { data, loading } = useAsync(() => loadOrder(orderId, user!.id), [orderId, user?.id], { enabled: Boolean(user) });
 
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+  if (pending || loading) return <div className="page-container py-section" aria-busy="true" />;
 
-    loadData();
-  }, [user, authLoading]);
-
-  const loadData = async () => {
-    try {
-      const orderData = await orderHistoryService.getOrder(orderId);
-
-      if (!orderData) {
-        router.push("/mis-pedidos");
-        return;
-      }
-
-      if (orderData.usuario_id !== user?.id) {
-        router.push("/mis-pedidos");
-        return;
-      }
-
-      setOrder(orderData);
-
-      const itemsData = await orderHistoryService.getOrderDetails(orderId, user!.id);
-      setItems(itemsData);
-    } catch (err) {
-      console.error("Error loading order:", err);
-      router.push("/mis-pedidos");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (authLoading || loading) {
-    return <div className="text-center py-12">Cargando...</div>;
-  }
-
+  const order = data?.order;
   if (!order) {
-    return <div className="text-center py-12">Pedido no encontrado</div>;
+    return (
+      <div className="page-container py-section">
+        <EmptyState
+          icon={<PackageIcon size={36} />}
+          title="No encontramos este pedido"
+          action={
+            <Link href="/mis-pedidos" className="btn btn-primary">
+              Volver a mis pedidos
+            </Link>
+          }
+        />
+      </div>
+    );
   }
 
-  const statusEmoji = orderHistoryService.getStatusEmoji(order.estado);
-  const statusLabel = orderHistoryService.getStatusLabel(order.estado);
-  const orderDate = new Date(order.creado_en).toLocaleDateString("es-AR", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  const statusColors: Record<string, string> = {
-    pendiente: "bg-warning-soft text-warning",
-    confirmado: "bg-info-soft text-info",
-    en_preparacion: "bg-highlight-soft text-highlight",
-    en_trayecto: "bg-action-soft text-action",
-    entregado: "bg-success-soft text-success",
-    cancelado: "bg-danger-soft text-danger",
-  };
+  const subtotal = order.monto_total - order.monto_envio;
 
   return (
-    <div className="page-container py-section space-y-8">
-      {/* Header */}
-      <div>
-        <Link href="/mis-pedidos" className="text-link hover:underline text-sm">
-          ← Volver a mis pedidos
-        </Link>
-        <h1 className="text-3xl font-bold mt-4 mb-2">
-          Pedido #{order.id.slice(0, 8)}
-        </h1>
-        <p className="text-muted">{orderDate}</p>
+    <div className="page-container py-section">
+      <Link href="/mis-pedidos" className="text-sm font-medium text-link hover:underline">
+        Mis pedidos
+      </Link>
+
+      <div className="flex flex-wrap items-end justify-between gap-3 pb-8 pt-2">
+        <div>
+          <h1 className="text-title">Pedido {order.numero_pedido}</h1>
+          <p className="mt-1 text-muted">
+            A {order.emprendimiento_nombre} · {formatDate(order.created_at, true)}
+          </p>
+        </div>
+        <span className={`rounded-full px-4 py-1.5 text-sm font-medium ${ORDER_STATUS_TONE[order.estado]}`}>
+          {ORDER_STATUS_LABEL[order.estado]}
+        </span>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Items del pedido */}
-        <div className="lg:col-span-2 space-y-4">
-          <div>
-            <h2 className="text-heading mb-4">📦 Artículos ({items.length})</h2>
-            <div className="space-y-4">
-              {items.map((item) => (
-                <OrderItem key={item.detalle_id} item={item} />
-              ))}
-            </div>
-          </div>
-        </div>
+      <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
+        <section aria-labelledby="items-title" className="space-y-3">
+          <h2 id="items-title" className="text-heading">
+            Productos
+          </h2>
+          {data?.items.map((item) => <OrderItem key={item.detalle_id} item={item} />)}
+        </section>
 
-        {/* Sidebar con información */}
-        <div className="space-y-6">
-          {/* Estado */}
-          <div className="rounded-card border border-border bg-surface p-6">
-            <h3 className="text-heading mb-4">Estado</h3>
-            <div className={`px-4 py-3 rounded-control text-center font-medium ${statusColors[order.estado]}`}>
-              <span className="text-lg mr-2">{statusEmoji}</span>
-              {statusLabel}
-            </div>
-          </div>
-
-          {/* Resumen */}
-          <div className="rounded-card border border-border bg-surface p-6 space-y-3">
-            <h3 className="text-heading mb-4">Resumen</h3>
-            <div className="space-y-2">
+        <aside className="space-y-4">
+          <div className="card space-y-4 p-6">
+            <h2 className="text-heading">Resumen</h2>
+            <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted">Artículos:</span>
-                <span className="font-medium">{order.cantidad_items}</span>
+                <dt className="text-muted">Productos</dt>
+                <dd className="tabular-nums">{formatPrice(subtotal)}</dd>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted">Unidades:</span>
-                <span className="font-medium">{order.total_unidades}</span>
+                <dt className="text-muted">Envío</dt>
+                <dd className="tabular-nums">{formatPrice(order.monto_envio)}</dd>
               </div>
-              <div className="border-t border-border pt-3 mt-3 flex justify-between text-lg font-bold">
-                <span>Total:</span>
-                <span className="text-action">${order.total.toFixed(2)}</span>
-              </div>
+            </dl>
+            <div className="flex items-baseline justify-between border-t border-border pt-4">
+              <span className="font-semibold">Total</span>
+              <span className="font-display text-2xl font-bold tabular-nums">{formatPrice(order.monto_total)}</span>
             </div>
           </div>
 
-          {/* Detalles */}
-          <div className="rounded-card border border-border bg-surface p-6 space-y-3">
-            <h3 className="text-heading mb-4">Detalles</h3>
-            <div className="space-y-2 text-sm">
-              <div>
-                <p className="text-muted mb-1">Creado el:</p>
-                <p className="font-medium">{new Date(order.creado_en).toLocaleDateString("es-AR")}</p>
-              </div>
-              <div>
-                <p className="text-muted mb-1">Última actualización:</p>
-                <p className="font-medium">{new Date(order.actualizado_en).toLocaleDateString("es-AR")}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* CTA */}
-          <Link
-            href="/productos"
-            className="block text-center rounded-control bg-highlight px-4 py-3 font-medium text-on-highlight hover:opacity-90 transition-opacity"
-          >
+          {order.estado === "en_camino" && (
+            <Link href={`/tracking/${order.id}`} className="btn btn-accent w-full">
+              <TruckIcon size={18} /> Seguir el envío en vivo
+            </Link>
+          )}
+          <Link href="/productos" className="btn btn-secondary w-full">
             Seguir comprando
           </Link>
-        </div>
+        </aside>
       </div>
     </div>
   );

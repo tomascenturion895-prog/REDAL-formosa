@@ -7,7 +7,12 @@ CREATE TABLE IF NOT EXISTS calificaciones (
   puntuacion INTEGER NOT NULL CHECK (puntuacion >= 1 AND puntuacion <= 5),
   comentario TEXT,
   creado_en TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT now()
+  actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  -- se califica un producto o un repartidor, no ambos ni ninguno
+  CONSTRAINT calificaciones_un_objetivo CHECK ((producto_id IS NOT NULL) <> (repartidor_id IS NOT NULL)),
+  -- una calificación por persona y objetivo (se edita en lugar de duplicarse)
+  CONSTRAINT calificaciones_unica_por_producto UNIQUE (usuario_id, producto_id),
+  CONSTRAINT calificaciones_unica_por_repartidor UNIQUE (usuario_id, repartidor_id)
 );
 
 -- Crear índices para búsquedas rápidas

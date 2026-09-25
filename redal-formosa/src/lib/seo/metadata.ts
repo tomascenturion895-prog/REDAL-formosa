@@ -1,83 +1,24 @@
-import { Metadata } from "next";
+import type { Metadata } from "next";
 
-export const siteConfig = {
-  name: "RedAL Formosa",
-  description: "Encuentra productos y servicios de emprendedores locales en Formosa. Compra directamente de productores locales con envío rápido.",
-  url: "https://redal-formosa.com",
-  ogImage: "https://redal-formosa.com/og-image.jpg",
-  links: {
-    twitter: "https://twitter.com/redalformosa",
-    instagram: "https://instagram.com/redalformosa",
-  },
-};
+const siteName = "RedAL Formosa";
+const description = "Comprale directo a emprendedores y productores de Formosa, y recibí tu pedido en casa.";
+
+// El dominio sale de la configuración: nunca un valor inventado en el código.
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export const defaultMetadata: Metadata = {
-  metadataBase: new URL(siteConfig.url),
-  title: {
-    default: siteConfig.name,
-    template: `%s | ${siteConfig.name}`,
-  },
-  description: siteConfig.description,
-  keywords: [
-    "productos locales",
-    "Formosa",
-    "emprendedores",
-    "comercio local",
-    "compra online",
-    "envío",
-  ],
-  authors: [{ name: "RedAL Formosa", url: siteConfig.url }],
-  creator: "RedAL Formosa",
+  metadataBase: new URL(siteUrl),
+  title: { default: siteName, template: `%s | ${siteName}` },
+  description,
+  applicationName: siteName,
+  manifest: "/manifest.json",
   openGraph: {
     type: "website",
     locale: "es_AR",
-    url: siteConfig.url,
-    title: siteConfig.name,
-    description: siteConfig.description,
-    siteName: siteConfig.name,
-    images: [
-      {
-        url: siteConfig.ogImage,
-        width: 1200,
-        height: 630,
-        alt: siteConfig.name,
-      },
-    ],
+    siteName,
+    title: siteName,
+    description,
   },
-  twitter: {
-    card: "summary_large_image",
-    title: siteConfig.name,
-    description: siteConfig.description,
-    images: [siteConfig.ogImage],
-    creator: "@redalformosa",
-  },
-  icons: {
-    icon: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
-  },
-  manifest: "/manifest.json",
-  formatDetection: {
-    email: false,
-    telephone: false,
-  },
+  twitter: { card: "summary", title: siteName, description },
+  formatDetection: { email: false, telephone: false },
 };
-
-export function generateProductMetadata(product: {
-  nombre: string;
-  descripcion?: string;
-  precio: number;
-  imagen_principal?: string;
-}): Metadata {
-  return {
-    title: product.nombre,
-    description:
-      product.descripcion || `Compra ${product.nombre} en RedAL Formosa - $${product.precio}`,
-    openGraph: {
-      type: "article",
-      title: product.nombre,
-      description:
-        product.descripcion || `Compra ${product.nombre} en RedAL Formosa`,
-      images: product.imagen_principal ? [product.imagen_principal] : [],
-    },
-  };
-}

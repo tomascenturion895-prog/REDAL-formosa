@@ -1,60 +1,52 @@
-const CACHE_NAME = "redal-v1";
-const ASSETS_TO_CACHE = [
-  "/",
-  "/favicon.ico",
-  "/manifest.json",
-];
+// Service worker de RedAL. Política deliberadamente conservadora:
+//  - Solo se cachean archivos estáticos inmutables (/_next/static, íconos).
+//  - Las páginas y las llamadas a datos NUNCA se cachean: contienen información de la
+//    persona con sesión y no deben quedar disponibles para otra en el mismo dispositivo.
+//  - Sin conexión, las navegaciones muestran /offline.html.
 
-// Install event - cache assets
+const STATIC_CACHE = "redal-static-v2";
+const OFFLINE_URL = "/offline.html";
+
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
+  event.waitUntil(caches.open(STATIC_CACHE).then((cache) => cache.addAll([OFFLINE_URL, "/icon.svg"])));
   self.skipWaiting();
 });
 
-// Activate event - clean old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((key) => key !== STATIC_CACHE).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim()),
   );
-  self.clients.claim();
 });
 
-// Fetch event - network first, fallback to cache
 self.addEventListener("fetch", (event) => {
-  // Don't cache API calls or external resources
-  if (
-    event.request.url.includes("/api/") ||
-    event.request.url.includes("supabase") ||
-    event.request.method !== "GET"
-  ) {
+  const { request } = event;
+  if (request.method !== "GET") return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  // Archivos versionados por Next: el contenido nunca cambia bajo la misma URL.
+  if (url.pathname.startsWith("/_next/static/") || url.pathname === "/icon.svg") {
+    event.respondWith(
+      caches.match(request).then(
+        (cached) =>
+          cached ||
+          fetch(request).then((response) => {
+            if (response.ok) {
+              const copy = response.clone();
+              caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
+            }
+            return response;
+          }),
+      ),
+    );
     return;
   }
 
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Cache successful responses
-        if (response && response.status === 200) {
-          const cache = caches.open(CACHE_NAME);
-          cache.then((c) => c.put(event.request, response.clone()));
-        }
-        return response;
-      })
-      .catch(() => {
-        // Return cached response on error
-        return caches.match(event.request);
-      })
-  );
+  if (request.mode === "navigate") {
+    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
+  }
 });

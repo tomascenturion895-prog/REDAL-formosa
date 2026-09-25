@@ -1,99 +1,54 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth/auth-context";
-import { adminService, type AdminStats } from "@/lib/admin/admin-service";
+import Link from "next/link";
+
+import { adminRepository } from "@/lib/admin/admin-repository";
+import { formatPrice } from "@/lib/format";
+import { useAsync } from "@/lib/hooks/use-async";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function AdminDashboard() {
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<AdminStats | null>(null);
+  const { data: stats, error } = useAsync(() => adminRepository.stats(), []);
 
-  useEffect(() => {
-    checkAdminAccess();
-  }, [user]);
-
-  const checkAdminAccess = async () => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
-    const admin = await adminService.isAdmin(user.id);
-    if (!admin) {
-      router.push("/");
-      return;
-    }
-
-    setIsAdmin(true);
-    loadStats();
-  };
-
-  const loadStats = async () => {
-    try {
-      const data = await adminService.getStats();
-      setStats(data);
-    } catch (err) {
-      console.error("Error loading stats:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (authLoading || loading) {
-    return <div className="text-center py-12">Cargando...</div>;
+  if (error) {
+    return (
+      <EmptyState
+        title="No pudimos cargar las métricas"
+        description="Verificá que las migraciones de administración estén aplicadas en la base."
+      />
+    );
   }
+  if (!stats) return <div aria-busy="true" className="h-40" />;
 
-  if (!isAdmin) {
-    return <div className="text-center py-12 text-danger">No autorizado</div>;
-  }
+  const cards: [string, string][] = [
+    ["Usuarios", String(stats.total_usuarios)],
+    ["Productos", String(stats.total_productos)],
+    ["Pedidos", String(stats.total_pedidos)],
+    ["Calificaciones", String(stats.total_calificaciones)],
+    ["Ingresos por pedidos pagados", formatPrice(stats.ingresos_totales)],
+    ["Pedidos entregados", String(stats.pedidos_completados)],
+    ["Pedidos en camino", String(stats.pedidos_en_entrega)],
+  ];
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold">Bienvenido al Panel de Admin</h1>
+      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {cards.map(([label, value]) => (
+          <div key={label} className="card p-5">
+            <dt className="text-sm text-muted">{label}</dt>
+            <dd className="mt-1 font-display text-3xl font-bold tabular-nums">{value}</dd>
+          </div>
+        ))}
+      </dl>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Usuarios" value={stats?.total_usuarios || 0} icon="👥" />
-        <StatCard label="Productos" value={stats?.total_productos || 0} icon="📦" />
-        <StatCard label="Pedidos" value={stats?.total_pedidos || 0} icon="📋" />
-        <StatCard label="Calificaciones" value={stats?.total_calificaciones || 0} icon="⭐" />
+      <div className="flex flex-wrap gap-3">
+        <Link href="/admin/productos" className="btn btn-primary">
+          Revisar productos pendientes
+        </Link>
+        <Link href="/admin/usuarios" className="btn btn-secondary">
+          Administrar usuarios
+        </Link>
       </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-card border border-border bg-surface p-6">
-          <h2 className="text-heading mb-4">💰 Ingresos</h2>
-          <p className="text-3xl font-bold text-action">${(stats?.ingresos_totales || 0).toFixed(2)}</p>
-        </div>
-        <div className="rounded-card border border-border bg-surface p-6">
-          <h2 className="text-heading mb-4">🚚 En Tránsito</h2>
-          <p className="text-3xl font-bold text-highlight">{stats?.pedidos_en_entrega || 0}</p>
-        </div>
-      </div>
-
-      <div className="rounded-card border border-border bg-surface p-6">
-        <h2 className="text-heading mb-4">⚡ Acciones</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <a href="/admin/productos" className="rounded-control bg-action px-4 py-3 text-center font-medium text-on-action hover:bg-action-hover">
-            📦 Validar
-          </a>
-          <a href="/admin/usuarios" className="rounded-control bg-highlight px-4 py-3 text-center font-medium text-on-highlight hover:opacity-90">
-            👥 Usuarios
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value, icon }: { label: string; value: number; icon: string }) {
-  return (
-    <div className="rounded-card border border-border bg-surface p-6">
-      <p className="text-2xl mb-2">{icon}</p>
-      <p className="text-sm text-muted">{label}</p>
-      <p className="text-3xl font-bold text-foreground mt-2">{value}</p>
     </div>
   );
 }

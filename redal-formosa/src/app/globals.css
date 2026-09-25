@@ -178,6 +178,149 @@
   padding-inline: var(--spacing-gutter);
 }
 
+/* Componentes base sobre los tokens semánticos ---------------------------- */
+
+@utility btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-control);
+  padding: 0.625rem 1.125rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  transition:
+    background-color 150ms var(--ease-soft),
+    border-color 150ms var(--ease-soft),
+    color 150ms var(--ease-soft);
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+@utility btn-primary {
+  background: var(--action);
+  color: var(--on-action);
+  &:hover:not(:disabled) {
+    background: var(--action-hover);
+  }
+}
+
+@utility btn-secondary {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--foreground);
+  &:hover:not(:disabled) {
+    background: var(--surface-muted);
+  }
+}
+
+@utility btn-accent {
+  background: var(--highlight);
+  color: var(--on-highlight);
+  &:hover:not(:disabled) {
+    background: var(--color-accent-300);
+  }
+}
+
+@utility btn-ghost {
+  color: var(--foreground);
+  &:hover:not(:disabled) {
+    background: var(--surface-muted);
+  }
+}
+
+@utility btn-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  &:hover:not(:disabled) {
+    filter: brightness(0.96);
+  }
+}
+
+@utility btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+@utility field {
+  width: 100%;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  padding: 0.625rem 0.75rem;
+  color: var(--foreground);
+  &::placeholder {
+    color: var(--muted);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 1px;
+  }
+}
+
+@utility card {
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+@utility chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  padding: 0.375rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground);
+  transition:
+    background-color 150ms var(--ease-soft),
+    border-color 150ms var(--ease-soft);
+  &:hover {
+    background: var(--surface-muted);
+  }
+  &[aria-pressed="true"] {
+    border-color: var(--action);
+    background: var(--action);
+    color: var(--on-action);
+  }
+}
+
+/* Etiqueta de precio de feria: el rasgo distintivo del sistema */
+@utility price-tag {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  border-radius: 0.5rem;
+  background: var(--highlight);
+  padding: 0.125rem 0.75rem 0.125rem 1.5rem;
+  color: var(--on-highlight);
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.5rem;
+  font-variant-numeric: tabular-nums;
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0.5rem;
+    top: 50%;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-top: -0.25rem;
+    border-radius: 9999px;
+    background: var(--surface);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.14);
+  }
+}
+
 @layer base {
   html {
     color-scheme: light dark;

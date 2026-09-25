@@ -1,163 +1,93 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth/auth-context";
-import { orderHistoryService, type OrderSummary, type OrderStats } from "@/lib/orders/order-history-service";
+
+import { useRequireAuth } from "@/lib/auth/use-require-auth";
+import { ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/domain/order-status";
+import { formatPrice } from "@/lib/format";
+import { useAsync } from "@/lib/hooks/use-async";
+import { ordersRepository } from "@/lib/orders/orders-repository";
+import { PageHeader } from "@/components/layout/page-header";
 import { OrderCard } from "@/components/orders/order-card";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PackageIcon } from "@/components/ui/icons";
+
+async function loadHistory(userId: string) {
+  const [orders, stats] = await Promise.all([ordersRepository.list(userId), ordersRepository.stats(userId)]);
+  return { orders, stats };
+}
 
 export default function MisPedidosPage() {
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
-  const [orders, setOrders] = useState<OrderSummary[]>([]);
-  const [stats, setStats] = useState<OrderStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<string | null>(null);
+  const { user, pending } = useRequireAuth();
+  const [filter, setFilter] = useState<OrderStatus | null>(null);
 
-  useEffect(() => {
-    if (authLoading) return;
+  const { data, error, loading } = useAsync(() => loadHistory(user!.id), [user?.id], { enabled: Boolean(user) });
 
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+  if (pending || loading) return <div className="page-container py-section" aria-busy="true" />;
 
-    loadData();
-  }, [user, authLoading]);
-
-  const loadData = async () => {
-    try {
-      const ordersData = await orderHistoryService.getOrders(user!.id);
-      setOrders(ordersData);
-
-      const statsData = await orderHistoryService.getStats(user!.id);
-      setStats(statsData);
-    } catch (err) {
-      console.error("Error loading data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredOrders = filterStatus
-    ? orders.filter((o) => o.estado === filterStatus)
-    : orders;
-
-  const statusOptions = [
-    { value: "pendiente", label: "⏳ Pendiente" },
-    { value: "confirmado", label: "✓ Confirmado" },
-    { value: "en_preparacion", label: "📦 En preparación" },
-    { value: "en_trayecto", label: "🚚 En trayecto" },
-    { value: "entregado", label: "✓✓ Entregado" },
-    { value: "cancelado", label: "✗ Cancelado" },
-  ];
-
-  if (authLoading || loading) {
-    return <div className="text-center py-12">Cargando...</div>;
-  }
+  const orders = data?.orders ?? [];
+  const stats = data?.stats;
+  const statusesInUse = [...new Set(orders.map((o) => o.estado))];
+  const visible = orders.filter((o) => !filter || o.estado === filter);
 
   return (
-    <div className="page-container py-section space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">📋 Mis Pedidos</h1>
-        <p className="text-muted">Historial de compras y detalles</p>
-      </div>
+    <div className="page-container py-section">
+      <PageHeader title="Mis pedidos" description="Seguí el estado de tus compras y revisá lo que pediste." />
 
-      {/* Estadísticas */}
-      {stats && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="rounded-card border border-border bg-surface p-4">
-            <p className="text-sm text-muted">Total pedidos</p>
-            <p className="text-3xl font-bold text-foreground mt-1">
-              {stats.total_pedidos}
-            </p>
-          </div>
-          <div className="rounded-card border border-border bg-surface p-4">
-            <p className="text-sm text-muted">Gasto total</p>
-            <p className="text-3xl font-bold text-action mt-1">
-              ${stats.gasto_total?.toFixed(2) || "0.00"}
-            </p>
-          </div>
-          <div className="rounded-card border border-border bg-surface p-4">
-            <p className="text-sm text-muted">Promedio</p>
-            <p className="text-3xl font-bold text-highlight mt-1">
-              ${stats.gasto_promedio?.toFixed(2) || "0.00"}
-            </p>
-          </div>
-          <div className="rounded-card border border-border bg-surface p-4">
-            <p className="text-sm text-muted">Productos</p>
-            <p className="text-3xl font-bold text-foreground mt-1">
-              {stats.productos_diferentes}
-            </p>
-          </div>
-          <div className="rounded-card border border-border bg-surface p-4">
-            <p className="text-sm text-muted">Unidades</p>
-            <p className="text-3xl font-bold text-foreground mt-1">
-              {stats.total_unidades}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {orders.length === 0 ? (
-        <div className="rounded-card border border-border bg-surface-muted p-12 text-center space-y-4">
-          <p className="text-lg text-muted">Aún no tienes pedidos</p>
-          <Link
-            href="/productos"
-            className="inline-block rounded-control bg-action px-6 py-3 font-medium text-on-action hover:bg-action-hover"
-          >
-            Explorar productos
-          </Link>
-        </div>
+      {error ? (
+        <Alert tone="error">No pudimos cargar tus pedidos. Intentá de nuevo en unos minutos.</Alert>
+      ) : orders.length === 0 ? (
+        <EmptyState
+          icon={<PackageIcon size={36} />}
+          title="Todavía no hiciste pedidos"
+          description="Cuando compres, vas a ver acá el estado de cada pedido."
+          action={
+            <Link href="/productos" className="btn btn-primary">
+              Explorar productos
+            </Link>
+          }
+        />
       ) : (
-        <>
-          {/* Filtros de estado */}
-          <div className="space-y-3">
-            <p className="text-sm font-medium text-foreground">Filtrar por estado:</p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setFilterStatus(null)}
-                className={`px-4 py-2 rounded-control text-sm font-medium transition-colors ${
-                  filterStatus === null
-                    ? "bg-action text-on-action"
-                    : "border border-border bg-surface text-foreground hover:bg-surface-muted"
-                }`}
-              >
+        <div className="space-y-8">
+          {stats && (
+            <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {[
+                ["Pedidos", String(stats.total_pedidos)],
+                ["Gastado", formatPrice(stats.gasto_total)],
+                ["Promedio por pedido", formatPrice(stats.gasto_promedio)],
+                ["Productos distintos", String(stats.productos_diferentes)],
+              ].map(([label, value]) => (
+                <div key={label} className="card p-4">
+                  <dt className="text-sm text-muted">{label}</dt>
+                  <dd className="mt-1 font-display text-2xl font-bold tabular-nums">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+
+          {statusesInUse.length > 1 && (
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar por estado">
+              <button type="button" className="chip" aria-pressed={filter === null} onClick={() => setFilter(null)}>
                 Todos ({orders.length})
               </button>
-              {statusOptions.map((status) => {
-                const count = orders.filter((o) => o.estado === status.value).length;
-                return (
-                  <button
-                    key={status.value}
-                    onClick={() => setFilterStatus(status.value)}
-                    className={`px-4 py-2 rounded-control text-sm font-medium transition-colors ${
-                      filterStatus === status.value
-                        ? "bg-highlight text-on-highlight"
-                        : "border border-border bg-surface text-foreground hover:bg-surface-muted"
-                    }`}
-                  >
-                    {status.label} ({count})
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Lista de pedidos */}
-          {filteredOrders.length === 0 ? (
-            <div className="rounded-card border border-border bg-surface-muted p-8 text-center">
-              <p className="text-muted">No hay pedidos con ese estado</p>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 auto-rows-max">
-              {filteredOrders.map((order) => (
-                <OrderCard key={order.id} order={order} />
+              {statusesInUse.map((status) => (
+                <button key={status} type="button" className="chip" aria-pressed={filter === status} onClick={() => setFilter(status)}>
+                  {ORDER_STATUS_LABEL[status]} ({orders.filter((o) => o.estado === status).length})
+                </button>
               ))}
             </div>
           )}
-        </>
+
+          <ul className="grid gap-4 md:grid-cols-2">
+            {visible.map((order) => (
+              <li key={order.id}>
+                <OrderCard order={order} />
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

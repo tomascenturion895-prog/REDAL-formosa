@@ -1,143 +1,110 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import type { Database } from "@/lib/supabase/types";
+import { useState } from "react";
+
+import { formatPrice } from "@/lib/format";
+import { useAsync } from "@/lib/hooks/use-async";
+import { producerRepository, type Product } from "@/lib/producer/producer-repository";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PackageIcon } from "@/components/ui/icons";
+import { ProductImage } from "@/components/ui/product-image";
 
 interface ProductListProps {
   emprendimientoId: string;
 }
 
-type Producto = Database["public"]["Tables"]["productos"]["Row"];
+// Estado que ve el productor según la revisión del administrador.
+function reviewStatus(p: Product): { label: string; tone: string } {
+  if (p.validado) {
+    return p.disponible
+      ? { label: "Publicado", tone: "bg-success-soft text-success" }
+      : { label: "Oculto", tone: "bg-surface-muted text-muted" };
+  }
+  if (p.razon_rechazo) return { label: "Rechazado", tone: "bg-danger-soft text-danger" };
+  return { label: "En revisión", tone: "bg-warning-soft text-warning" };
+}
 
 export function ProductList({ emprendimientoId }: ProductListProps) {
-  const supabase = createClient();
-  const [products, setProducts] = useState<Producto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: products, error: loadError, loading, reload } = useAsync(
+    () => producerRepository.listProducts(emprendimientoId),
+    [emprendimientoId],
+  );
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadProducts();
-  }, [emprendimientoId]);
-
-  const loadProducts = async () => {
+  const run = async (action: () => Promise<void>, failure: string) => {
+    setActionError(null);
     try {
-      setLoading(true);
-      const { data, error: err } = await supabase
-        .from("productos")
-        .select("*")
-        .eq("emprendimiento_id", emprendimientoId);
-
-      if (err) throw err;
-      setProducts(data || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar productos");
-    } finally {
-      setLoading(false);
+      await action();
+      reload();
+    } catch {
+      setActionError(failure);
     }
   };
 
-  const toggleAvailability = async (productId: string, currentStatus: boolean) => {
-    try {
-      const { error: err } = await supabase
-        .from("productos")
-        // @ts-ignore
-        .update({ disponible: !currentStatus })
-        .eq("id", productId);
+  if (loading && !products) return <div aria-busy="true" className="h-24" />;
+  if (loadError) return <Alert tone="error">No pudimos cargar tus productos.</Alert>;
 
-      if (err) throw err;
-      loadProducts();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al actualizar");
-    }
-  };
-
-  const deleteProduct = async (productId: string) => {
-    if (!confirm("¿Eliminar este producto?")) return;
-
-    try {
-      const { error: err } = await supabase
-        .from("productos")
-        .delete()
-        .eq("id", productId);
-
-      if (err) throw err;
-      loadProducts();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al eliminar");
-    }
-  };
-
-  if (loading) {
-    return <div className="text-center py-8 text-muted">Cargando productos...</div>;
-  }
-
-  if (products.length === 0) {
+  if (!products || products.length === 0) {
     return (
-      <div className="rounded-card border border-border bg-surface-muted p-6 text-center">
-        <p className="text-muted">No hay productos aún</p>
-      </div>
+      <EmptyState
+        icon={<PackageIcon size={36} />}
+        title="Todavía no cargaste productos"
+        description="Agregá el primero con el botón “Nuevo producto”."
+      />
     );
   }
 
   return (
     <div className="space-y-3">
-      {error && (
-        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
-          {error}
-        </div>
-      )}
+      {actionError && <Alert tone="error">{actionError}</Alert>}
 
-      <div className="grid gap-4">
-        {products.map((product) => (
-          <div
-            key={product.id}
-            className="rounded-card border border-border bg-surface p-4 flex gap-4 items-start"
-          >
-            {product.imagen_url && (
-              <img
-                src={product.imagen_url}
-                alt={product.nombre}
-                className="w-24 h-24 object-cover rounded-control flex-shrink-0"
-              />
-            )}
-
-            <div className="flex-1">
-              <h4 className="font-medium text-foreground">{product.nombre}</h4>
-              <p className="text-sm text-muted mt-1">{product.descripcion}</p>
-              <div className="flex items-center gap-4 mt-2">
-                <span className="font-semibold text-action">
-                  ${product.precio} / {product.unidad}
-                </span>
-                <span
-                  className={`text-xs px-2 py-1 rounded-full ${
-                    product.disponible
-                      ? "bg-success-soft text-success"
-                      : "bg-warning-soft text-warning"
-                  }`}
-                >
-                  {product.disponible ? "Disponible" : "No disponible"}
-                </span>
+      <ul className="space-y-3">
+        {products.map((p) => {
+          const status = reviewStatus(p);
+          return (
+            <li key={p.id} className="card flex flex-wrap gap-4 p-4">
+              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-control bg-surface-muted">
+                <ProductImage src={p.imagen_url} sizes="80px" iconSize={26} />
               </div>
-            </div>
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => toggleAvailability(product.id, product.disponible)}
-                className="text-xs rounded-control border border-border px-3 py-1 text-foreground hover:bg-surface-muted transition-colors"
-              >
-                {product.disponible ? "Ocultar" : "Mostrar"}
-              </button>
-              <button
-                onClick={() => deleteProduct(product.id)}
-                className="text-xs rounded-control border border-danger text-danger px-3 py-1 hover:bg-danger-soft transition-colors"
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-display font-semibold">{p.nombre}</h3>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${status.tone}`}>{status.label}</span>
+                </div>
+                <p className="mt-0.5 text-sm text-muted">
+                  {formatPrice(p.precio)} · {p.unidad}
+                </p>
+                {!p.validado && p.razon_rechazo && <p className="mt-2 text-sm text-danger">Motivo del rechazo: {p.razon_rechazo}</p>}
+              </div>
+
+              <div className="flex items-start gap-2">
+                {p.validado && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => run(() => producerRepository.setProductAvailability(p.id, !p.disponible), "No pudimos actualizar el producto.")}
+                  >
+                    {p.disponible ? "Ocultar" : "Mostrar"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm"
+                  onClick={() => {
+                    if (window.confirm(`¿Eliminar “${p.nombre}”?`)) {
+                      void run(() => producerRepository.deleteProduct(p.id), "No se pudo eliminar. Si tiene pedidos, ocultalo en su lugar.");
+                    }
+                  }}
+                >
+                  Eliminar
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

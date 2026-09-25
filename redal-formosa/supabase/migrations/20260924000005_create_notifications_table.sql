@@ -35,15 +35,15 @@ CREATE TABLE IF NOT EXISTS preferencias_notificaciones (
 -- RLS para notificaciones
 ALTER TABLE notificaciones ENABLE ROW LEVEL SECURITY;
 
--- Solo admins y el usuario pueden ver sus propias notificaciones
+-- Cada usuario ve solo sus notificaciones
 CREATE POLICY "Ver propias notificaciones" ON notificaciones
   FOR SELECT
-  USING (auth.uid() = usuario_id OR auth.jwt() ->> 'role' = 'admin');
+  USING (auth.uid() = usuario_id);
 
--- Solo backend puede crear notificaciones
-CREATE POLICY "Backend crea notificaciones" ON notificaciones
+-- Solo se puede registrar una notificación a nombre propio
+CREATE POLICY "Crear propias notificaciones" ON notificaciones
   FOR INSERT
-  WITH CHECK (true); -- Restringir en aplicación
+  WITH CHECK (auth.uid() = usuario_id);
 
 -- RLS para preferencias
 ALTER TABLE preferencias_notificaciones ENABLE ROW LEVEL SECURITY;

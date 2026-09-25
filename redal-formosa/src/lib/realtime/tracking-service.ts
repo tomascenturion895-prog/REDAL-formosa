@@ -1,119 +1,84 @@
-import { createClient } from "@/lib/supabase/client";
-import type { RealtimeChannel } from "@supabase/supabase-js";
-import type { GeolocationCoordinates } from "@/lib/geolocation/geo-service";
+import { createClient, type Db } from "@/lib/supabase/client";
+import { RepositoryError, unwrapOptional } from "@/lib/supabase/repository";
+import type { Position } from "@/lib/geolocation/geolocation";
 
 export interface RepartidorUbicacion {
-  id: string;
   repartidor_id: string;
   latitud: number;
   longitud: number;
-  exactitud: number;
-  velocidad?: number;
-  rumbo?: number;
+  velocidad: number | null;
   actualizado_en: string;
 }
 
+interface LocationRow {
+  repartidor_id: string;
+  latitud: number | null;
+  longitud: number | null;
+  velocidad: number | null;
+  actualizado_en: string;
+}
+
+const toLocation = (row: LocationRow): RepartidorUbicacion | null =>
+  row.latitud === null || row.longitud === null
+    ? null
+    : {
+        repartidor_id: row.repartidor_id,
+        latitud: row.latitud,
+        longitud: row.longitud,
+        velocidad: row.velocidad,
+        actualizado_en: row.actualizado_en,
+      };
+
+/** Ubicación en tiempo real del repartidor (una fila por repartidor con su última posición). */
 export class TrackingService {
-  private supabase = createClient();
-  private channel: RealtimeChannel | null = null;
+  constructor(private readonly db: Db = createClient()) {}
 
-  async updateRepartidorLocation(
-    repartidorId: string,
-    coords: GeolocationCoordinates
-  ): Promise<void> {
-    try {
-      const { error } = await (this.supabase
-        .from("ubicaciones_tiempo_real")
-        .upsert(
-          {
-            repartidor_id: repartidorId,
-            latitud: coords.latitude,
-            longitud: coords.longitude,
-            exactitud: coords.accuracy,
-            velocidad: coords.speed || 0,
-            rumbo: coords.heading || 0,
-            actualizado_en: new Date().toISOString(),
-          } as any
-        ) as any);
-
-      if (error) throw error;
-    } catch (err) {
-      console.error("Error updating location:", err);
-      throw err;
-    }
+  async publish(repartidorId: string, position: Position): Promise<void> {
+    const { error } = await this.db.from("ubicaciones_tiempo_real").upsert(
+      {
+        repartidor_id: repartidorId,
+        latitud: position.latitude,
+        longitud: position.longitude,
+        exactitud: position.accuracy,
+        velocidad: position.speed ?? 0,
+        rumbo: position.heading ?? 0,
+      },
+      { onConflict: "repartidor_id" },
+    );
+    if (error) throw new RepositoryError(`publicar ubicación: ${error.message}`, error);
   }
 
-  subscribeToRepartidorTracking(
-    repartidorId: string,
-    onLocationUpdate: (location: RepartidorUbicacion) => void,
-    onError?: (error: Error) => void
-  ): void {
-    this.channel = this.supabase
+  async current(repartidorId: string): Promise<RepartidorUbicacion | null> {
+    const row = await unwrapOptional(
+      this.db
+        .from("ubicaciones_tiempo_real")
+        .select("repartidor_id, latitud, longitud, velocidad, actualizado_en")
+        .eq("repartidor_id", repartidorId)
+        .maybeSingle(),
+      "cargar ubicación",
+    );
+    return row ? toLocation(row) : null;
+  }
+
+  /** Avisa cada vez que cambia la ubicación. Devuelve la función que cancela la suscripción. */
+  subscribe(repartidorId: string, onUpdate: (location: RepartidorUbicacion) => void, onError?: (e: Error) => void): () => void {
+    const channel = this.db
       .channel(`tracking:${repartidorId}`)
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "ubicaciones_tiempo_real",
-          filter: `repartidor_id=eq.${repartidorId}`,
+        { event: "*", schema: "public", table: "ubicaciones_tiempo_real", filter: `repartidor_id=eq.${repartidorId}` },
+        (payload) => {
+          const location = toLocation(payload.new as LocationRow);
+          if (location) onUpdate(location);
         },
-        (payload: any) => {
-          onLocationUpdate(payload.new as RepartidorUbicacion);
-        }
       )
-      .subscribe((status: any) => {
-        if (status === "CHANNEL_ERROR" && onError) {
-          onError(new Error("Failed to subscribe to tracking updates"));
-        }
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR") onError?.(new Error("No pudimos conectarnos al seguimiento en vivo"));
       });
-  }
 
-  unsubscribeFromTracking(): void {
-    if (this.channel) {
-      this.supabase.removeChannel(this.channel);
-      this.channel = null;
-    }
-  }
-
-  async getRepartidorCurrentLocation(
-    repartidorId: string
-  ): Promise<RepartidorUbicacion | null> {
-    try {
-      const { data, error } = await this.supabase
-        .from("ubicaciones_tiempo_real")
-        .select("*")
-        .eq("repartidor_id", repartidorId)
-        .order("actualizado_en", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (error && error.code !== "PGRST116") throw error;
-      return data || null;
-    } catch (err) {
-      console.error("Error getting location:", err);
-      return null;
-    }
-  }
-
-  async getLocationHistory(
-    repartidorId: string,
-    limit: number = 100
-  ): Promise<RepartidorUbicacion[]> {
-    try {
-      const { data, error } = await this.supabase
-        .from("ubicaciones_tiempo_real")
-        .select("*")
-        .eq("repartidor_id", repartidorId)
-        .order("actualizado_en", { ascending: false })
-        .limit(limit);
-
-      if (error) throw error;
-      return data || [];
-    } catch (err) {
-      console.error("Error getting history:", err);
-      return [];
-    }
+    return () => {
+      void this.db.removeChannel(channel);
+    };
   }
 }
 
