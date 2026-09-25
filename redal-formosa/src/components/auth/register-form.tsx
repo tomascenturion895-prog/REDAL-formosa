@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { useAuthActions } from "@/lib/auth/use-auth-actions";
 import { authErrorMessage } from "@/lib/auth/messages";
+import { SocialButtons } from "@/components/auth/social-buttons";
 import { CheckIcon } from "@/components/ui/icons";
 
 export function RegisterForm() {
@@ -13,13 +14,16 @@ export function RegisterForm() {
   const { signUp } = useAuthActions();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
+  const mismatch = confirm.length > 0 && confirm !== password;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password !== confirm) return;
     setError(null);
     setLoading(true);
 
@@ -132,19 +136,40 @@ export function RegisterForm() {
           </p>
         </div>
 
-        <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-3">
+        <div>
+          <label htmlFor="confirmPassword" className="mb-1 block text-sm font-medium">
+            Confirmar contraseña
+          </label>
+          <input
+            id="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            minLength={6}
+            required
+            aria-invalid={mismatch}
+            aria-describedby={mismatch ? "confirm-error" : undefined}
+            className={`field ${mismatch ? "!border-danger" : ""}`}
+          />
+          {mismatch && (
+            <p id="confirm-error" role="alert" className="mt-1 text-xs text-danger">
+              Las contraseñas no coinciden.
+            </p>
+          )}
+        </div>
+
+        <button type="submit" disabled={loading || !confirm || mismatch} aria-busy={loading} className="btn btn-primary w-full !py-3">
           {loading ? "Creando tu cuenta…" : "Crear cuenta"}
         </button>
       </form>
 
-      <div className="my-5 flex items-center gap-3 text-xs text-muted" aria-hidden="true">
+      <div className="my-5 flex items-center gap-3 text-xs text-muted">
         <span className="h-px flex-1 bg-border" />
-        o
+        o registrate con
         <span className="h-px flex-1 bg-border" />
       </div>
-      <Link href="/login" className="btn btn-secondary w-full !py-3">
-        Ya tengo cuenta
-      </Link>
+      <SocialButtons onError={(message) => setError(message)} />
     </div>
   );
 }
