@@ -42,3 +42,60 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Error al guardar la publicación", details: e.message }, { status: 500 });
   }
 }
+
+export async function PUT(req: Request) {
+  try {
+    const { id, content } = await req.json();
+    if (!id || !content) {
+      return NextResponse.json({ error: "id y content son requeridos" }, { status: 400 });
+    }
+
+    if (!fs.existsSync(postsFile)) {
+      return NextResponse.json({ error: "Publicación no encontrada" }, { status: 404 });
+    }
+
+    const posts = JSON.parse(fs.readFileSync(postsFile, "utf8"));
+    const index = posts.findIndex((p: any) => p.id === Number(id) || p.id === id);
+
+    if (index === -1) {
+      return NextResponse.json({ error: "Publicación no encontrada" }, { status: 404 });
+    }
+
+    posts[index].content = content;
+    posts[index].updated_at = new Date().toISOString();
+
+    fs.writeFileSync(postsFile, JSON.stringify(posts, null, 2));
+    return NextResponse.json(posts[index]);
+  } catch (e: any) {
+    return NextResponse.json({ error: "Error al actualizar la publicación", details: e.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const idParam = searchParams.get("id");
+    let id = idParam ? (isNaN(Number(idParam)) ? idParam : Number(idParam)) : null;
+
+    if (!id) {
+      const body = await req.json().catch(() => null);
+      id = body?.id;
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: "id es requerido" }, { status: 400 });
+    }
+
+    if (!fs.existsSync(postsFile)) {
+      return NextResponse.json({ success: true });
+    }
+
+    let posts = JSON.parse(fs.readFileSync(postsFile, "utf8"));
+    posts = posts.filter((p: any) => p.id !== id && p.id !== Number(id));
+
+    fs.writeFileSync(postsFile, JSON.stringify(posts, null, 2));
+    return NextResponse.json({ success: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: "Error al eliminar la publicación", details: e.message }, { status: 500 });
+  }
+}

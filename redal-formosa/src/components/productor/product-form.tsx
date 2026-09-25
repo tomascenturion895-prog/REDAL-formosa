@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { stockNote, type VoiceProductDraft } from "@/lib/domain/voice-product";
-import { producerRepository } from "@/lib/producer/producer-repository";
+import { producerRepository, type Product } from "@/lib/producer/producer-repository";
 import { VoiceToProduct } from "./voice-to-product";
 import { Alert } from "@/components/ui/alert";
 import { Field } from "@/components/ui/field";
@@ -11,7 +11,9 @@ import { ProductImage } from "@/components/ui/product-image";
 
 interface ProductFormProps {
   emprendimientoId: string;
+  initialProduct?: Product;
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
 const UNITS = [
@@ -24,9 +26,19 @@ const UNITS = [
 
 const EMPTY = { nombre: "", descripcion: "", precio: "", unidad: "unidad" };
 
-export function ProductForm({ emprendimientoId, onSuccess }: ProductFormProps) {
-  const [form, setForm] = useState(EMPTY);
-  const [imageUrl, setImageUrl] = useState("");
+export function ProductForm({ emprendimientoId, initialProduct, onSuccess, onCancel }: ProductFormProps) {
+  const isEditing = Boolean(initialProduct);
+  const [form, setForm] = useState(
+    initialProduct
+      ? {
+          nombre: initialProduct.nombre,
+          descripcion: initialProduct.descripcion ?? "",
+          precio: String(initialProduct.precio),
+          unidad: initialProduct.unidad,
+        }
+      : EMPTY,
+  );
+  const [imageUrl, setImageUrl] = useState(initialProduct?.imagen_url ?? "");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,19 +77,33 @@ export function ProductForm({ emprendimientoId, onSuccess }: ProductFormProps) {
     setError(null);
     setSaving(true);
     try {
-      await producerRepository.createProduct({
-        emprendimientoId,
-        nombre: form.nombre.trim(),
-        descripcion: form.descripcion.trim(),
-        precio: parseFloat(form.precio),
-        unidad: form.unidad,
-        imagenUrl: imageUrl,
-      });
-      setForm(EMPTY);
-      setImageUrl("");
+      if (initialProduct) {
+        await producerRepository.updateProduct(initialProduct.id, {
+          nombre: form.nombre.trim(),
+          descripcion: form.descripcion.trim(),
+          precio: parseFloat(form.precio),
+          unidad: form.unidad,
+          imagenUrl: imageUrl,
+        });
+      } else {
+        await producerRepository.createProduct({
+          emprendimientoId,
+          nombre: form.nombre.trim(),
+          descripcion: form.descripcion.trim(),
+          precio: parseFloat(form.precio),
+          unidad: form.unidad,
+          imagenUrl: imageUrl,
+        });
+        setForm(EMPTY);
+        setImageUrl("");
+      }
       onSuccess?.();
     } catch {
-      setError("No pudimos crear el producto. Revisá los datos e intentá de nuevo.");
+      setError(
+        initialProduct
+          ? "No pudimos actualizar el producto. Revisá los datos e intentá de nuevo."
+          : "No pudimos crear el producto. Revisá los datos e intentá de nuevo.",
+      );
     } finally {
       setSaving(false);
     }
@@ -87,7 +113,7 @@ export function ProductForm({ emprendimientoId, onSuccess }: ProductFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && <Alert tone="error">{error}</Alert>}
 
-      <VoiceToProduct onDraft={applyDraft} />
+      {!isEditing && <VoiceToProduct onDraft={applyDraft} />}
 
       <Field id="nombre" label="Nombre del producto">
         <input id="nombre" required value={form.nombre} onChange={update("nombre")} placeholder="Ej: Miel pura de abeja" className="field" />
@@ -130,9 +156,32 @@ export function ProductForm({ emprendimientoId, onSuccess }: ProductFormProps) {
         </div>
       )}
 
-      <button type="submit" disabled={saving || uploading} aria-busy={saving || uploading} className="btn btn-primary w-full !py-3">
-        {saving ? "Guardando…" : uploading ? "Subiendo foto…" : "Agregar producto"}
-      </button>
+      <div className="flex items-center gap-3 pt-2">
+        {onCancel && (
+          <button
+            type="button"
+            className="btn btn-secondary flex-1 !py-3"
+            onClick={onCancel}
+            disabled={saving || uploading}
+          >
+            Cancelar
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={saving || uploading}
+          aria-busy={saving || uploading}
+          className="btn btn-primary flex-1 !py-3"
+        >
+          {saving
+            ? "Guardando…"
+            : uploading
+              ? "Subiendo foto…"
+              : isEditing
+                ? "Guardar cambios"
+                : "Agregar producto"}
+        </button>
+      </div>
     </form>
   );
 }

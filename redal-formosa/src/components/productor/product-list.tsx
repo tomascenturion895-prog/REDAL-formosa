@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PackageIcon } from "@/components/ui/icons";
 import { ProductImage } from "@/components/ui/product-image";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ProductForm } from "./product-form";
 
 interface ProductListProps {
   emprendimientoId: string;
@@ -33,6 +34,7 @@ export function ProductList({ emprendimientoId }: ProductListProps) {
   );
   const [actionError, setActionError] = useState<string | null>(null);
   const [productToDelete, setProductToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const run = async (action: () => Promise<void>, failure: string) => {
@@ -94,6 +96,13 @@ export function ProductList({ emprendimientoId }: ProductListProps) {
               </div>
 
               <div className="flex items-start gap-2">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setProductToEdit(p)}
+                >
+                  Editar
+                </button>
                 {p.validado && (
                   <button
                     type="button"
@@ -115,6 +124,40 @@ export function ProductList({ emprendimientoId }: ProductListProps) {
           );
         })}
       </ul>
+
+      {productToEdit && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-dialog-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+        >
+          <div className="card w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h2 id="edit-dialog-title" className="text-heading">
+                Editar producto
+              </h2>
+              <button
+                type="button"
+                onClick={() => setProductToEdit(null)}
+                className="rounded-control p-1 text-muted hover:bg-surface-muted hover:text-foreground text-sm font-medium"
+              >
+                ✕ Cerrar
+              </button>
+            </div>
+
+            <ProductForm
+              emprendimientoId={emprendimientoId}
+              initialProduct={productToEdit}
+              onSuccess={() => {
+                setProductToEdit(null);
+                reload();
+              }}
+              onCancel={() => setProductToEdit(null)}
+            />
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         isOpen={Boolean(productToDelete)}
