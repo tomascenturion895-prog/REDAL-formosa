@@ -7,14 +7,19 @@ import Link from "next/link";
 import { useAuthActions } from "@/lib/auth/use-auth-actions";
 import { authErrorMessage, safeNextPath } from "@/lib/auth/messages";
 import { PasswordInput } from "@/components/ui/password-input";
+import { SocialButtons } from "@/components/auth/social-buttons";
 
 export function LoginForm() {
   const router = useRouter();
-  const next = safeNextPath(useSearchParams().get("next"));
+  const searchParams = useSearchParams();
+  const next = safeNextPath(searchParams.get("next"));
+  const urlError = searchParams.get("error");
   const { signIn } = useAuthActions();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    urlError ? authErrorMessage(urlError) : null,
+  );
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,12 +96,21 @@ export function LoginForm() {
 
       <div className="my-5 flex items-center gap-3 text-xs text-muted" aria-hidden="true">
         <span className="h-px flex-1 bg-border" />
-        o
+        o ingresá con
         <span className="h-px flex-1 bg-border" />
       </div>
-      <Link href="/register" className="btn btn-secondary w-full !py-3">
-        Registrarme
-      </Link>
+
+      <SocialButtons onError={(msg) => setError(msg)} next={next} />
+
+      <p className="mt-6 text-center text-sm text-muted">
+        ¿No tenés cuenta todavía?{" "}
+        <Link
+          href={`/register${next !== "/" ? `?next=${encodeURIComponent(next)}` : ""}`}
+          className="font-medium text-link hover:underline"
+        >
+          Crear cuenta
+        </Link>
+      </p>
     </div>
   );
 }

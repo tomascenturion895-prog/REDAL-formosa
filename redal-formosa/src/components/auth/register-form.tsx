@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import { useAuthActions } from "@/lib/auth/use-auth-actions";
-import { authErrorMessage } from "@/lib/auth/messages";
+import { authErrorMessage, safeNextPath } from "@/lib/auth/messages";
 import { SocialButtons } from "@/components/auth/social-buttons";
 import { CheckIcon } from "@/components/ui/icons";
 import { PasswordInput } from "@/components/ui/password-input";
 
 export function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = safeNextPath(searchParams.get("next"));
   const { signUp } = useAuthActions();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,7 +45,7 @@ export function RegisterForm() {
     }
 
     if (data.session) {
-      router.push("/");
+      router.push(next);
       router.refresh();
       return;
     }
@@ -62,7 +64,10 @@ export function RegisterForm() {
           Te mandamos un enlace de confirmación a <strong className="text-foreground">{email}</strong>. Al abrirlo,
           tu cuenta queda activa.
         </p>
-        <Link href="/login" className="btn btn-secondary">
+        <Link
+          href={`/login${next !== "/" ? `?next=${encodeURIComponent(next)}` : ""}`}
+          className="btn btn-secondary"
+        >
           Ir a ingresar
         </Link>
       </div>
@@ -74,7 +79,10 @@ export function RegisterForm() {
       <h1 className="text-title">Crear cuenta</h1>
       <p className="mb-6 mt-2 text-sm text-muted">
         ¿Ya tenés cuenta?{" "}
-        <Link href="/login" className="font-medium text-link hover:underline">
+        <Link
+          href={`/login${next !== "/" ? `?next=${encodeURIComponent(next)}` : ""}`}
+          className="font-medium text-link hover:underline"
+        >
           Ingresá
         </Link>
       </p>
@@ -169,7 +177,7 @@ export function RegisterForm() {
         o registrate con
         <span className="h-px flex-1 bg-border" />
       </div>
-      <SocialButtons onError={(message) => setError(message)} />
+      <SocialButtons onError={(message) => setError(message)} next={next} />
     </div>
   );
 }
