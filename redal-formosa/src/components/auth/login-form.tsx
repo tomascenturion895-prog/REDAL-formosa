@@ -88,6 +88,15 @@ export function LoginForm() {
           {loading ? "Ingresando…" : "Ingresar"}
         </button>
       </form>
+
+      <div className="my-5 flex items-center gap-3 text-xs text-muted" aria-hidden="true">
+        <span className="h-px flex-1 bg-border" />
+        o
+        <span className="h-px flex-1 bg-border" />
+      </div>
+      <Link href="/register" className="btn btn-secondary w-full !py-3">
+        Registrarme
+      </Link>
     </div>
   );
 }
