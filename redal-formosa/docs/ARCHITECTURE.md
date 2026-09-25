@@ -72,6 +72,21 @@ lo que no corresponde.
 - Mensajes de error al usuario: en español, sin detalles internos; el detalle va a `console.error`.
 - Colores y formas salen de los tokens de `globals.css` (`bg-surface`, `text-muted`, `btn-primary`,
   `field`, `card`, `price-tag`); no se escriben valores hex en componentes.
+
+## Sistema de diseño
+
+Identidad: **crema** (fondo), **tinta** azul marino (texto), **chacra** verde (acción), **sol** ámbar
+(destacado) y **río** celeste (información). Se define en tres capas en `globals.css`: escalas crudas
+(`primary`, `accent`, `sky`, `ink`, `neutral`), tokens semánticos (`--background`, `--action`, `--muted`…) que
+cambian en modo oscuro, y utilidades de Tailwind expuestas desde esos semánticos. Para cambiar la marca
+alcanza con tocar las escalas o los semánticos; los componentes no se modifican.
+
+- Contraste: el verde 500 (`#17924E`) es solo para rellenos; el texto blanco sobre verde y los enlaces usan
+  el 700 (`#0E7A3F`, 5.2:1). Los bordes de controles usan `--border-strong` (≥3:1).
+- Elemento distintivo: la etiqueta de precio (`price-tag`) y el mapa de emprendimientos.
+- El mapa (`components/map`) dibuja solo emprendimientos con ubicación válida (`lib/domain/map.ts`). Los pines
+  se estilizan con tokens y **nunca** se arma HTML con texto de personas: el detalle es una tarjeta de React.
+  Leaflet se carga diferido (`lazy-map.tsx`) y el contenedor usa `isolate` para no tapar el encabezado fijo.
 - Imágenes de producto con `ProductImage` (`next/image`): se sirven redimensionadas y en WebP/AVIF.
 
 ## Pruebas

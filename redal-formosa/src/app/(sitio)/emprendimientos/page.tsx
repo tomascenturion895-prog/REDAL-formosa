@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { catalogRepository } from "@/lib/catalog/catalog-repository";
 import { useAsync } from "@/lib/hooks/use-async";
@@ -9,9 +10,10 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MapPinIcon, SearchIcon, StoreIcon } from "@/components/ui/icons";
 
-export default function EmprendimientosPage() {
+function EmprendimientosContent() {
   const { data: items, error } = useAsync(() => catalogRepository.listEmprendimientos(), []);
-  const [term, setTerm] = useState("");
+  // La búsqueda de la portada llega como ?q=; después la persona sigue editándola acá.
+  const [term, setTerm] = useState(useSearchParams().get("q") ?? "");
 
   const filtered = useMemo(() => {
     const t = term.trim().toLowerCase();
@@ -78,5 +80,13 @@ export default function EmprendimientosPage() {
         </ul>
       )}
     </div>
+  );
+}
+
+export default function EmprendimientosPage() {
+  return (
+    <Suspense fallback={<div className="page-container py-section" />}>
+      <EmprendimientosContent />
+    </Suspense>
   );
 }

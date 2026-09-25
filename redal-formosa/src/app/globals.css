@@ -2,25 +2,55 @@
 
 /* ==========================================================================
    Tokens de diseño — RedAL Formosa
-   Capa 1 (@theme static): escalas crudas (primary, accent, neutral) + forma/tipografía.
+   Capa 1 (@theme static): escalas crudas (primary, accent, sky, ink, neutral) + forma/tipografía.
    Capa 2 (:root):         tokens semánticos que cambian en modo oscuro.
    Capa 3 (@theme inline): expone los semánticos como utilidades (bg-surface, text-muted…).
    En componentes usar SIEMPRE los semánticos; las escalas crudas solo para casos puntuales.
+
+   Identidad: crema (fondo), tinta azul (texto), verde chacra (acción), sol (destacado), río (información).
+   Contraste: el verde 500 (#17924E) es para rellenos y gráficos; para texto blanco sobre verde
+   y para enlaces se usa el 700 (#0E7A3F), que llega a AA (5.2:1).
    ========================================================================== */
 
 @theme static {
-  /* --- Color: primary "monte" (verde profundo, acciones y marca) --- */
-  --color-primary-50: #edf8f5;
-  --color-primary-100: #d2eee7;
-  --color-primary-200: #a8ddd0;
-  --color-primary-300: #74c5b3;
-  --color-primary-400: #44a992;
-  --color-primary-500: #2a8e79;
-  --color-primary-600: #1f7362;
-  --color-primary-700: #1b5c50;
-  --color-primary-800: #184a41;
-  --color-primary-900: #143d36;
-  --color-primary-950: #09231f;
+  /* --- Color: primary "chacra" (verde de campo, acciones y marca) --- */
+  --color-primary-50: #eaf6ef;
+  --color-primary-100: #d2ebdd;
+  --color-primary-200: #a9dabf;
+  --color-primary-300: #78c39a;
+  --color-primary-400: #45ab74;
+  --color-primary-500: #17924e;
+  --color-primary-600: #138646;
+  --color-primary-700: #0e7a3f;
+  --color-primary-800: #0b6533;
+  --color-primary-900: #095029;
+  --color-primary-950: #052e17;
+
+  /* --- Color: sky "río" (celeste, información y detalles secundarios) --- */
+  --color-sky-50: #e7f5fc;
+  --color-sky-100: #c7e8f8;
+  --color-sky-200: #98d4f0;
+  --color-sky-300: #63bde6;
+  --color-sky-400: #40b0e1;
+  --color-sky-500: #2fa8de;
+  --color-sky-600: #1b8fc4;
+  --color-sky-700: #007ab0;
+  --color-sky-800: #00618c;
+  --color-sky-900: #0a4a6c;
+  --color-sky-950: #06304a;
+
+  /* --- Color: ink "tinta" (azul marino para texto y modo oscuro) --- */
+  --color-ink-50: #f1f4f8;
+  --color-ink-100: #e1e7ef;
+  --color-ink-200: #c5cfdc;
+  --color-ink-300: #a0aebf;
+  --color-ink-400: #7c8b9b;
+  --color-ink-500: #5d6e82;
+  --color-ink-600: #44576b;
+  --color-ink-700: #2c4159;
+  --color-ink-800: #123657;
+  --color-ink-900: #0b2545;
+  --color-ink-950: #061529;
 
   /* --- Color: accent "sol" (ámbar, destacados y llamadas de atención) --- */
   --color-accent-50: #fff8e6;
@@ -35,18 +65,18 @@
   --color-accent-900: #64350e;
   --color-accent-950: #391a04;
 
-  /* --- Color: neutral "piedra" (grises con leve tinte verde) --- */
-  --color-neutral-50: #f7f8f7;
-  --color-neutral-100: #eef0ee;
-  --color-neutral-200: #dfe2df;
-  --color-neutral-300: #c7ccc8;
-  --color-neutral-400: #9aa19c;
-  --color-neutral-500: #6f7772;
-  --color-neutral-600: #565d59;
-  --color-neutral-700: #424845;
-  --color-neutral-800: #2c312f;
-  --color-neutral-900: #1c201f;
-  --color-neutral-950: #0f1211;
+  /* --- Color: neutral "crema" (superficies y bordes cálidos) --- */
+  --color-neutral-50: #faf7f1;
+  --color-neutral-100: #f3eee3;
+  --color-neutral-200: #e8e2d5;
+  --color-neutral-300: #d9d1bf;
+  --color-neutral-400: #b8ae97;
+  --color-neutral-500: #8c836f;
+  --color-neutral-600: #6b634f;
+  --color-neutral-700: #4e4838;
+  --color-neutral-800: #35312a;
+  --color-neutral-900: #221f1a;
+  --color-neutral-950: #14120f;
 
   /* --- Tipografía: escala fluida para títulos (xs–2xl siguen los defaults de Tailwind) --- */
   --text-heading: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
@@ -70,8 +100,8 @@
   --radius-sheet: 1.5rem; /* modales, paneles, bottom sheets */
 
   /* --- Sombras --- */
-  --shadow-card: 0 1px 2px rgb(15 18 17 / 0.06), 0 2px 8px rgb(15 18 17 / 0.05);
-  --shadow-pop: 0 8px 24px -4px rgb(15 18 17 / 0.16);
+  --shadow-card: 0 1px 2px rgb(11 37 69 / 0.06), 0 2px 8px rgb(11 37 69 / 0.05);
+  --shadow-pop: 0 8px 24px -4px rgb(11 37 69 / 0.18);
 
   /* --- Layout --- */
   --container-page: 72rem; /* max-w-page: ancho de página */
@@ -88,17 +118,18 @@
   --background: var(--color-neutral-50);
   --surface: #ffffff;
   --surface-muted: var(--color-neutral-100);
-  --foreground: var(--color-neutral-900);
-  --muted: var(--color-neutral-600);
+  --foreground: var(--color-ink-900);
+  --muted: var(--color-ink-600);
   --border: var(--color-neutral-200);
-  --border-strong: var(--color-neutral-300);
+  /* Bordes de controles interactivos: 3:1 sobre blanco y sobre crema (WCAG 1.4.11). */
+  --border-strong: var(--color-ink-400);
 
   --action: var(--color-primary-700);
   --action-hover: var(--color-primary-800);
   --on-action: #ffffff;
   --link: var(--color-primary-700);
   --highlight: var(--color-accent-400);
-  --on-highlight: var(--color-neutral-950);
+  --on-highlight: var(--color-ink-950);
   --ring: var(--color-primary-500);
 
   --success: var(--color-primary-700);
@@ -107,36 +138,36 @@
   --warning-soft: var(--color-accent-50);
   --danger: #b3311f;
   --danger-soft: #fbe9e5;
-  --info: #2563a8;
-  --info-soft: #e4eefa;
+  --info: var(--color-sky-800);
+  --info-soft: var(--color-sky-50);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: var(--color-neutral-950);
-    --surface: var(--color-neutral-900);
-    --surface-muted: var(--color-neutral-800);
+    --background: var(--color-ink-950);
+    --surface: var(--color-ink-900);
+    --surface-muted: var(--color-ink-800);
     --foreground: var(--color-neutral-50);
-    --muted: var(--color-neutral-400);
-    --border: var(--color-neutral-800);
-    --border-strong: var(--color-neutral-700);
+    --muted: var(--color-ink-300);
+    --border: #1e3f63;
+    --border-strong: var(--color-ink-500);
 
     --action: var(--color-primary-400);
     --action-hover: var(--color-primary-300);
-    --on-action: var(--color-neutral-950);
+    --on-action: var(--color-ink-950);
     --link: var(--color-primary-300);
     --highlight: var(--color-accent-300);
-    --on-highlight: var(--color-neutral-950);
+    --on-highlight: var(--color-ink-950);
     --ring: var(--color-primary-400);
 
     --success: var(--color-primary-300);
-    --success-soft: #10302a;
+    --success-soft: #0f3b2a;
     --warning: var(--color-accent-300);
     --warning-soft: #33240a;
     --danger: #f08070;
     --danger-soft: #3a1a15;
-    --info: #7db3ee;
-    --info-soft: #13233a;
+    --info: var(--color-sky-300);
+    --info-soft: #0f2e48;
   }
 }
 
@@ -360,7 +391,7 @@
 
   ::selection {
     background: var(--color-accent-300);
-    color: var(--color-neutral-950);
+    color: var(--color-ink-950);
   }
 
   @media (prefers-reduced-motion: reduce) {

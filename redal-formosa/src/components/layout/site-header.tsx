@@ -1,6 +1,6 @@
 import { Suspense } from "react";
-import Link from "next/link";
 
+import { Logo } from "@/components/brand/logo";
 import { SearchBox } from "@/components/search/search-box";
 import { NavLinks } from "./nav-links";
 import { HeaderActions } from "./header-actions";
@@ -8,16 +8,10 @@ import { HeaderActions } from "./header-actions";
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">
-      <div className="page-container flex h-16 items-center gap-4 lg:gap-6">
-        <Link
-          href="/"
-          className="font-display text-xl font-bold leading-none tracking-tight text-action"
-        >
-          RedAL
-          <span className="ml-1.5 font-medium text-foreground">Formosa</span>
-        </Link>
+      <div className="page-container flex h-[4.5rem] items-center gap-4 lg:gap-6">
+        <Logo descriptor />
 
-        <div className="hidden md:block">
+        <div className="ml-2 hidden md:block">
           <NavLinks />
         </div>
 
