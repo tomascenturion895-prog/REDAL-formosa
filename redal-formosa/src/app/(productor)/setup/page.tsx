@@ -27,6 +27,7 @@ export default function ProductorSetupPage() {
   // Si ya creó su emprendimiento, el asistente sigue desde el paso siguiente (sin duplicarlo).
   const { data: existingId, loading } = useAsync(() => producerRepository.firstEmprendimientoId(user!.id), [user?.id], {
     enabled: Boolean(user),
+    scope: user?.id,
   });
 
   const [step, setStep] = useState<Step | null>(null);

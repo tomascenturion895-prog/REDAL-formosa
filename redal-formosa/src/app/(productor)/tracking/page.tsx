@@ -20,7 +20,7 @@ async function loadAssignments(userId: string) {
 
 export default function RepartidorTrackingPage() {
   const { user, pending } = useRequireAuth();
-  const { data, loading } = useAsync(() => loadAssignments(user!.id), [user?.id], { enabled: Boolean(user) });
+  const { data, loading } = useAsync(() => loadAssignments(user!.id), [user?.id], { enabled: Boolean(user), scope: user?.id });
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   if (pending || loading) return <div className="h-40" aria-busy="true" />;

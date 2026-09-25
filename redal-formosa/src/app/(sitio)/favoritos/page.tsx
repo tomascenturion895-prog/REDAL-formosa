@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 
 import { useRequireAuth } from "@/lib/auth/use-require-auth";
+import { useUserScopedState } from "@/lib/auth/use-user-scoped-state";
 import { useAsync } from "@/lib/hooks/use-async";
 import { wishlistRepository } from "@/lib/wishlist/wishlist-repository";
 import { PageHeader } from "@/components/layout/page-header";
@@ -16,9 +16,10 @@ export default function FavoritosPage() {
   const { user, pending } = useRequireAuth();
   const { data, error, loading } = useAsync(() => wishlistRepository.listProducts(user!.id), [user?.id], {
     enabled: Boolean(user),
+    scope: user?.id,
   });
   // Los que la persona quita en esta pantalla desaparecen de la lista sin recargar.
-  const [removed, setRemoved] = useState<Set<string>>(new Set());
+  const [removed, setRemoved] = useUserScopedState<Set<string>>(() => new Set());
 
   if (pending || loading) return <div className="page-container py-section" aria-busy="true" />;
 

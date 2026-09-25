@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/lib/auth/auth-context";
+import { useUserScopedState } from "@/lib/auth/use-user-scoped-state";
 import { useAsync } from "@/lib/hooks/use-async";
 import { wishlistRepository } from "@/lib/wishlist/wishlist-repository";
 import { HeartIcon } from "@/components/ui/icons";
@@ -19,12 +20,13 @@ interface WishlistButtonProps {
 export function WishlistButton({ productId, favorite, onToggle, variant = "icon" }: WishlistButtonProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const [own, setOwn] = useState<boolean | null>(null);
+  const [own, setOwn] = useUserScopedState<boolean | null>(() => null);
   const [busy, setBusy] = useState(false);
 
   // Solo consulta por su cuenta cuando el padre no le informó el estado.
   const { data: fetched } = useAsync(() => wishlistRepository.isFavorite(user!.id, productId), [user?.id, productId], {
     enabled: favorite === undefined && Boolean(user),
+    scope: user?.id,
   });
   const isFavorite = favorite ?? own ?? fetched ?? false;
 

@@ -21,7 +21,7 @@ export default function PedidoDetallePage() {
   const { id: orderId } = useParams<{ id: string }>();
   const { user, pending } = useRequireAuth();
 
-  const { data, loading } = useAsync(() => loadOrder(orderId, user!.id), [orderId, user?.id], { enabled: Boolean(user) });
+  const { data, loading } = useAsync(() => loadOrder(orderId, user!.id), [orderId, user?.id], { enabled: Boolean(user), scope: user?.id });
 
   if (pending || loading) return <div className="page-container py-section" aria-busy="true" />;
 

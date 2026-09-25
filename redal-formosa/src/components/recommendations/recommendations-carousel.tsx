@@ -23,6 +23,7 @@ export function RecommendationsCarousel({ title, description, kind, productId, l
   const needsUser = kind === "personalized";
   const { data: products } = useAsync(() => recommendationsRepository.load(kind, limit, productId), [kind, limit, productId, user?.id], {
     enabled: needsUser ? Boolean(user) && !authLoading : true,
+    scope: user?.id ?? null,
   });
 
   if (!products || products.length === 0) return null;
