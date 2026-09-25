@@ -6,6 +6,7 @@ import { adminRepository } from "@/lib/admin/admin-repository";
 import { formatPrice } from "@/lib/format";
 import { useAsync } from "@/lib/hooks/use-async";
 import { EmptyState } from "@/components/ui/empty-state";
+import { VoicePostCreator } from "@/components/producer/VoicePostCreator";
 
 export default function AdminDashboard() {
   const { data: stats, error } = useAsync(() => adminRepository.stats(), []);
@@ -32,6 +33,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
+      <VoicePostCreator />
       
       {/* Botones de acción */}
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
