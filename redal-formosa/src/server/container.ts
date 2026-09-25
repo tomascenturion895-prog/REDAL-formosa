@@ -1,4 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { OpenAiProductExtractor } from "./ai/openai-product-extractor";
+import { OpenAiWhisper } from "./ai/openai-whisper";
+import { VoiceCatalogService } from "./ai/voice-catalog-service";
 import { EventBus } from "./events/event-bus";
 import type { OrderEvents } from "./events/order-events";
 import { OrderNotifier } from "./notifications/order-notifier";
@@ -61,10 +64,19 @@ export const getBankAccountService = lazy(() => {
   return new BankAccountService(createAdminClient(), cipher);
 });
 
+export const getVoiceCatalogService = lazy(
+  () =>
+    new VoiceCatalogService(
+      new OpenAiWhisper(process.env.OPENAI_API_KEY),
+      new OpenAiProductExtractor(process.env.OPENAI_API_KEY),
+    ),
+);
+
 // Límites por clave (usuario o IP). Frenan abusos sin molestar el uso normal.
 export const limiters = {
   checkout: new InMemoryRateLimiter({ limit: 10, windowMs: 60_000 }),
   bankAccount: new InMemoryRateLimiter({ limit: 5, windowMs: 60_000 }),
+  voiceCatalog: new InMemoryRateLimiter({ limit: 10, windowMs: 60_000 }),
   webhook: new InMemoryRateLimiter({ limit: 300, windowMs: 60_000 }),
 };
 

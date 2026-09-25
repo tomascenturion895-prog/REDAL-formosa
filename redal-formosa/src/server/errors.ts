@@ -1,7 +1,8 @@
-export type ServiceErrorCode = "unauthorized" | "not_found" | "conflict" | "bad_request" | "unavailable" | "rate_limited";
+export type ServiceErrorCode = "unauthorized" | "forbidden" | "not_found" | "conflict" | "bad_request" | "unavailable" | "rate_limited";
 
 const STATUS: Record<ServiceErrorCode, number> = {
   unauthorized: 401,
+  forbidden: 403,
   not_found: 404,
   conflict: 409,
   bad_request: 400,

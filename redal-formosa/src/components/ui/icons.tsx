@@ -140,7 +140,20 @@ export const SunIcon =(p: IconProps) => (
   </Svg>
 );
 
-export const MoonIcon = (p: IconProps) => (
+export const MicIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="9" y="3" width="6" height="11" rx="3" />
+    <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" />
+  </Svg>
+);
+
+export const StopIcon = (p: IconProps) => (
+  <Svg {...p} fill="currentColor">
+    <rect x="6" y="6" width="12" height="12" rx="2.5" />
+  </Svg>
+);
+
+export const MoonIcon =(p: IconProps) => (
   <Svg {...p}>
     <path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z" />
   </Svg>
