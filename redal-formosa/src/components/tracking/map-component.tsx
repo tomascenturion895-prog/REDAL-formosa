@@ -57,7 +57,7 @@ export default function MapComponent({ repartidorLocation, destino, className = 
     else courierMarker.current = L.marker(courier, { icon: dot("bg-highlight") }).addTo(instance).bindPopup("Repartidor");
 
     if (route.current) route.current.setLatLngs([courier, target]);
-    else route.current = L.polyline([courier, target], { color: "#1b5c50", weight: 3, opacity: 0.7 }).addTo(instance);
+    else route.current = L.polyline([courier, target], { color: "#0e7a3f", weight: 3, opacity: 0.7 }).addTo(instance);
 
     instance.fitBounds(L.latLngBounds([courier, target]).pad(0.2));
   }, [repartidorLocation, destino.lat, destino.lng]);

@@ -1,15 +1,16 @@
 import Link from "next/link";
 
-import { siteName } from "@/lib/navigation";
+import { Logo } from "@/components/brand/logo";
+import { siteTagline } from "@/lib/navigation";
 
 export function SiteFooter() {
   return (
     <footer className="border-t border-border bg-surface">
       <div className="page-container grid gap-8 py-10 text-sm sm:grid-cols-[1.5fr_1fr_1fr]">
         <div>
-          <p className="font-display text-lg font-bold text-action">{siteName}</p>
-          <p className="mt-2 max-w-xs text-muted">
-            Lo que producen los emprendedores de Formosa, directo a tu casa.
+          <Logo />
+          <p className="mt-3 max-w-xs text-muted">
+            {siteTagline}: lo que producen los emprendedores de Formosa, directo a tu casa.
           </p>
         </div>
         <nav aria-label="Comprar" className="flex flex-col gap-2">
@@ -19,6 +20,9 @@ export function SiteFooter() {
           </Link>
           <Link href="/emprendimientos" className="text-muted hover:text-foreground">
             Emprendimientos
+          </Link>
+          <Link href="/mapa" className="text-muted hover:text-foreground">
+            Mapa
           </Link>
           <Link href="/mis-pedidos" className="text-muted hover:text-foreground">
             Mis pedidos
