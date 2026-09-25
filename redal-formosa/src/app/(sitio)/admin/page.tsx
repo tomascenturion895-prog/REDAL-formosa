@@ -31,24 +31,49 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="space-y-8">
-      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map(([label, value]) => (
-          <div key={label} className="card p-5">
-            <dt className="text-sm text-muted">{label}</dt>
-            <dd className="mt-1 font-display text-3xl font-bold tabular-nums">{value}</dd>
-          </div>
-        ))}
-      </dl>
-
-      <div className="flex flex-wrap gap-3">
-        <Link href="/admin/productos" className="btn btn-primary">
+    <div className="flex flex-col gap-6">
+      
+      {/* Botones de acción */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <Link 
+          href="/admin/productos" 
+          className="btn btn-primary w-full px-6 py-2 shadow-sm sm:w-auto"
+        >
           Revisar productos pendientes
         </Link>
-        <Link href="/admin/usuarios" className="btn btn-secondary">
+        <Link 
+          href="/admin/usuarios" 
+          className="btn btn-secondary w-full bg-surface px-6 py-2 shadow-sm sm:w-auto"
+        >
           Administrar usuarios
         </Link>
       </div>
+
+      {/* Grilla de métricas compacta */}
+      <section aria-label="Métricas principales">
+        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {cards.map(([label, value]) => {
+            const isIngresos = label.includes("Ingresos");
+            return (
+              <div 
+                key={label} 
+                className={`group flex flex-col justify-between rounded-xl border p-5 shadow-sm transition-all hover:shadow-md ${
+                  isIngresos 
+                    ? "border-action bg-action/5 hover:border-action/80" 
+                    : "border-border bg-surface hover:border-border-strong"
+                }`}
+              >
+                <dt className={`text-sm font-medium ${isIngresos ? "text-action" : "text-muted"}`}>
+                  {label}
+                </dt>
+                <dd className={`mt-2 font-display text-3xl font-bold tracking-tight tabular-nums ${isIngresos ? "text-action" : "text-foreground"}`}>
+                  {value}
+                </dd>
+              </div>
+            );
+          })}
+        </dl>
+      </section>
     </div>
   );
 }
