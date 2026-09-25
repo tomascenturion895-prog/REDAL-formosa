@@ -1,127 +1,127 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import type { Database } from "@/lib/supabase/types";
 
-type Pedido = Database["public"]["Tables"]["pedidos"]["Row"];
+import { useRequireAuth } from "@/lib/auth/use-require-auth";
+import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/domain/order-status";
+import { formatPrice } from "@/lib/format";
+import { useAsync } from "@/lib/hooks/use-async";
+import { ordersRepository } from "@/lib/orders/orders-repository";
+import { EmptyState } from "@/components/ui/empty-state";
+import { CheckIcon, PackageIcon } from "@/components/ui/icons";
+
+const POLL_MS = 4000;
+const MAX_POLLS = 8;
 
 function ConfirmacionContent() {
-  const searchParams = useSearchParams();
-  const pedidoId = searchParams.get("pedido");
-  const supabase = createClient();
-  const [pedido, setPedido] = useState<Pedido | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const params = useSearchParams();
+  const pedidoId = params.get("pedido");
+  const returnStatus = params.get("status");
+  const { user, pending } = useRequireAuth();
 
+  const { data: pedido, loading, reload } = useAsync(() => ordersRepository.getConfirmation(pedidoId!), [pedidoId], {
+    enabled: Boolean(user && pedidoId),
+  });
+
+  // Al volver de MercadoPago el webhook puede tardar unos segundos en confirmar el pago.
+  const waitingForWebhook = pedido?.estado === "pendiente_pago" && returnStatus === "approved";
   useEffect(() => {
-    if (pedidoId) {
-      loadPedido();
-    }
-  }, [pedidoId]);
+    if (!waitingForWebhook) return;
+    let polls = 0;
+    const timer = setInterval(() => {
+      if (++polls > MAX_POLLS) clearInterval(timer);
+      else reload();
+    }, POLL_MS);
+    return () => clearInterval(timer);
+  }, [waitingForWebhook, reload]);
 
-  const loadPedido = async () => {
-    if (!pedidoId) return;
-    try {
-      const { data, error: err } = await supabase
-        .from("pedidos")
-        .select("*")
-        .eq("id", pedidoId)
-        .single();
-
-      if (err) throw err;
-      setPedido(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error cargando pedido");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return <div className="page-container py-section text-center">Cargando...</div>;
-  }
+  if (pending || loading) return <div className="page-container py-section" aria-busy="true" />;
 
   if (!pedido) {
     return (
       <div className="page-container py-section">
-        <div className="max-w-2xl mx-auto text-center">
-          <p className="text-muted">Pedido no encontrado</p>
-          <a
-            href="/emprendimientos"
-            className="mt-4 inline-block rounded-control bg-action px-6 py-3 font-medium text-on-action hover:bg-action-hover"
-          >
-            Volver al catálogo
-          </a>
-        </div>
+        <EmptyState
+          icon={<PackageIcon size={36} />}
+          title="No encontramos este pedido"
+          description="Revisá que hayas iniciado sesión con la cuenta con la que compraste."
+          action={
+            <Link href="/mis-pedidos" className="btn btn-primary">
+              Ver mis pedidos
+            </Link>
+          }
+        />
       </div>
     );
   }
 
+  const paid = pedido.estado !== "pendiente_pago" && pedido.estado !== "cancelado";
+  const heading = paid
+    ? "¡Pedido confirmado!"
+    : waitingForWebhook
+      ? "Estamos confirmando tu pago"
+      : returnStatus === "failure"
+        ? "El pago no se completó"
+        : "Tu pedido está pendiente de pago";
+
+  const detail = paid
+    ? "El emprendimiento ya recibió tu pedido y lo está preparando."
+    : waitingForWebhook
+      ? "MercadoPago nos avisa en unos segundos. Podés cerrar esta página: lo vas a ver en Mis pedidos."
+      : "Guardamos tu pedido. Se confirma cuando se acredita el pago.";
+
   return (
     <div className="page-container py-section">
-      <div className="max-w-2xl mx-auto">
-        <div className="rounded-card border border-success bg-surface p-8 text-center mb-8">
-          <div className="text-6xl mb-4">✓</div>
-          <h1 className="text-title text-success mb-2">¡Pedido confirmado!</h1>
-          <p className="text-muted">Tu pedido ha sido registrado correctamente.</p>
+      <div className="mx-auto max-w-2xl space-y-6">
+        <div className="card flex flex-col items-center gap-3 p-8 text-center">
+          <span
+            className={`flex h-14 w-14 items-center justify-center rounded-full ${
+              paid ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
+            }`}
+          >
+            {paid ? <CheckIcon size={28} /> : <PackageIcon size={28} />}
+          </span>
+          <h1 className="text-title">{heading}</h1>
+          <p className="max-w-md text-muted">{detail}</p>
         </div>
 
-        <div className="rounded-card border border-border bg-surface p-6 space-y-4">
+        <dl className="card grid gap-5 p-6 sm:grid-cols-2">
           <div>
-            <p className="text-sm text-muted">Número de pedido</p>
-            <p className="text-lg font-semibold text-foreground">{pedido.numero_pedido}</p>
+            <dt className="text-sm text-muted">Número de pedido</dt>
+            <dd className="mt-1 font-semibold">{pedido.numero_pedido}</dd>
           </div>
-
           <div>
-            <p className="text-sm text-muted">Estado</p>
-            <p className="inline-block mt-1 px-3 py-1 rounded-full bg-info-soft text-info text-sm font-medium">
-              Pendiente de pago
-            </p>
+            <dt className="text-sm text-muted">Estado</dt>
+            <dd className="mt-1">
+              <span className={`inline-block rounded-full px-3 py-1 text-sm font-medium ${ORDER_STATUS_TONE[pedido.estado]}`}>
+                {ORDER_STATUS_LABEL[pedido.estado]}
+              </span>
+            </dd>
           </div>
-
           <div>
-            <p className="text-sm text-muted">Monto total</p>
-            <p className="text-2xl font-bold text-action">${pedido.monto_total.toFixed(2)}</p>
+            <dt className="text-sm text-muted">Total</dt>
+            <dd className="mt-1 font-display text-2xl font-bold">{formatPrice(pedido.monto_total)}</dd>
           </div>
-
           <div>
-            <p className="text-sm text-muted">Dirección de entrega</p>
-            <p className="text-foreground mt-1">{pedido.direccion_entrega}</p>
+            <dt className="text-sm text-muted">Entrega en</dt>
+            <dd className="mt-1">{pedido.direccion_entrega}</dd>
           </div>
-
           {pedido.nota_cliente && (
-            <div>
-              <p className="text-sm text-muted">Notas</p>
-              <p className="text-foreground mt-1">{pedido.nota_cliente}</p>
+            <div className="sm:col-span-2">
+              <dt className="text-sm text-muted">Notas</dt>
+              <dd className="mt-1">{pedido.nota_cliente}</dd>
             </div>
           )}
-        </div>
+        </dl>
 
-        <div className="mt-8 space-y-3">
-          <div className="rounded-control bg-info-soft p-4 text-sm text-info">
-            <p className="font-medium">¿Qué sigue?</p>
-            <p className="mt-2">
-              Recibirás un email de confirmación con los detalles de tu pedido y el estado de tu entrega.
-            </p>
-          </div>
-
-          <div className="flex gap-3">
-            <a
-              href="/emprendimientos"
-              className="flex-1 rounded-control bg-action px-4 py-3 font-medium text-on-action text-center hover:bg-action-hover"
-            >
-              Seguir comprando
-            </a>
-            <a
-              href="/"
-              className="flex-1 rounded-control border border-border px-4 py-3 font-medium text-foreground text-center hover:bg-surface-muted"
-            >
-              Volver a inicio
-            </a>
-          </div>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Link href={`/mis-pedidos/${pedido.id}`} className="btn btn-primary flex-1">
+            Ver detalle del pedido
+          </Link>
+          <Link href="/productos" className="btn btn-secondary flex-1">
+            Seguir comprando
+          </Link>
         </div>
       </div>
     </div>
@@ -130,7 +130,7 @@ function ConfirmacionContent() {
 
 export default function ConfirmacionPage() {
   return (
-    <Suspense fallback={<div className="page-container py-section text-center">Cargando...</div>}>
+    <Suspense fallback={<div className="page-container py-section" />}>
       <ConfirmacionContent />
     </Suspense>
   );

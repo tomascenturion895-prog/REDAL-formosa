@@ -1,106 +1,101 @@
 "use client";
 
-import { Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+
 import { useAuth } from "@/lib/auth/auth-context";
+import { useCart } from "@/lib/cart/cart-context";
+import { formatPrice } from "@/lib/format";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
+import { EmptyState } from "@/components/ui/empty-state";
+import { CartIcon, UserIcon } from "@/components/ui/icons";
 
-function CheckoutContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+export default function CheckoutPage() {
   const { user, loading } = useAuth();
+  const { items, subtotal, envio, total } = useCart();
 
-  const monto = parseFloat(searchParams.get("monto") || "0");
-  const direccion = decodeURIComponent(searchParams.get("direccion") || "");
+  if (loading) return <div className="page-container py-section" aria-busy="true" />;
 
-  if (loading) {
-    return <div className="page-container py-section text-center">Cargando...</div>;
+  if (items.length === 0) {
+    return (
+      <div className="page-container py-section">
+        <EmptyState
+          icon={<CartIcon size={36} />}
+          title="No hay nada para pagar"
+          description="Agregá productos al carrito para armar tu pedido."
+          action={
+            <Link href="/productos" className="btn btn-primary">
+              Ver productos
+            </Link>
+          }
+        />
+      </div>
+    );
   }
 
   if (!user) {
     return (
       <div className="page-container py-section">
-        <div className="max-w-2xl mx-auto text-center">
-          <h1 className="text-title mb-4">Inicia sesión para continuar</h1>
-          <p className="text-muted mb-6">Necesitas estar logueado para hacer una compra.</p>
-          <a
-            href="/login"
-            className="inline-block rounded-control bg-action px-6 py-3 font-medium text-on-action hover:bg-action-hover"
-          >
-            Ir a login
-          </a>
-        </div>
-      </div>
-    );
-  }
-
-  if (!monto || !direccion) {
-    return (
-      <div className="page-container py-section">
-        <div className="max-w-2xl mx-auto text-center">
-          <h1 className="text-title mb-4">Datos incompletos</h1>
-          <p className="text-muted mb-6">Vuelve al carrito para completar tu compra.</p>
-          <a
-            href="/carrito"
-            className="inline-block rounded-control bg-action px-6 py-3 font-medium text-on-action hover:bg-action-hover"
-          >
-            Volver al carrito
-          </a>
-        </div>
+        <EmptyState
+          icon={<UserIcon size={36} />}
+          title="Ingresá para terminar tu compra"
+          description="Tu carrito queda guardado. Iniciá sesión o creá una cuenta para hacer el pedido."
+          action={
+            <div className="flex gap-3">
+              <Link href="/login" className="btn btn-primary">
+                Ingresar
+              </Link>
+              <Link href="/register" className="btn btn-secondary">
+                Crear cuenta
+              </Link>
+            </div>
+          }
+        />
       </div>
     );
   }
 
   return (
     <div className="page-container py-section">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-title mb-8">Checkout</h1>
+      <h1 className="text-title pb-8">Finalizar pedido</h1>
 
-        <div className="grid gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <CheckoutForm
-              monto={monto}
-              direccion={direccion}
-              onSuccess={(pedidoId) => {
-                router.push(`/confirmacion?pedido=${pedidoId}`);
-              }}
-            />
+      <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
+        <CheckoutForm />
+
+        <aside className="card h-fit space-y-4 p-6 lg:sticky lg:top-24">
+          <h2 className="text-heading">Tu pedido</h2>
+
+          <ul className="space-y-2 border-b border-border pb-4 text-sm">
+            {items.map(({ producto, cantidad }) => (
+              <li key={producto.id} className="flex justify-between gap-3">
+                <span className="min-w-0 truncate">
+                  {cantidad} × {producto.nombre}
+                </span>
+                <span className="tabular-nums">{formatPrice(Number(producto.precio) * cantidad)}</span>
+              </li>
+            ))}
+          </ul>
+
+          <dl className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-muted">Productos</dt>
+              <dd className="tabular-nums">{formatPrice(subtotal)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted">Envío</dt>
+              <dd className="tabular-nums">{formatPrice(envio)}</dd>
+            </div>
+          </dl>
+
+          <div className="flex items-baseline justify-between border-t border-border pt-4">
+            <span className="font-semibold">Total</span>
+            <span className="font-display text-2xl font-bold tabular-nums">{formatPrice(total)}</span>
           </div>
 
-          <div className="rounded-card border border-border bg-surface p-6 h-fit">
-            <h2 className="text-heading mb-4">Resumen del pedido</h2>
-
-            <div className="space-y-3 text-sm mb-4 pb-4 border-b border-border">
-              <div className="flex justify-between">
-                <span className="text-muted">Monto total</span>
-                <span className="font-semibold">${monto.toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div className="space-y-2 text-sm">
-              <div>
-                <p className="text-muted text-xs mb-1">Dirección de entrega</p>
-                <p className="font-medium text-foreground line-clamp-3">{direccion}</p>
-              </div>
-            </div>
-
-            <a
-              href="/carrito"
-              className="mt-6 block text-center text-sm text-link hover:underline"
-            >
-              Volver al carrito
-            </a>
-          </div>
-        </div>
+          <Link href="/carrito" className="block text-center text-sm font-medium text-link hover:underline">
+            Volver al carrito
+          </Link>
+        </aside>
       </div>
     </div>
-  );
-}
-
-export default function CheckoutPage() {
-  return (
-    <Suspense fallback={<div className="page-container py-section text-center">Cargando...</div>}>
-      <CheckoutContent />
-    </Suspense>
   );
 }

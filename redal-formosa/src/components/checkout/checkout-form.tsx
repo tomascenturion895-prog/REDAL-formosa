@@ -1,211 +1,123 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { useCart } from "@/lib/cart/cart-context";
-import { useAuth } from "@/lib/auth/auth-context";
-import { createClient } from "@/lib/supabase/client";
+import type { LatLng } from "@/lib/domain/geo";
+import { getCurrentPosition, type GeolocationFailure } from "@/lib/geolocation/geolocation";
+import { ordersRepository } from "@/lib/orders/orders-repository";
+import { Alert } from "@/components/ui/alert";
+import { Field } from "@/components/ui/field";
+import { MapPinIcon } from "@/components/ui/icons";
 
-interface CheckoutFormProps {
-  monto: number;
-  direccion: string;
-  onSuccess?: (pedidoId: string) => void;
-}
-
-export function CheckoutForm({ monto, direccion, onSuccess }: CheckoutFormProps) {
-  const { user } = useAuth();
+export function CheckoutForm() {
+  const router = useRouter();
   const { items, emprendimientoId, clearCart } = useCart();
-  const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    nombre: "",
-    email: "",
-    telefono: "",
-    direccion: direccion,
-    notas: "",
-  });
+  const [form, setForm] = useState({ telefono: "", direccion: "", notas: "" });
+  const [ubicacion, setUbicacion] = useState<LatLng | null>(null);
+  const [locating, setLocating] = useState(false);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const shareLocation = async () => {
+    setLocating(true);
+    setError(null);
+    try {
+      const position = await getCurrentPosition();
+      setUbicacion({ lat: position.latitude, lng: position.longitude });
+    } catch (failure) {
+      setError((failure as GeolocationFailure).message ?? "No pudimos obtener tu ubicación");
+    } finally {
+      setLocating(false);
+    }
   };
+
+  const update =
+    (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!emprendimientoId || items.length === 0) return;
     setError(null);
     setLoading(true);
 
     try {
-      if (!user) throw new Error("Debes estar logueado para hacer una compra");
-      if (!emprendimientoId) throw new Error("Selecciona un emprendimiento");
-      if (items.length === 0) throw new Error("Tu carrito está vacío");
+      // La base valida disponibilidad y calcula precios y envío; acá solo se indica qué y cuánto.
+      const order = await ordersRepository.create({
+        emprendimientoId,
+        items: items.map((i) => ({ producto_id: i.producto.id, cantidad: i.cantidad })),
+        direccion: form.direccion,
+        nota: [form.telefono && `Tel: ${form.telefono}`, form.notas].filter(Boolean).join(" · "),
+        ubicacion: ubicacion ?? undefined,
+      });
 
-      // Generar número de pedido
-      const numeroPedido = `PED-${Date.now()}`;
+      // El pedido ya existe: el carrito se vacía aunque el pago todavía no esté habilitado.
+      clearCart();
 
-      // Crear pedido en la BD
-      const { data: pedido, error: pedidoErr } = await (supabase
-        .from("pedidos")
-        .insert({
-          numero_pedido: numeroPedido,
-          comprador_id: user.id,
-          emprendimiento_id: emprendimientoId,
-          estado: "pendiente_pago",
-          tipo_entrega: "domicilio",
-          direccion_entrega: formData.direccion,
-          monto_total: monto,
-          nota_cliente: formData.notas,
-        } as any) as any)
-        .select()
-        .single();
+      const response = await fetch("/api/checkout/create-preference", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pedidoId: order.pedidoId }),
+      });
 
-      if (pedidoErr) throw pedidoErr;
-
-      // Crear items del pedido
-      for (const item of items) {
-        const { error: itemErr } = await (supabase
-          .from("pedido_items")
-          .insert({
-            pedido_id: pedido.id,
-            producto_id: item.producto.id,
-            cantidad: item.cantidad,
-            precio_unitario: item.producto.precio,
-            subtotal: item.producto.precio * item.cantidad,
-          } as any) as any);
-
-        if (itemErr) throw itemErr;
+      if (!response.ok) {
+        router.push(`/confirmacion?pedido=${order.pedidoId}&status=unpaid`);
+        return;
       }
 
-      // Crear pago pendiente
-      const { data: pago, error: pagoErr } = await (supabase
-        .from("pagos")
-        .insert({
-          pedido_id: pedido.id,
-          monto: monto,
-          estado: "pendiente",
-          proveedor: "mercadopago",
-        } as any) as any);
-
-      if (pagoErr) throw pagoErr;
-
-      // Redirigir a MercadoPago
-      // En producción, aquí integrar la preferencia de MercadoPago
-      // Por ahora, simular éxito
-      clearCart();
-      onSuccess?.(pedido.id);
+      const { url } = (await response.json()) as { url: string };
+      window.location.href = url;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al procesar el pedido");
-    } finally {
+      setError(err instanceof Error ? err.message : "No pudimos procesar el pedido");
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="card space-y-5 p-6">
       <h2 className="text-heading">Datos de entrega</h2>
 
-      {error && (
-        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
-          {error}
-        </div>
-      )}
+      {error && <Alert tone="error">{error}</Alert>}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor="nombre" className="block text-sm font-medium text-foreground mb-1">
-            Nombre completo
-          </label>
-          <input
-            id="nombre"
-            type="text"
-            name="nombre"
-            value={formData.nombre}
-            onChange={handleChange}
-            required
-            placeholder="Tu nombre"
-            className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </div>
+      <Field id="telefono" label="Teléfono de contacto">
+        <input id="telefono" type="tel" autoComplete="tel" required value={form.telefono} onChange={update("telefono")} placeholder="3704 123456" className="field" />
+      </Field>
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            placeholder="tu@email.com"
-            className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label htmlFor="telefono" className="block text-sm font-medium text-foreground mb-1">
-          Teléfono
-        </label>
-        <input
-          id="telefono"
-          type="tel"
-          name="telefono"
-          value={formData.telefono}
-          onChange={handleChange}
-          required
-          placeholder="+54 3764 123456"
-          className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="direccion" className="block text-sm font-medium text-foreground mb-1">
-          Dirección de entrega
-        </label>
+      <Field id="direccion" label="Dirección de entrega">
         <textarea
           id="direccion"
-          name="direccion"
-          value={formData.direccion}
-          onChange={handleChange}
           required
-          placeholder="Calle, número, piso, apartamento..."
           rows={3}
-          className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          autoComplete="street-address"
+          value={form.direccion}
+          onChange={update("direccion")}
+          placeholder="Calle, número, barrio y referencias"
+          className="field"
         />
-      </div>
+      </Field>
 
-      <div>
-        <label htmlFor="notas" className="block text-sm font-medium text-foreground mb-1">
-          Notas (opcional)
-        </label>
-        <textarea
-          id="notas"
-          name="notas"
-          value={formData.notas}
-          onChange={handleChange}
-          placeholder="Ej: Tocar timbre con cuidado..."
-          rows={2}
-          className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
-
-      <div className="bg-info-soft rounded-control p-4 text-sm text-info">
-        <p className="font-medium">Información de pago</p>
-        <p className="mt-1">
-          Serás redirigido a MercadoPago para completar el pago de forma segura.
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" onClick={shareLocation} disabled={locating} className="btn btn-secondary btn-sm">
+          <MapPinIcon size={16} />
+          {locating ? "Buscando tu ubicación…" : ubicacion ? "Actualizar mi ubicación" : "Usar mi ubicación actual"}
+        </button>
+        <p className="text-sm text-muted" aria-live="polite">
+          {ubicacion
+            ? "Ubicación guardada: el repartidor va a ver el punto exacto en el mapa."
+            : "Opcional: ayuda a que el repartidor llegue al lugar exacto."}
         </p>
       </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded-control bg-action px-5 py-3 font-medium text-on-action transition-colors duration-150 ease-soft hover:bg-action-hover disabled:opacity-60"
-      >
-        {loading ? "Procesando..." : "Ir a pagar con MercadoPago"}
+      <Field id="notas" label="Notas para el emprendedor" optional>
+        <textarea id="notas" rows={2} value={form.notas} onChange={update("notas")} placeholder="Ej: tocar timbre, horario preferido" className="field" />
+      </Field>
+
+      <Alert tone="info">Vas a pagar de forma segura con MercadoPago. Tu pedido se confirma cuando se acredita el pago.</Alert>
+
+      <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-3">
+        {loading ? "Creando tu pedido…" : "Pagar con MercadoPago"}
       </button>
     </form>
   );

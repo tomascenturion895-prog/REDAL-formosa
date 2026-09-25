@@ -1,0 +1,22 @@
+{
+  "name": "RedAL Formosa",
+  "short_name": "RedAL",
+  "description": "Comprale directo a emprendedores y productores de Formosa.",
+  "lang": "es-AR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f7f8f7",
+  "theme_color": "#0e7a3f",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "categories": ["shopping", "business"],
+  "shortcuts": [
+    { "name": "Productos", "url": "/productos", "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }] },
+    { "name": "Mis pedidos", "url": "/mis-pedidos", "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }] },
+    { "name": "Carrito", "url": "/carrito", "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }] }
+  ]
+}

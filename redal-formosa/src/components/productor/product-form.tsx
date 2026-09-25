@@ -1,194 +1,137 @@
 "use client";
 
 import { useState } from "react";
-import { insertEmprendimiento } from "@/lib/supabase/db-helpers";
-import { createClient } from "@/lib/supabase/client";
+
+import { stockNote, type VoiceProductDraft } from "@/lib/domain/voice-product";
+import { producerRepository } from "@/lib/producer/producer-repository";
+import { VoiceToProduct } from "./voice-to-product";
+import { Alert } from "@/components/ui/alert";
+import { Field } from "@/components/ui/field";
+import { ProductImage } from "@/components/ui/product-image";
 
 interface ProductFormProps {
   emprendimientoId: string;
   onSuccess?: () => void;
 }
 
+const UNITS = [
+  ["unidad", "Unidad"],
+  ["kg", "Kilogramo"],
+  ["litro", "Litro"],
+  ["metro", "Metro"],
+  ["pack", "Pack"],
+] as const;
+
+const EMPTY = { nombre: "", descripcion: "", precio: "", unidad: "unidad" };
+
 export function ProductForm({ emprendimientoId, onSuccess }: ProductFormProps) {
-  const supabase = createClient();
-  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState(EMPTY);
+  const [imageUrl, setImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [imageUrl, setImageUrl] = useState<string>("");
-  const [formData, setFormData] = useState({
-    nombre: "",
-    descripcion: "",
-    precio: "",
-    unidad: "unidad",
-    categoria_id: "",
-  });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const update =
+    (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+      setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const applyDraft = (draft: VoiceProductDraft) =>
+    setForm((prev) => {
+      const note = stockNote(draft);
+      return {
+        ...prev,
+        nombre: draft.producto,
+        precio: draft.precio === null ? prev.precio : String(draft.precio),
+        unidad: draft.unidad,
+        descripcion: [prev.descripcion.replace(/\s*Disponibles: [^.]*\.?$/, "").trim(), note].filter(Boolean).join(" "),
+      };
+    });
+
+  const handleImage = async (file: File | undefined) => {
     if (!file) return;
-
     setError(null);
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${emprendimientoId}/${Date.now()}.${fileExt}`;
-
+    setUploading(true);
     try {
-      const { error: uploadErr } = await supabase.storage
-        .from("product-images")
-        .upload(fileName, file, { upsert: true });
-
-      if (uploadErr) throw uploadErr;
-
-      const { data } = supabase.storage.from("product-images").getPublicUrl(fileName);
-      setImageUrl(data.publicUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al subir imagen");
+      setImageUrl(await producerRepository.uploadProductImage(emprendimientoId, file));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No pudimos subir la imagen.");
+    } finally {
+      setUploading(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setLoading(true);
-
+    setSaving(true);
     try {
-      if (!formData.nombre || !formData.precio) {
-        throw new Error("Nombre y precio son requeridos");
-      }
-
-      const { error: err } = await (supabase
-        .from("productos")
-        .insert({
-          emprendimiento_id: emprendimientoId,
-          nombre: formData.nombre,
-          descripcion: formData.descripcion,
-          precio: parseFloat(formData.precio),
-          unidad: formData.unidad,
-          imagen_url: imageUrl,
-          categoria_id: formData.categoria_id || null,
-          disponible: true,
-        } as any) as any);
-
-      if (err) throw err;
-
-      setFormData({ nombre: "", descripcion: "", precio: "", unidad: "unidad", categoria_id: "" });
+      await producerRepository.createProduct({
+        emprendimientoId,
+        nombre: form.nombre.trim(),
+        descripcion: form.descripcion.trim(),
+        precio: parseFloat(form.precio),
+        unidad: form.unidad,
+        imagenUrl: imageUrl,
+      });
+      setForm(EMPTY);
       setImageUrl("");
       onSuccess?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al crear producto");
+    } catch {
+      setError("No pudimos crear el producto. Revisá los datos e intentá de nuevo.");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h3 className="text-heading">Agregar producto</h3>
+      {error && <Alert tone="error">{error}</Alert>}
 
-      {error && (
-        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
-          {error}
-        </div>
-      )}
+      <VoiceToProduct onDraft={applyDraft} />
 
-      <div>
-        <label htmlFor="nombre" className="block text-sm font-medium text-foreground mb-1">
-          Nombre del producto
-        </label>
-        <input
-          id="nombre"
-          type="text"
-          name="nombre"
-          value={formData.nombre}
-          onChange={handleChange}
-          required
-          placeholder="Ej: Miel pura de abeja"
-          className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
+      <Field id="nombre" label="Nombre del producto">
+        <input id="nombre" required value={form.nombre} onChange={update("nombre")} placeholder="Ej: Miel pura de abeja" className="field" />
+      </Field>
 
-      <div>
-        <label htmlFor="descripcion" className="block text-sm font-medium text-foreground mb-1">
-          Descripción
-        </label>
-        <textarea
-          id="descripcion"
-          name="descripcion"
-          value={formData.descripcion}
-          onChange={handleChange}
-          placeholder="Describe tu producto..."
-          rows={3}
-          className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
+      <Field id="descripcion" label="Descripción" optional>
+        <textarea id="descripcion" rows={3} value={form.descripcion} onChange={update("descripcion")} placeholder="Contá cómo es y cómo se produce" className="field" />
+      </Field>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div>
-          <label htmlFor="precio" className="block text-sm font-medium text-foreground mb-1">
-            Precio ($)
-          </label>
-          <input
-            id="precio"
-            type="number"
-            name="precio"
-            value={formData.precio}
-            onChange={handleChange}
-            required
-            step="0.01"
-            min="0"
-            placeholder="0.00"
-            className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </div>
+        <Field id="precio" label="Precio ($)">
+          <input id="precio" type="number" required step="0.01" min="0" value={form.precio} onChange={update("precio")} placeholder="0" className="field" />
+        </Field>
 
-        <div>
-          <label htmlFor="unidad" className="block text-sm font-medium text-foreground mb-1">
-            Unidad
-          </label>
-          <select
-            id="unidad"
-            name="unidad"
-            value={formData.unidad}
-            onChange={handleChange}
-            className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="unidad">Unidad</option>
-            <option value="kg">Kilogramo</option>
-            <option value="litro">Litro</option>
-            <option value="metro">Metro</option>
-            <option value="pack">Pack</option>
+        <Field id="unidad" label="Se vende por">
+          <select id="unidad" value={form.unidad} onChange={update("unidad")} className="field">
+            {UNITS.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
-        </div>
+        </Field>
 
-        <div>
-          <label htmlFor="imagen" className="block text-sm font-medium text-foreground mb-1">
-            Imagen
-          </label>
+        <Field id="imagen" label="Foto" optional hint="JPG, PNG o WebP, hasta 5 MB.">
           <input
             id="imagen"
             type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="w-full text-sm file:rounded-control file:border-0 file:bg-action file:px-3 file:py-1 file:text-on-action file:font-medium file:cursor-pointer hover:file:bg-action-hover"
+            accept="image/jpeg,image/png,image/webp"
+            disabled={uploading}
+            onChange={(e) => handleImage(e.target.files?.[0])}
+            className="field text-sm file:mr-3 file:rounded-control file:border-0 file:bg-action file:px-3 file:py-1 file:font-medium file:text-on-action"
           />
-        </div>
+        </Field>
       </div>
 
       {imageUrl && (
-        <div className="rounded-control border border-border overflow-hidden">
-          <img src={imageUrl} alt="preview" className="w-full h-32 object-cover" />
+        <div className="relative h-32 overflow-hidden rounded-control border border-border">
+          <ProductImage src={imageUrl} alt="Vista previa de la foto del producto" sizes="(min-width: 640px) 400px, 100vw" />
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded-control bg-action px-5 py-2.5 font-medium text-on-action transition-colors duration-150 ease-soft hover:bg-action-hover disabled:opacity-60"
-      >
-        {loading ? "Guardando..." : "Agregar producto"}
+      <button type="submit" disabled={saving || uploading} aria-busy={saving || uploading} className="btn btn-primary w-full !py-3">
+        {saving ? "Guardando…" : uploading ? "Subiendo foto…" : "Agregar producto"}
       </button>
     </form>
   );
