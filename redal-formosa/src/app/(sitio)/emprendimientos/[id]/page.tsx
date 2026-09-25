@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { catalogRepository } from "@/lib/catalog/catalog-repository";
 import { useAsync } from "@/lib/hooks/use-async";
 import { ProductGrid } from "@/components/catalog/product-grid";
+import { ContactActions, ContactBar } from "@/components/contact/contact-actions";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MapPinIcon, PackageIcon, StoreIcon } from "@/components/ui/icons";
 
@@ -67,18 +68,17 @@ export default function EmprendimientoPage() {
         </div>
 
         {(emprendimiento.email || emprendimiento.telefono) && (
-          <div className="flex flex-wrap gap-2">
+          <ContactBar>
             {emprendimiento.email && (
               <a href={`mailto:${emprendimiento.email}`} className="btn btn-secondary">
                 Escribirles
               </a>
             )}
-            {emprendimiento.telefono && (
-              <a href={`tel:${emprendimiento.telefono}`} className="btn btn-secondary">
-                Llamar
-              </a>
-            )}
-          </div>
+            <ContactActions
+              telefono={emprendimiento.telefono}
+              mensaje={`Hola, vi tu emprendimiento ${emprendimiento.nombre} en RedAL Formosa y quería consultarte.`}
+            />
+          </ContactBar>
         )}
       </header>
 

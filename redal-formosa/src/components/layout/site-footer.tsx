@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Logo } from "@/components/brand/logo";
+import { MercadoPagoBadge } from "@/components/payment/mercadopago-badge";
 import { siteTagline } from "@/lib/navigation";
 
 export function SiteFooter() {
@@ -11,6 +12,9 @@ export function SiteFooter() {
           <Logo />
           <p className="mt-3 max-w-xs text-muted">
             {siteTagline}: lo que producen los emprendedores de Formosa, directo a tu casa.
+          </p>
+          <p className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted">
+            Pagos procesados por <MercadoPagoBadge size="sm" />
           </p>
         </div>
         <nav aria-label="Comprar" className="flex flex-col gap-2">

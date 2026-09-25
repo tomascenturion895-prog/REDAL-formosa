@@ -10,6 +10,8 @@ import { cartStore } from "./cart-store";
 export type { CartItem, CartProduct };
 
 interface CartContextType {
+  /** false mientras se resuelve la sesión: todavía no se sabe de quién es el carrito. */
+  ready: boolean;
   items: CartItem[];
   emprendimientoId: string | null;
   /** Devuelve false si la persona decidió no vaciar un carrito de otro emprendimiento. */
@@ -60,6 +62,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const subtotal = sumSubtotal(items.map((i) => ({ precio: i.producto.precio, cantidad: i.cantidad })));
     const envio = estimarEnvio(items.length);
     return {
+      ready: owner !== undefined,
       items,
       emprendimientoId: items[0]?.producto.emprendimiento_id ?? null,
       addItem,

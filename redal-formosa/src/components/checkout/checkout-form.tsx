@@ -4,17 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useCart } from "@/lib/cart/cart-context";
+import { formatPrice } from "@/lib/format";
 import type { LatLng } from "@/lib/domain/geo";
 import { getCurrentPosition, type GeolocationFailure } from "@/lib/geolocation/geolocation";
 import { ordersRepository } from "@/lib/orders/orders-repository";
 import { Alert } from "@/components/ui/alert";
 import { Field } from "@/components/ui/field";
-import { MapPinIcon } from "@/components/ui/icons";
+import { LockIcon, MapPinIcon } from "@/components/ui/icons";
+import { PaymentMethods } from "@/components/payment/payment-methods";
+import { RedirectOverlay } from "@/components/payment/redirect-overlay";
 
 export function CheckoutForm() {
   const router = useRouter();
-  const { items, emprendimientoId, clearCart } = useCart();
+  const { items, emprendimientoId, clearCart, total } = useCart();
   const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ telefono: "", direccion: "", notas: "" });
   const [ubicacion, setUbicacion] = useState<LatLng | null>(null);
@@ -68,6 +72,7 @@ export function CheckoutForm() {
       }
 
       const { url } = (await response.json()) as { url: string };
+      setRedirecting(true);
       window.location.href = url;
     } catch (err) {
       setError(err instanceof Error ? err.message : "No pudimos procesar el pedido");
@@ -77,6 +82,7 @@ export function CheckoutForm() {
 
   return (
     <form onSubmit={handleSubmit} className="card space-y-5 p-6">
+      {redirecting && <RedirectOverlay />}
       <h2 className="text-heading">Datos de entrega</h2>
 
       {error && <Alert tone="error">{error}</Alert>}
@@ -114,11 +120,21 @@ export function CheckoutForm() {
         <textarea id="notas" rows={2} value={form.notas} onChange={update("notas")} placeholder="Ej: tocar timbre, horario preferido" className="field" />
       </Field>
 
-      <Alert tone="info">Vas a pagar de forma segura con MercadoPago. Tu pedido se confirma cuando se acredita el pago.</Alert>
+      <PaymentMethods />
 
-      <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-3">
-        {loading ? "Creando tu pedido…" : "Pagar con MercadoPago"}
+      <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-4 !text-base">
+        {loading ? (
+          "Creando tu pedido…"
+        ) : (
+          <>
+            <LockIcon size={18} />
+            Pagar {formatPrice(total)} con Mercado Pago
+          </>
+        )}
       </button>
+      <p className="text-center text-xs text-muted">
+        Al pagar aceptás que el pedido se prepare y se entregue en la dirección indicada.
+      </p>
     </form>
   );
 }

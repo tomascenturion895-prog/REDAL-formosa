@@ -60,7 +60,7 @@ export function ProductorForm({ userId, defaultEmail = "", onSuccess }: Producto
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="telefono" label="Teléfono">
+        <Field id="telefono" label="Teléfono" hint="Con código de área, sin 0 ni 15. Los compradores te van a poder escribir por WhatsApp a este número.">
           <input id="telefono" type="tel" autoComplete="tel" value={form.telefono} onChange={update("telefono")} placeholder="3704 123456" className="field" />
         </Field>
         <Field id="email" label="Email de contacto">
