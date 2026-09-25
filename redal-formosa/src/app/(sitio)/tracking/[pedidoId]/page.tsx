@@ -1,191 +1,81 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { useAuth } from "@/lib/auth/auth-context";
-import { RepartidorTracker } from "@/components/tracking/repartidor-tracker";
-import { PageHeader } from "@/components/layout/page-header";
-import type { Database } from "@/lib/supabase/types";
 
-type Pedido = Database["public"]["Tables"]["pedidos"]["Row"];
-type Repartidor = Database["public"]["Tables"]["repartidores"]["Row"];
+import { useRequireAuth } from "@/lib/auth/use-require-auth";
+import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/domain/order-status";
+import { FORMOSA_CENTER } from "@/lib/domain/geo";
+import { formatPrice } from "@/lib/format";
+import { useAsync } from "@/lib/hooks/use-async";
+import { ordersRepository } from "@/lib/orders/orders-repository";
+import { RepartidorTracker } from "@/components/tracking/repartidor-tracker";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PackageIcon, TruckIcon } from "@/components/ui/icons";
 
 export default function TrackingPage() {
-  const params = useParams();
-  const pedidoId = params.pedidoId as string;
-  const { user } = useAuth();
-  const supabase = createClient();
+  const { pedidoId } = useParams<{ pedidoId: string }>();
+  const { user, pending } = useRequireAuth();
+  const { data: pedido, loading } = useAsync(() => ordersRepository.getConfirmation(pedidoId), [pedidoId], {
+    enabled: Boolean(user),
+  });
 
-  const [pedido, setPedido] = useState<Pedido | null>(null);
-  const [repartidor, setRepartidor] = useState<Repartidor | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadData();
-  }, [pedidoId]);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-
-      // Obtener pedido
-      const { data: pedidoData, error: pedidoErr } = await supabase
-        .from("pedidos")
-        .select("*")
-        .eq("id", pedidoId)
-        .single();
-
-      if (pedidoErr) throw pedidoErr;
-      setPedido(pedidoData);
-
-      // Obtener repartidor asignado
-      const { data: repartidorData, error: repartidorErr } = await supabase
-        .from("repartidores")
-        .select("*")
-        .eq("pedido_id", pedidoId)
-        .single();
-
-      if (repartidorErr && repartidorErr.code !== "PGRST116") throw repartidorErr;
-      setRepartidor(repartidorData || null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error cargando datos");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="page-container py-section">
-        <div className="text-center">Cargando seguimiento...</div>
-      </div>
-    );
-  }
+  if (pending || loading) return <div className="page-container py-section" aria-busy="true" />;
 
   if (!pedido) {
     return (
       <div className="page-container py-section">
-        <div className="text-center">
-          <p className="text-muted mb-4">Pedido no encontrado</p>
-          <a
-            href="/emprendimientos"
-            className="inline-block rounded-control bg-action px-6 py-3 font-medium text-on-action hover:bg-action-hover"
-          >
-            Volver al catálogo
-          </a>
-        </div>
+        <EmptyState
+          icon={<PackageIcon size={36} />}
+          title="No encontramos este pedido"
+          action={
+            <Link href="/mis-pedidos" className="btn btn-primary">
+              Ver mis pedidos
+            </Link>
+          }
+        />
       </div>
     );
   }
 
   return (
     <div className="page-container py-section">
-      <PageHeader
-        title="Seguimiento de Pedido"
-        description={`Pedido ${pedido.numero_pedido}`}
-      />
-
-      <div className="max-w-4xl mx-auto space-y-6">
-        {error && (
-          <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
-            {error}
-          </div>
-        )}
-
-        {/* Estado del pedido */}
-        <div className="rounded-card border border-border bg-surface p-6">
-          <h2 className="text-heading mb-4">📦 Estado del Pedido</h2>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-sm text-muted">Número de pedido</p>
-              <p className="font-semibold text-foreground mt-1">
-                {pedido.numero_pedido}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-sm text-muted">Estado</p>
-              <p className="font-semibold text-foreground mt-1">
-                <span
-                  className={`inline-block px-3 py-1 rounded-full text-sm ${
-                    (pedido.estado as any) === "confirmado"
-                      ? "bg-success-soft text-success"
-                      : (pedido.estado as any) === "en_entrega"
-                      ? "bg-info-soft text-info"
-                      : "bg-warning-soft text-warning"
-                  }`}
-                >
-                  {(pedido.estado as any) === "confirmado"
-                    ? "✓ Confirmado"
-                    : (pedido.estado as any) === "en_entrega"
-                    ? "🚗 En entrega"
-                    : "⏳ Pendiente"}
-                </span>
-              </p>
-            </div>
-
-            <div>
-              <p className="text-sm text-muted">Dirección de entrega</p>
-              <p className="text-foreground mt-1">{pedido.direccion_entrega}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-muted">Monto total</p>
-              <p className="font-semibold text-action text-lg mt-1">
-                ${pedido.monto_total.toFixed(2)}
-              </p>
-            </div>
-          </div>
+      <div className="mx-auto max-w-4xl space-y-6">
+        <div>
+          <Link href={`/mis-pedidos/${pedido.id}`} className="text-sm font-medium text-link hover:underline">
+            Pedido {pedido.numero_pedido}
+          </Link>
+          <h1 className="text-title mt-1">Seguimiento del envío</h1>
         </div>
 
-        {/* Tracking del repartidor */}
-        {repartidor ? (
-          <RepartidorTracker
-            repartidorId={repartidor.id}
-            destino={{ lat: -25.4971, lng: -55.504 }} // Coordenadas de ejemplo (Formosa)
-            isRepartidor={false}
-          />
+        <dl className="card grid gap-5 p-6 sm:grid-cols-3">
+          <div>
+            <dt className="text-sm text-muted">Estado</dt>
+            <dd className="mt-1">
+              <span className={`inline-block rounded-full px-3 py-1 text-sm font-medium ${ORDER_STATUS_TONE[pedido.estado]}`}>
+                {ORDER_STATUS_LABEL[pedido.estado]}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-sm text-muted">Entrega en</dt>
+            <dd className="mt-1">{pedido.direccion_entrega}</dd>
+          </div>
+          <div>
+            <dt className="text-sm text-muted">Total</dt>
+            <dd className="mt-1 font-display text-lg font-bold">{formatPrice(pedido.monto_total)}</dd>
+          </div>
+        </dl>
+
+        {pedido.repartidor_id ? (
+          <RepartidorTracker repartidorId={pedido.repartidor_id} destino={pedido.entrega ?? FORMOSA_CENTER} isRepartidor={false} />
         ) : (
-          <div className="rounded-card border border-border bg-surface-muted p-6 text-center">
-            <p className="text-muted">
-              {(pedido.estado as any) === "confirmado"
-                ? "Tu pedido aún no ha sido asignado a un repartidor"
-                : "Tu pedido está siendo procesado"}
-            </p>
-          </div>
+          <EmptyState
+            icon={<TruckIcon size={36} />}
+            title="Todavía no hay un repartidor asignado"
+            description="Apenas alguien tome tu pedido vas a ver su recorrido en el mapa."
+          />
         )}
-
-        {/* Información de contacto */}
-        <div className="rounded-card border border-border bg-surface p-6">
-          <h2 className="text-heading mb-4">📞 ¿Necesitas ayuda?</h2>
-          <p className="text-muted mb-4">
-            Si tienes problemas con tu pedido, contáctanos:
-          </p>
-          <div className="space-y-2">
-            <a
-              href="tel:+54"
-              className="block text-link hover:underline"
-            >
-              Llamar al equipo de soporte
-            </a>
-            <a
-              href="mailto:soporte@redal.com"
-              className="block text-link hover:underline"
-            >
-              Email: soporte@redal.com
-            </a>
-          </div>
-        </div>
-
-        <a
-          href="/emprendimientos"
-          className="inline-block text-link hover:underline"
-        >
-          ← Volver al catálogo
-        </a>
       </div>
     </div>
   );

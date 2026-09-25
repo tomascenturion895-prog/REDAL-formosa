@@ -1,101 +1,81 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import type { Database } from "@/lib/supabase/types";
-import { PageHeader } from "@/components/layout/page-header";
 
-type Emprendimiento = Database["public"]["Tables"]["emprendimientos"]["Row"];
+import { catalogRepository } from "@/lib/catalog/catalog-repository";
+import { useAsync } from "@/lib/hooks/use-async";
+import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { MapPinIcon, SearchIcon, StoreIcon } from "@/components/ui/icons";
 
 export default function EmprendimientosPage() {
-  const supabase = createClient();
-  const [emprendimientos, setEmprendimientos] = useState<Emprendimiento[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const { data: items, error } = useAsync(() => catalogRepository.listEmprendimientos(), []);
+  const [term, setTerm] = useState("");
 
-  useEffect(() => {
-    loadEmprendimientos();
-  }, []);
-
-  const loadEmprendimientos = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("emprendimientos")
-        .select("*")
-        .eq("activo", true)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setEmprendimientos(data || []);
-    } catch (err) {
-      console.error("Error cargando emprendimientos:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filtered = emprendimientos.filter((emp) =>
-    emp.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    const t = term.trim().toLowerCase();
+    return (items ?? []).filter((e) => !t || e.nombre.toLowerCase().includes(t) || (e.descripcion ?? "").toLowerCase().includes(t));
+  }, [items, term]);
 
   return (
     <div className="page-container py-section">
-      <PageHeader
-        title="Emprendimientos"
-        description="Descubre todos los emprendedores y productores locales de Formosa"
-      />
+      <PageHeader title="Emprendimientos" description="Conocé a quienes producen en Formosa y comprales directo." />
 
-      <div className="mb-8 max-w-sm">
+      <div className="relative mb-8 max-w-md">
+        <label htmlFor="emp-search" className="sr-only">
+          Buscar emprendimientos
+        </label>
+        <SearchIcon size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
         <input
-          type="text"
-          placeholder="Buscar emprendimiento..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          id="emp-search"
+          type="search"
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          placeholder="Buscar por nombre o rubro"
+          className="field !pl-10"
         />
       </div>
 
-      {loading ? (
-        <div className="text-center py-12 text-muted">Cargando emprendimientos...</div>
-      ) : filtered.length === 0 ? (
-        <div className="rounded-card border border-border bg-surface-muted p-8 text-center">
-          <p className="text-muted">
-            {searchTerm ? "No se encontraron emprendimientos" : "No hay emprendimientos disponibles"}
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((emprendimiento) => (
-            <Link
-              key={emprendimiento.id}
-              href={`/emprendimientos/${emprendimiento.id}`}
-              className="group rounded-card border border-border bg-surface overflow-hidden shadow-card hover:shadow-pop transition-all hover:-translate-y-1"
-            >
-              <div className="aspect-video bg-surface-muted flex items-center justify-center group-hover:bg-surface transition-colors">
-                <span className="text-4xl">🏪</span>
-              </div>
-
-              <div className="p-4">
-                <h3 className="font-medium text-foreground group-hover:text-action transition-colors">
-                  {emprendimiento.nombre}
-                </h3>
-
-                <p className="text-sm text-muted mt-2 line-clamp-2">
-                  {emprendimiento.descripcion || "Sin descripción"}
-                </p>
-
-                {emprendimiento.telefono && (
-                  <p className="text-xs text-muted mt-3">{emprendimiento.telefono}</p>
-                )}
-
-                <div className="mt-4 inline-block rounded-control bg-highlight px-3 py-1 text-sm font-medium text-on-highlight group-hover:opacity-90">
-                  Ver productos →
-                </div>
-              </div>
-            </Link>
+      {error ? (
+        <EmptyState title="No pudimos cargar los emprendimientos" description="Revisá tu conexión e intentá de nuevo." />
+      ) : !items ? (
+        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <li key={i} className="card h-40 animate-pulse bg-surface-muted" />
           ))}
-        </div>
+        </ul>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={<StoreIcon size={36} />}
+          title={term ? "No encontramos emprendimientos con ese nombre" : "Todavía no hay emprendimientos"}
+          description={term ? "Probá con otra palabra." : "Los emprendedores que se sumen van a aparecer acá."}
+        />
+      ) : (
+        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((emp) => (
+            <li key={emp.id}>
+              <Link
+                href={`/emprendimientos/${emp.id}`}
+                className="card group flex h-full flex-col gap-4 p-5 transition-colors hover:border-border-strong"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-control bg-primary-100 font-display text-xl font-bold text-primary-800">
+                    {emp.nombre.charAt(0).toUpperCase()}
+                  </span>
+                  <h2 className="font-display text-lg font-semibold leading-tight group-hover:text-action">{emp.nombre}</h2>
+                </div>
+                <p className="line-clamp-3 text-sm text-muted">{emp.descripcion || "Todavía no cargó una descripción."}</p>
+                {emp.direccion && (
+                  <p className="mt-auto flex items-center gap-1.5 text-sm text-muted">
+                    <MapPinIcon size={16} />
+                    <span className="truncate">{emp.direccion}</span>
+                  </p>
+                )}
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

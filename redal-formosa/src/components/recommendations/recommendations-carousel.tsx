@@ -1,142 +1,54 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { recommendationsService, type RecommendedProduct } from "@/lib/recommendations/recommendations-service";
+
+import { useAuth } from "@/lib/auth/auth-context";
+import { formatPrice } from "@/lib/format";
+import { useAsync } from "@/lib/hooks/use-async";
+import { recommendationsRepository, type RecommendationKind } from "@/lib/recommendations/recommendations-repository";
+import { ProductImage } from "@/components/ui/product-image";
 
 interface RecommendationsCarouselProps {
   title: string;
-  userId?: string | null;
-  type?: "personalized" | "trending" | "new" | "similar";
+  description?: string;
+  kind: RecommendationKind;
   productId?: string;
   limit?: number;
 }
 
-export function RecommendationsCarousel({
-  title,
-  userId = null,
-  type = "trending",
-  productId,
-  limit = 8,
-}: RecommendationsCarouselProps) {
-  const [products, setProducts] = useState<RecommendedProduct[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [scrollPos, setScrollPos] = useState(0);
+export function RecommendationsCarousel({ title, description, kind, productId, limit = 8 }: RecommendationsCarouselProps) {
+  const { user, loading: authLoading } = useAuth();
 
-  useEffect(() => {
-    loadRecommendations();
-  }, [userId, type, productId]);
+  // Las recomendaciones son un extra: si fallan o no hay ninguna, la sección simplemente no aparece.
+  const needsUser = kind === "personalized";
+  const { data: products } = useAsync(() => recommendationsRepository.load(kind, limit, productId), [kind, limit, productId, user?.id], {
+    enabled: needsUser ? Boolean(user) && !authLoading : true,
+  });
 
-  const loadRecommendations = async () => {
-    try {
-      let data: any[] = [];
-
-      switch (type) {
-        case "personalized":
-          data = await recommendationsService.getPersonalizedRecommendations(userId, limit);
-          break;
-        case "trending":
-          data = await recommendationsService.getTrendingProducts(limit);
-          break;
-        case "new":
-          data = await recommendationsService.getNewProducts(limit);
-          break;
-        case "similar":
-          if (productId) {
-            data = await recommendationsService.getSimilarProducts(productId, limit);
-          }
-          break;
-      }
-
-      setProducts(data);
-    } catch (err) {
-      console.error("Error loading recommendations:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading || products.length === 0) {
-    return null;
-  }
-
-  const scroll = (direction: "left" | "right") => {
-    const container = document.getElementById(`carousel-${type}`);
-    if (container) {
-      const scrollAmount = 320;
-      const newPos =
-        direction === "left"
-          ? Math.max(0, scrollPos - scrollAmount)
-          : scrollPos + scrollAmount;
-      container.scrollLeft = newPos;
-      setScrollPos(newPos);
-    }
-  };
+  if (!products || products.length === 0) return null;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-heading">{title}</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={() => scroll("left")}
-            className="rounded-control border border-border bg-surface p-2 hover:bg-surface-muted transition-colors disabled:opacity-50"
-            disabled={scrollPos === 0}
-          >
-            ←
-          </button>
-          <button
-            onClick={() => scroll("right")}
-            className="rounded-control border border-border bg-surface p-2 hover:bg-surface-muted transition-colors"
-          >
-            →
-          </button>
-        </div>
+    <section aria-labelledby={`rec-${kind}`} className="space-y-4">
+      <div>
+        <h2 id={`rec-${kind}`} className="text-heading">
+          {title}
+        </h2>
+        {description && <p className="mt-1 text-sm text-muted">{description}</p>}
       </div>
 
-      <div
-        id={`carousel-${type}`}
-        className="flex gap-4 overflow-x-auto pb-4 scroll-smooth"
-        style={{ scrollBehavior: "smooth" }}
-      >
-        {products.map((product) => (
-          <Link
-            key={product.producto_id}
-            href={`/productos/${product.producto_id}`}
-            className="flex-shrink-0 w-72 group rounded-card border border-border bg-surface overflow-hidden hover:shadow-lg transition-shadow"
-          >
-            {product.imagen_principal && (
-              <img
-                src={product.imagen_principal}
-                alt={product.nombre}
-                className="w-full h-40 object-cover bg-surface-muted group-hover:opacity-90 transition-opacity"
-              />
-            )}
-            <div className="p-4 space-y-2">
-              <h3 className="font-semibold text-foreground group-hover:text-action transition-colors line-clamp-2">
-                {product.nombre}
-              </h3>
-              <div className="flex items-end justify-between">
-                <p className="text-lg font-bold text-action">
-                  ${product.precio.toFixed(2)}
-                </p>
-                {product.relevancia && (
-                  <span className="text-xs text-muted bg-surface-muted px-2 py-1 rounded">
-                    {Math.round(product.relevancia * 100 / 10)}% match
-                  </span>
-                )}
+      <ul className="-mx-[var(--spacing-gutter)] flex snap-x gap-4 overflow-x-auto px-[var(--spacing-gutter)] pb-3">
+        {products.map((p) => (
+          <li key={p.id} className="w-56 shrink-0 snap-start">
+            <Link href={`/productos/${p.id}`} className="card group block overflow-hidden">
+              <div className="relative aspect-[4/3] bg-surface-muted">
+                <ProductImage src={p.imagen_url} sizes="224px" iconSize={32} />
+                <span className="price-tag absolute bottom-2 left-2 !text-base">{formatPrice(p.precio)}</span>
               </div>
-              {product.razon && (
-                <p className="text-xs text-muted italic">
-                  {product.razon === "basado_en_favoritos"
-                    ? "Basado en tus favoritos"
-                    : "Basado en tus compras"}
-                </p>
-              )}
-            </div>
-          </Link>
+              <p className="line-clamp-2 p-3 text-sm font-medium group-hover:text-action">{p.nombre}</p>
+            </Link>
+          </li>
         ))}
-      </div>
-    </div>
+      </ul>
+    </section>
   );
 }

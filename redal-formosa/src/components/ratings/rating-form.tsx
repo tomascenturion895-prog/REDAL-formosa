@@ -1,144 +1,105 @@
 "use client";
 
 import { useState } from "react";
-import { ratingsService } from "@/lib/ratings/ratings-service";
+import Link from "next/link";
+
 import { useAuth } from "@/lib/auth/auth-context";
+import { useAsync } from "@/lib/hooks/use-async";
+import { ratingsRepository } from "@/lib/ratings/ratings-repository";
 import { StarRating } from "./star-rating";
 
 interface RatingFormProps {
-  productoId?: string;
-  repartidorId?: string;
+  productoId: string;
   onSuccess?: () => void;
-  currentRating?: number;
-  currentComment?: string;
-  isEditing?: boolean;
-  ratingId?: string;
 }
 
-export function RatingForm({
-  productoId,
-  repartidorId,
-  onSuccess,
-  currentRating = 5,
-  currentComment = "",
-  isEditing = false,
-  ratingId,
-}: RatingFormProps) {
+export function RatingForm({ productoId, onSuccess }: RatingFormProps) {
   const { user, loading: authLoading } = useAuth();
-  const [rating, setRating] = useState(currentRating);
-  const [comment, setComment] = useState(currentComment);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+
+  // Si la persona ya calificó, el formulario parte de su calificación y permite editarla.
+  const { data: previous } = useAsync(() => ratingsRepository.myRatingForProduct(productoId), [user?.id, productoId], {
+    enabled: Boolean(user),
+  });
+
+  const [stars, setStars] = useState<number | null>(null);
+  const [comment, setComment] = useState<string | null>(null);
+  const [savedOnce, setSavedOnce] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+
+  const rating = stars ?? previous?.puntuacion ?? 0;
+  const text = comment ?? previous?.comentario ?? "";
+  const hasPrevious = Boolean(previous) || savedOnce;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
-
+    if (rating < 1) {
+      setMessage({ type: "error", text: "Elegí una puntuación de 1 a 5 estrellas." });
+      return;
+    }
+    setSaving(true);
+    setMessage(null);
     try {
-      if (!user) {
-        setError("Debes estar logueado para calificar");
-        return;
-      }
-
-      if (!productoId && !repartidorId) {
-        setError("Error: No se especificó qué calificar");
-        return;
-      }
-
-      if (isEditing && ratingId) {
-        await ratingsService.updateRating(ratingId, {
-          puntuacion: rating,
-          comentario: comment || undefined,
-        });
-      } else {
-        await ratingsService.createRating({
-          producto_id: productoId,
-          repartidor_id: repartidorId,
-          puntuacion: rating,
-          comentario: comment || undefined,
-        });
-      }
-
-      setSuccess(true);
-      setComment("");
-      setRating(5);
-
-      setTimeout(() => {
-        setSuccess(false);
-        onSuccess?.();
-      }, 2000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al guardar calificación");
+      await ratingsRepository.rateProduct(productoId, { puntuacion: rating, comentario: text });
+      setSavedOnce(true);
+      setMessage({ type: "ok", text: "Guardamos tu calificación." });
+      onSuccess?.();
+    } catch {
+      setMessage({ type: "error", text: "No pudimos guardar tu calificación. Intentá de nuevo." });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  if (authLoading) {
-    return <div className="text-center text-muted">Cargando...</div>;
-  }
+  if (authLoading) return null;
 
   if (!user) {
     return (
-      <div className="rounded-control bg-info-soft p-4 text-sm text-info">
-        <p className="font-medium">Debes estar logueado para calificar</p>
-        <a href="/login" className="mt-2 inline-block text-link hover:underline">
-          Ir a login
-        </a>
-      </div>
+      <p className="rounded-control bg-info-soft px-4 py-3 text-sm text-info">
+        <Link href="/login" className="font-medium underline">
+          Ingresá
+        </Link>{" "}
+        para calificar este producto.
+      </p>
     );
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          {isEditing ? "Actualizar calificación" : "Tu calificación"}
-        </label>
-        <StarRating
-          rating={rating}
-          interactive={true}
-          onRate={setRating}
-          size="lg"
-        />
+        <p className="mb-2 text-sm font-medium">{hasPrevious ? "Tu calificación" : "¿Cuántas estrellas le das?"}</p>
+        <StarRating rating={rating} interactive onRate={setStars} size="lg" />
       </div>
 
       <div>
-        <label htmlFor="comment" className="block text-sm font-medium text-foreground mb-2">
-          Comentario (opcional)
+        <label htmlFor="rating-comment" className="mb-1 block text-sm font-medium">
+          Comentario <span className="font-normal text-muted">(opcional)</span>
         </label>
         <textarea
-          id="comment"
-          value={comment}
+          id="rating-comment"
+          value={text}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Comparte tu experiencia..."
+          placeholder="Contá cómo fue tu experiencia"
           rows={3}
           maxLength={500}
-          className="w-full rounded-control border border-border-strong bg-surface px-3 py-2 text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="field"
         />
-        <p className="text-xs text-muted mt-1">{comment.length}/500</p>
+        <p className="mt-1 text-xs text-muted">{text.length}/500</p>
       </div>
 
-      {error && (
-        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
-          {error}
-        </div>
+      {message && (
+        <p
+          role={message.type === "error" ? "alert" : "status"}
+          className={`rounded-control px-4 py-3 text-sm ${
+            message.type === "ok" ? "bg-success-soft text-success" : "bg-danger-soft text-danger"
+          }`}
+        >
+          {message.text}
+        </p>
       )}
 
-      {success && (
-        <div className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
-          ✓ Calificación guardada correctamente
-        </div>
-      )}
-
-      <button
-        type="submit"
-        disabled={loading || success}
-        className="w-full rounded-control bg-action px-4 py-3 font-medium text-on-action hover:bg-action-hover disabled:opacity-60 transition-colors"
-      >
-        {loading ? "Guardando..." : isEditing ? "Actualizar" : "Enviar calificación"}
+      <button type="submit" disabled={saving} className="btn btn-primary w-full">
+        {saving ? "Guardando…" : hasPrevious ? "Actualizar calificación" : "Enviar calificación"}
       </button>
     </form>
   );

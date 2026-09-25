@@ -1,64 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { ratingsService } from "@/lib/ratings/ratings-service";
+
+import { catalogRepository } from "@/lib/catalog/catalog-repository";
+import { useCart } from "@/lib/cart/cart-context";
+import { MAX_QUANTITY } from "@/lib/cart/cart-reducer";
+import { formatPrice } from "@/lib/format";
+import { useAsync } from "@/lib/hooks/use-async";
+import { ratingsRepository } from "@/lib/ratings/ratings-repository";
 import { StarRating } from "@/components/ratings/star-rating";
 import { RatingForm } from "@/components/ratings/rating-form";
 import { RatingsList } from "@/components/ratings/ratings-list";
 import { WishlistButton } from "@/components/wishlist/wishlist-button";
 import { RecommendationsCarousel } from "@/components/recommendations/recommendations-carousel";
-import { PageHeader } from "@/components/layout/page-header";
-import type { Database } from "@/lib/supabase/types";
-
-type Producto = Database["public"]["Tables"]["productos"]["Row"];
-
-interface RatingStats {
-  total_ratings: number;
-  promedio_puntuacion: number;
-}
+import { EmptyState } from "@/components/ui/empty-state";
+import { CheckIcon, MinusIcon, PackageIcon, PlusIcon, StoreIcon } from "@/components/ui/icons";
+import { ProductImage } from "@/components/ui/product-image";
 
 export default function ProductoDetailPage() {
-  const params = useParams();
-  const productoId = params.id as string;
-  const supabase = createClient();
+  const { id: productoId } = useParams<{ id: string }>();
+  const { addItem } = useCart();
 
-  const [producto, setProducto] = useState<Producto | null>(null);
-  const [stats, setStats] = useState<RatingStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: producto, loading } = useAsync(() => catalogRepository.getProduct(productoId), [productoId]);
+  const { data: stats, reload: reloadStats } = useAsync(() => ratingsRepository.statsForProduct(productoId), [productoId]);
 
-  useEffect(() => {
-    loadData();
-  }, [productoId]);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-
-      const { data: prod, error: prodErr } = await supabase
-        .from("productos")
-        .select("*")
-        .eq("id", productoId)
-        .single();
-
-      if (prodErr) throw prodErr;
-      setProducto(prod);
-
-      const stat = await ratingsService.getProductStats(productoId);
-      setStats(stat);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error cargando producto");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [cantidad, setCantidad] = useState(1);
+  const [added, setAdded] = useState(false);
+  const [ratingsVersion, setRatingsVersion] = useState(0);
 
   if (loading) {
     return (
       <div className="page-container py-section">
-        <div className="text-center">Cargando...</div>
+        <div className="grid animate-pulse gap-10 lg:grid-cols-2" aria-hidden="true">
+          <div className="aspect-square rounded-card bg-surface-muted" />
+          <div className="space-y-4">
+            <div className="h-8 w-2/3 rounded bg-surface-muted" />
+            <div className="h-6 w-1/4 rounded bg-surface-muted" />
+            <div className="h-24 rounded bg-surface-muted" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -66,120 +48,148 @@ export default function ProductoDetailPage() {
   if (!producto) {
     return (
       <div className="page-container py-section">
-        <div className="text-center">
-          <p className="text-muted mb-4">Producto no encontrado</p>
-          <a
-            href="/emprendimientos"
-            className="inline-block rounded-control bg-action px-6 py-3 font-medium text-on-action hover:bg-action-hover"
-          >
-            Volver al catálogo
-          </a>
-        </div>
+        <EmptyState
+          icon={<PackageIcon size={36} />}
+          title="No encontramos este producto"
+          description="Puede que ya no esté publicado."
+          action={
+            <Link href="/productos" className="btn btn-primary">
+              Ver todos los productos
+            </Link>
+          }
+        />
       </div>
     );
   }
 
+  const handleAdd = () => {
+    if (addItem(producto, cantidad)) {
+      setAdded(true);
+      setTimeout(() => setAdded(false), 2000);
+    }
+  };
+
   return (
     <div className="page-container py-section">
-      <PageHeader
-        title={producto.nombre}
-        description={producto.descripcion || ""}
-      />
+      <nav aria-label="Ubicación" className="mb-6 text-sm text-muted">
+        <Link href="/productos" className="hover:text-foreground">
+          Productos
+        </Link>
+        <span aria-hidden="true"> / </span>
+        <span className="text-foreground">{producto.nombre}</span>
+      </nav>
 
-      <div className="max-w-4xl mx-auto grid gap-8 lg:grid-cols-3">
-        {/* Información del producto */}
-        <div className="lg:col-span-2 space-y-6">
-          {producto.imagen_url && (
-            <img
-              src={producto.imagen_url}
-              alt={producto.nombre}
-              className="w-full h-96 object-cover rounded-card border border-border"
-            />
-          )}
-
-          <div className="rounded-card border border-border bg-surface p-6">
-            <div className="mb-4">
-              <p className="text-sm text-muted">Precio</p>
-              <p className="text-3xl font-bold text-action mt-1">
-                ${producto.precio}
-              </p>
-              <p className="text-sm text-muted mt-1">{producto.unidad}</p>
-            </div>
-
-            {/* Calificaciones */}
-            {stats && stats.total_ratings > 0 ? (
-              <div className="mb-6 p-4 rounded-control bg-surface-muted">
-                <p className="text-sm text-muted mb-2">Calificación promedio</p>
-                <div className="flex items-center gap-4">
-                  <StarRating rating={stats.promedio_puntuacion} size="lg" />
-                  <span className="text-sm text-muted">
-                    Basado en {stats.total_ratings} calificación
-                    {stats.total_ratings !== 1 ? "es" : ""}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="mb-6 p-4 rounded-control bg-surface-muted">
-                <p className="text-sm text-muted">Aún no tiene calificaciones</p>
-              </div>
-            )}
-          </div>
-
-          {/* Formulario de calificación */}
-          <div className="rounded-card border border-border bg-surface p-6">
-            <h2 className="text-heading mb-4">Califica este producto</h2>
-            <RatingForm
-              productoId={productoId}
-              onSuccess={() => {
-                loadData();
-              }}
-            />
-          </div>
-
-          {/* Lista de calificaciones */}
-          <div className="rounded-card border border-border bg-surface p-6">
-            <h2 className="text-heading mb-4">Calificaciones</h2>
-            <RatingsList productoId={productoId} limit={20} />
+      <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr]">
+        <div className="card overflow-hidden">
+          <div className="relative aspect-square bg-surface-muted">
+            <ProductImage src={producto.imagen_url} alt={producto.nombre} sizes="(min-width: 1024px) 55vw, 100vw" priority iconSize={72} />
           </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          <div className="rounded-card border border-border bg-surface p-6 sticky top-20">
-            <p className="text-sm text-muted mb-3">Disponibilidad</p>
-            <p className="font-semibold text-foreground mb-4">
-              {producto.disponible ? "✓ Disponible" : "No disponible"}
-            </p>
+        <div className="flex flex-col gap-6">
+          <div>
+            <h1 className="text-title">{producto.nombre}</h1>
 
-            <div className="mb-4">
-              <WishlistButton productId={productoId} />
+            {producto.emprendimiento && (
+              <Link
+                href={`/emprendimientos/${producto.emprendimiento.id}`}
+                className="mt-2 inline-flex items-center gap-1.5 text-sm text-link hover:underline"
+              >
+                <StoreIcon size={16} />
+                {producto.emprendimiento.nombre}
+              </Link>
+            )}
+
+            <div className="mt-3 flex items-center gap-2 text-sm text-muted">
+              {stats && stats.total > 0 ? (
+                <>
+                  <StarRating rating={stats.promedio} size="sm" />
+                  <span>
+                    {stats.promedio.toFixed(1)} · {stats.total} {stats.total === 1 ? "calificación" : "calificaciones"}
+                  </span>
+                </>
+              ) : (
+                <span>Todavía sin calificaciones</span>
+              )}
             </div>
+          </div>
 
-            <a
-              href="/emprendimientos"
-              className="block text-center rounded-control bg-highlight px-4 py-3 font-medium text-on-highlight hover:opacity-90"
-            >
-              Ver más productos
-            </a>
+          <div className="flex items-baseline gap-3">
+            <span className="price-tag !text-2xl">{formatPrice(producto.precio)}</span>
+            <span className="text-sm text-muted">{producto.unidad}</span>
+          </div>
 
-            <a
-              href="/emprendimientos"
-              className="block text-center mt-3 text-sm text-link hover:underline"
-            >
-              Volver al catálogo
-            </a>
+          {producto.descripcion && <p className="max-w-prose">{producto.descripcion}</p>}
+
+          <div className="card space-y-4 p-5">
+            {producto.disponible ? (
+              <>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm font-medium" id="qty-label">
+                    Cantidad
+                  </span>
+                  <div className="flex items-center gap-1" role="group" aria-labelledby="qty-label">
+                    <button type="button" className="btn btn-secondary !p-2" onClick={() => setCantidad((c) => Math.max(1, c - 1))} aria-label="Restar una unidad">
+                      <MinusIcon size={16} />
+                    </button>
+                    <span className="w-10 text-center font-semibold tabular-nums" aria-live="polite">
+                      {cantidad}
+                    </span>
+                    <button type="button" className="btn btn-secondary !p-2" onClick={() => setCantidad((c) => Math.min(MAX_QUANTITY, c + 1))} aria-label="Sumar una unidad">
+                      <PlusIcon size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <button type="button" onClick={handleAdd} className="btn btn-primary w-full !py-3">
+                  {added ? (
+                    <>
+                      <CheckIcon size={18} /> Agregado al carrito
+                    </>
+                  ) : (
+                    <>Agregar al carrito · {formatPrice(Number(producto.precio) * cantidad)}</>
+                  )}
+                </button>
+
+                {added && (
+                  <Link href="/carrito" className="block text-center text-sm font-medium text-link hover:underline">
+                    Ir al carrito
+                  </Link>
+                )}
+              </>
+            ) : (
+              <p className="rounded-control bg-surface-muted px-4 py-3 text-center text-sm text-muted">Este producto no está disponible por ahora.</p>
+            )}
+
+            <WishlistButton productId={producto.id} variant="full" />
           </div>
         </div>
       </div>
 
-      {/* Recomendaciones similares */}
-      <div className="mt-12">
-        <RecommendationsCarousel
-          title="🔗 Productos similares"
-          type="similar"
-          productId={productoId}
-          limit={6}
-        />
+      <div className="mt-16 grid gap-10 lg:grid-cols-[1.1fr_1fr]">
+        <section aria-labelledby="ratings-title" className="space-y-4">
+          <h2 id="ratings-title" className="text-heading">
+            Calificaciones
+          </h2>
+          <RatingsList key={ratingsVersion} productoId={productoId} limit={20} />
+        </section>
+
+        <section aria-labelledby="rate-title" className="card h-fit space-y-4 p-5">
+          <h2 id="rate-title" className="text-heading">
+            Calificá este producto
+          </h2>
+          <RatingForm
+            productoId={productoId}
+            onSuccess={() => {
+              reloadStats();
+              setRatingsVersion((v) => v + 1);
+            }}
+          />
+        </section>
+      </div>
+
+      <div className="mt-16">
+        <RecommendationsCarousel kind="similar" productId={productoId} title="Más como este" limit={6} />
       </div>
     </div>
   );

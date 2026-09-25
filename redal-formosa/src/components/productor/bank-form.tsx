@@ -1,136 +1,85 @@
 "use client";
 
 import { useState } from "react";
-import { updateProfileField } from "@/lib/supabase/db-helpers";
+
+import { BANKS, isBankCode } from "@/lib/domain/banks";
+import { isValidCbu } from "@/lib/domain/cbu";
+import { saveBankAccount } from "@/lib/producer/bank-account-client";
+import { Alert } from "@/components/ui/alert";
+import { Field } from "@/components/ui/field";
 
 interface BankFormProps {
-  userId: string;
   onSuccess?: () => void;
 }
 
-export function BankForm({ userId, onSuccess }: BankFormProps) {
+export function BankForm({ onSuccess }: BankFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    cbu: "",
-    banco: "",
-    titular: "",
-  });
+  const [form, setForm] = useState({ cbu: "", banco: "", titular: "" });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const update =
+    (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!isValidCbu(form.cbu)) {
+      setError("El CBU no es válido. Revisá que tenga 22 dígitos y que estén bien cargados.");
+      return;
+    }
+
+    if (!isBankCode(form.banco)) return;
+
     setLoading(true);
-
     try {
-      if (formData.cbu.length !== 22) {
-        throw new Error("El CBU debe tener 22 dígitos");
-      }
-
-      const bankData = JSON.stringify({
-        cbu: formData.cbu,
-        banco: formData.banco,
-        titular: formData.titular,
-        creado: new Date().toISOString(),
-      });
-
-      const { error: err } = await updateProfileField(userId, "bank_account", bankData);
-      if (err) throw err;
+      // El servidor valida de nuevo y guarda la cuenta cifrada.
+      await saveBankAccount({ cbu: form.cbu, banco: form.banco, titular: form.titular.trim() });
       onSuccess?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al guardar datos bancarios");
-    } finally {
+      setError(err instanceof Error ? err.message : "No pudimos guardar tus datos bancarios. Intentá de nuevo.");
       setLoading(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h3 className="text-heading">Datos bancarios para transferencias</h3>
-      <p className="text-sm text-muted">
-        Los fondos de tus ventas se transferirán a esta cuenta.
-      </p>
+      {error && <Alert tone="error">{error}</Alert>}
 
-      {error && (
-        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
-          {error}
-        </div>
-      )}
-
-      <div>
-        <label htmlFor="banco" className="block text-sm font-medium text-foreground mb-1">
-          Banco
-        </label>
-        <select
-          id="banco"
-          name="banco"
-          value={formData.banco}
-          onChange={handleChange}
-          required
-          className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <option value="">Seleccionar banco</option>
-          <option value="santander">Santander</option>
-          <option value="galicia">Galicia</option>
-          <option value="bbva">BBVA</option>
-          <option value="macro">Macro</option>
-          <option value="bna">Banco Nación</option>
-          <option value="provincia">Banco Provincia</option>
-          <option value="icbc">ICBC</option>
-          <option value="otro">Otro</option>
+      <Field id="banco" label="Banco">
+        <select id="banco" required value={form.banco} onChange={update("banco")} className="field">
+          <option value="">Elegí tu banco</option>
+          {BANKS.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
         </select>
-      </div>
+      </Field>
 
-      <div>
-        <label htmlFor="cbu" className="block text-sm font-medium text-foreground mb-1">
-          CBU (22 dígitos)
-        </label>
+      <Field id="cbu" label="CBU" hint="22 dígitos, sin espacios.">
         <input
           id="cbu"
-          type="text"
-          name="cbu"
-          value={formData.cbu}
-          onChange={handleChange}
           required
+          inputMode="numeric"
+          value={form.cbu}
+          onChange={update("cbu")}
           placeholder="0170001234567890123456"
           maxLength={22}
           pattern="[0-9]{22}"
-          className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 font-mono text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="field font-mono"
         />
-      </div>
+      </Field>
 
-      <div>
-        <label htmlFor="titular" className="block text-sm font-medium text-foreground mb-1">
-          Titular de la cuenta
-        </label>
-        <input
-          id="titular"
-          type="text"
-          name="titular"
-          value={formData.titular}
-          onChange={handleChange}
-          required
-          placeholder="Tu nombre completo"
-          className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
+      <Field id="titular" label="Titular de la cuenta">
+        <input id="titular" required value={form.titular} onChange={update("titular")} placeholder="Nombre completo" className="field" />
+      </Field>
 
-      <div className="rounded-control bg-info-soft px-4 py-3 text-sm text-info">
-        <p className="font-medium">Seguridad</p>
-        <p>Tus datos bancarios están encriptados y protegidos.</p>
-      </div>
+      <Alert tone="info">Solo vos y el equipo de RedAL pueden ver estos datos. Los usamos para transferirte tus ventas.</Alert>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded-control bg-action px-5 py-2.5 font-medium text-on-action transition-colors duration-150 ease-soft hover:bg-action-hover disabled:opacity-60"
-      >
-        {loading ? "Guardando..." : "Guardar datos bancarios"}
+      <button type="submit" disabled={loading} className="btn btn-primary w-full !py-3">
+        {loading ? "Guardando…" : "Guardar datos bancarios"}
       </button>
     </form>
   );

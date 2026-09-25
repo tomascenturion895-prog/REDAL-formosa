@@ -1,106 +1,97 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+import { adminRepository, type AdminUser } from "@/lib/admin/admin-repository";
 import { useAuth } from "@/lib/auth/auth-context";
-import { adminService } from "@/lib/admin/admin-service";
+import { formatDate } from "@/lib/format";
+import { useAsync } from "@/lib/hooks/use-async";
+import type { UserRole } from "@/lib/supabase/types";
+import { Alert } from "@/components/ui/alert";
+
+const ROLE_LABEL: Record<UserRole, string> = {
+  comprador: "Comprador",
+  emprendedor: "Emprendedor",
+  admin: "Administrador",
+};
 
 export default function AdminUsuariosPage() {
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [procesando, setProcesando] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { data: users, error: loadError, reload } = useAsync(() => adminRepository.users(), []);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    checkAdminAndLoad();
-  }, [user]);
+  const changeRole = async (target: AdminUser, role: UserRole) => {
+    const action = role === "admin" ? "dar permisos de administrador a" : "quitar permisos de administrador a";
+    if (!window.confirm(`¿Querés ${action} ${target.email}?`)) return;
 
-  const checkAdminAndLoad = async () => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
-    const admin = await adminService.isAdmin(user.id);
-    if (!admin) {
-      router.push("/");
-      return;
-    }
-
-    setIsAdmin(true);
-    loadUsers();
-  };
-
-  const loadUsers = async () => {
+    setBusy(target.id);
+    setError(null);
     try {
-      const data = await adminService.getUsers();
-      setUsers(data);
-    } catch (err) {
-      console.error("Error:", err);
+      await adminRepository.setRole(target.id, role);
+      reload();
+    } catch {
+      setError("No se pudo cambiar el rol.");
     } finally {
-      setLoading(false);
+      setBusy(null);
     }
   };
 
-  const handlePromoteAdmin = async (userId: string) => {
-    if (!confirm("¿Promover a admin?")) return;
-    setProcesando(userId);
-    const success = await adminService.promoteToAdmin(userId);
-    if (success) loadUsers();
-    setProcesando(null);
-  };
-
-  const handleRemoveAdmin = async (userId: string) => {
-    if (!confirm("¿Remover admin?")) return;
-    setProcesando(userId);
-    const success = await adminService.removeAdmin(userId);
-    if (success) loadUsers();
-    setProcesando(null);
-  };
-
-  if (authLoading || loading) return <div className="text-center py-12">Cargando...</div>;
-  if (!isAdmin) return <div className="text-center py-12 text-danger">No autorizado</div>;
+  if (loadError) return <Alert tone="error">No pudimos cargar los usuarios.</Alert>;
+  if (!users) return <div aria-busy="true" className="h-40" />;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">👥 Usuarios</h1>
-      <div className="rounded-card border border-border bg-surface overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-muted border-b border-border">
-              <tr>
-                <th className="px-4 py-3 text-left">Email</th>
-                <th className="px-4 py-3 text-left">Rol</th>
-                <th className="px-4 py-3 text-left">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {users.map((u) => (
-                <tr key={u.id}>
-                  <td className="px-4 py-3">{u.email}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      u.is_admin ? "bg-warning-soft text-warning" : "bg-surface-muted text-muted"
-                    }`}>
-                      {u.is_admin ? "👑 Admin" : "Usuario"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
+    <div className="space-y-4">
+      {error && <Alert tone="error">{error}</Alert>}
+
+      <div className="card overflow-x-auto">
+        <table className="w-full text-sm">
+          <caption className="sr-only">Usuarios registrados</caption>
+          <thead className="border-b border-border bg-surface-muted text-left text-muted">
+            <tr>
+              <th scope="col" className="px-4 py-3 font-medium">Usuario</th>
+              <th scope="col" className="px-4 py-3 font-medium">Rol</th>
+              <th scope="col" className="px-4 py-3 font-medium">Pedidos</th>
+              <th scope="col" className="px-4 py-3 font-medium">Registro</th>
+              <th scope="col" className="px-4 py-3">
+                <span className="sr-only">Acciones</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {users.map((u) => (
+              <tr key={u.id}>
+                <td className="px-4 py-3">
+                  <p className="font-medium">{u.full_name || "Sin nombre"}</p>
+                  <p className="text-muted">{u.email}</p>
+                </td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      u.role === "admin" ? "bg-warning-soft text-warning" : "bg-surface-muted text-muted"
+                    }`}
+                  >
+                    {ROLE_LABEL[u.role]}
+                  </span>
+                </td>
+                <td className="px-4 py-3 tabular-nums">{u.cantidad_pedidos}</td>
+                <td className="px-4 py-3 text-muted">{formatDate(u.created_at)}</td>
+                <td className="px-4 py-3 text-right">
+                  {u.id !== user?.id && (
                     <button
-                      onClick={() => u.is_admin ? handleRemoveAdmin(u.id) : handlePromoteAdmin(u.id)}
-                      disabled={procesando === u.id}
-                      className="text-xs text-link hover:underline disabled:opacity-60"
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      disabled={busy === u.id}
+                      onClick={() => changeRole(u, u.role === "admin" ? "comprador" : "admin")}
                     >
-                      {u.is_admin ? "Remover" : "Promover"}
+                      {u.role === "admin" ? "Quitar admin" : "Hacer admin"}
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

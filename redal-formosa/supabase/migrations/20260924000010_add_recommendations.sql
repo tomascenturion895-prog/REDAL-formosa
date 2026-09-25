@@ -1,97 +1,97 @@
--- Tabla de historial de vistas/interacciones (para futuro)
-CREATE TABLE IF NOT EXISTS product_interactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  usuario_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  producto_id UUID REFERENCES productos(id) ON DELETE CASCADE,
-  tipo VARCHAR(50), -- 'vista', 'favorito', 'compra'
-  creado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(usuario_id, producto_id, tipo)
-);
+-- REDAL: recomendaciones (similares, más vendidos, nuevos, personalizadas).
 
-CREATE INDEX idx_product_interactions_usuario ON product_interactions(usuario_id);
-CREATE INDEX idx_product_interactions_tipo ON product_interactions(tipo);
-
--- View: Productos similares (misma categoría)
-CREATE OR REPLACE VIEW productos_similares AS
-SELECT
+-- Productos parecidos: mismo emprendimiento (peso 10) o misma categoría (peso 5).
+-- security_invoker: RLS oculta lo que el usuario no puede ver.
+create or replace view public.productos_similares
+with (security_invoker = true) as
+select
   p1.id as producto_id,
   p2.id as similar_id,
   p2.nombre,
   p2.precio,
-  p2.imagen_principal,
-  CASE
-    WHEN p1.productor_id = p2.productor_id THEN 10
-    WHEN p1.categoria = p2.categoria THEN 5
-    ELSE 1
-  END as relevancia
-FROM productos p1
-JOIN productos p2 ON (
-  (p1.productor_id = p2.productor_id OR p1.categoria = p2.categoria)
-  AND p1.id != p2.id
-  AND p1.validado = TRUE
-  AND p2.validado = TRUE
+  p2.imagen_url,
+  case when p1.emprendimiento_id = p2.emprendimiento_id then 10 else 5 end as relevancia
+from public.productos p1
+join public.productos p2
+  on p1.id <> p2.id
+ and p2.disponible
+ and (
+   p1.emprendimiento_id = p2.emprendimiento_id
+   or (p1.categoria_id is not null and p1.categoria_id = p2.categoria_id)
+ );
+
+create or replace view public.nuevos_productos
+with (security_invoker = true) as
+select id, nombre, precio, imagen_url, categoria_id, created_at
+from public.productos
+where disponible
+order by created_at desc
+limit 50;
+
+-- Más vendidos: agrega ventas de todos los compradores, por eso es security definer.
+-- Solo devuelve datos públicos del producto y un conteo; no expone pedidos ni personas.
+create or replace function public.productos_mas_vendidos(max_results int default 8)
+returns table (
+  producto_id uuid,
+  nombre text,
+  precio numeric,
+  imagen_url text,
+  veces_comprado bigint
 )
-ORDER BY relevancia DESC;
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p.id, p.nombre, p.precio, p.imagen_url, count(distinct i.pedido_id)
+  from public.pedido_items i
+  join public.pedidos o on o.id = i.pedido_id
+  join public.productos p on p.id = i.producto_id
+  where o.estado in ('pagado', 'en_preparacion', 'listo', 'en_camino', 'entregado')
+    and p.disponible and p.validado
+  group by p.id, p.nombre, p.precio, p.imagen_url
+  order by count(distinct i.pedido_id) desc
+  limit max_results;
+$$;
 
--- View: Productos más vendidos
-CREATE OR REPLACE VIEW top_products AS
-SELECT
-  dp.producto_id,
-  pr.nombre,
-  pr.precio,
-  pr.imagen_principal,
-  COUNT(DISTINCT dp.pedido_id) as veces_comprado,
-  SUM(dp.cantidad) as total_vendido,
-  AVG(dp.cantidad) as promedio_cantidad
-FROM detalle_pedido dp
-JOIN productos pr ON dp.producto_id = pr.id
-WHERE pr.validado = TRUE
-GROUP BY dp.producto_id, pr.nombre, pr.precio, pr.imagen_principal
-ORDER BY veces_comprado DESC
-LIMIT 100;
+-- Personalizadas: parte de favoritos y compras del usuario actual (RLS propio).
+create or replace function public.recomendaciones_usuario(max_results int default 12)
+returns table (
+  producto_id uuid,
+  nombre text,
+  precio numeric,
+  imagen_url text,
+  relevancia int,
+  razon text
+)
+language sql
+stable
+as $$
+  with base as (
+    select w.producto_id as pid, 'favoritos'::text as origen
+    from public.wishlist w
+    where w.usuario_id = auth.uid()
+    union all
+    select i.producto_id, 'compras'::text
+    from public.pedido_items i
+    join public.pedidos o on o.id = i.pedido_id
+    where o.comprador_id = auth.uid()
+  )
+  select
+    s.similar_id,
+    s.nombre,
+    s.precio,
+    s.imagen_url,
+    sum(s.relevancia)::int,
+    case when bool_or(b.origen = 'compras')
+      then 'basado_en_compras' else 'basado_en_favoritos' end
+  from base b
+  join public.productos_similares s on s.producto_id = b.pid
+  where s.similar_id not in (select pid from base)
+  group by s.similar_id, s.nombre, s.precio, s.imagen_url
+  order by 5 desc
+  limit max_results;
+$$;
 
--- View: Productos nuevos
-CREATE OR REPLACE VIEW nuevos_productos AS
-SELECT
-  id,
-  nombre,
-  precio,
-  imagen_principal,
-  categoria,
-  creado_en
-FROM productos
-WHERE validado = TRUE
-ORDER BY creado_en DESC
-LIMIT 50;
-
--- View: Para usuario, productos basados en favoritos
-CREATE OR REPLACE VIEW usuario_recomendaciones_favoritos AS
-SELECT
-  w.usuario_id,
-  ps.similar_id as producto_id,
-  ps.nombre,
-  ps.precio,
-  ps.imagen_principal,
-  ps.relevancia,
-  'basado_en_favoritos' as razon
-FROM wishlist w
-JOIN productos_similares ps ON w.producto_id = ps.producto_id
-WHERE w.usuario_id IS NOT NULL
-ORDER BY w.usuario_id, ps.relevancia DESC;
-
--- View: Para usuario, productos basados en compras
-CREATE OR REPLACE VIEW usuario_recomendaciones_compras AS
-SELECT
-  p.usuario_id,
-  ps.similar_id as producto_id,
-  ps.nombre,
-  ps.precio,
-  ps.imagen_principal,
-  ps.relevancia,
-  'basado_en_compras' as razon
-FROM pedidos p
-JOIN detalle_pedido dp ON p.id = dp.pedido_id
-JOIN productos_similares ps ON dp.producto_id = ps.producto_id
-WHERE p.usuario_id IS NOT NULL
-GROUP BY p.usuario_id, ps.similar_id, ps.nombre, ps.precio, ps.imagen_principal, ps.relevancia
-ORDER BY p.usuario_id, COUNT(DISTINCT p.id) DESC;
+grant execute on function public.productos_mas_vendidos(int) to anon, authenticated;
+grant execute on function public.recomendaciones_usuario(int) to authenticated;

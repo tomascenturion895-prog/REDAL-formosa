@@ -1,26 +1,19 @@
-import type { Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Figtree } from "next/font/google";
+
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { CartProvider } from "@/lib/cart/cart-context";
-import { PWAInstaller } from "@/components/pwa/pwa-installer";
 import { defaultMetadata } from "@/lib/seo/metadata";
+import { PWAInstaller } from "@/components/pwa/pwa-installer";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 
-const figtree = Figtree({
-  variable: "--font-figtree",
-  subsets: ["latin"],
-  display: "swap",
-});
+// next/font descarga y sirve las fuentes desde el propio dominio: no hace falta preconectar a Google.
+const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"], display: "swap" });
+const bricolage = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: ["latin"], display: "swap" });
 
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-export const metadata = defaultMetadata;
+export const metadata: Metadata = defaultMetadata;
 
 export const viewport: Viewport = {
   themeColor: [
@@ -29,21 +22,10 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="es-AR"
-      className={`${figtree.variable} ${bricolage.variable} h-full antialiased`}
-    >
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      </head>
-      <body className="min-h-full flex flex-col">
+    <html lang="es-AR" className={`${figtree.variable} ${bricolage.variable} h-full antialiased`}>
+      <body className="flex min-h-full flex-col">
         <AuthProvider>
           <CartProvider>
             {children}

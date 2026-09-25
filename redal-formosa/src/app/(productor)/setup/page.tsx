@@ -1,136 +1,103 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/lib/auth/auth-context";
+import Link from "next/link";
+
+import { useRequireAuth } from "@/lib/auth/use-require-auth";
+import { useAsync } from "@/lib/hooks/use-async";
+import { producerRepository } from "@/lib/producer/producer-repository";
 import { ProductorForm } from "@/components/productor/productor-form";
 import { SucursalesForm } from "@/components/productor/sucursales-form";
 import { BiometricVerification } from "@/components/productor/biometric-verification";
 import { BankForm } from "@/components/productor/bank-form";
+import { CheckIcon } from "@/components/ui/icons";
 
-type Step = "info" | "sucursal" | "biometric" | "bank" | "complete";
+type Step = "info" | "ubicacion" | "biometric" | "bank" | "complete";
+
+const STEPS: { key: Exclude<Step, "complete">; title: string; description: string }[] = [
+  { key: "info", title: "Tu emprendimiento", description: "Contanos qué producís." },
+  { key: "ubicacion", title: "Ubicación y horarios", description: "Para que sepan dónde y cuándo encontrarte." },
+  { key: "biometric", title: "Verificación de identidad", description: "Subí tu DNI y una selfie." },
+  { key: "bank", title: "Datos para cobrar", description: "La cuenta donde vas a recibir tus ventas." },
+];
 
 export default function ProductorSetupPage() {
-  const { user, loading } = useAuth();
-  const [step, setStep] = useState<Step>("info");
-  const [emprendimientoId, setEmprendimientoId] = useState<string>("");
+  const { user, pending } = useRequireAuth();
 
-  if (loading) {
-    return <div className="text-center py-12">Cargando...</div>;
-  }
+  // Si ya creó su emprendimiento, el asistente sigue desde el paso siguiente (sin duplicarlo).
+  const { data: existingId, loading } = useAsync(() => producerRepository.firstEmprendimientoId(user!.id), [user?.id], {
+    enabled: Boolean(user),
+  });
 
-  if (!user) {
-    return (
-      <div className="max-w-narrow mx-auto text-center py-12">
-        <p className="text-muted">Debes estar logueado para acceder a esta página.</p>
-      </div>
-    );
-  }
+  const [step, setStep] = useState<Step | null>(null);
+  const [createdId, setCreatedId] = useState<string | null>(null);
 
-  const steps: { key: Step; title: string; description: string }[] = [
-    {
-      key: "info",
-      title: "Información del emprendimiento",
-      description: "Cuéntanos sobre tu negocio",
-    },
-    {
-      key: "sucursal",
-      title: "Ubicación y horarios",
-      description: "Agrega tu localidad y horarios de atención",
-    },
-    {
-      key: "biometric",
-      title: "Verificación de identidad",
-      description: "Verifica tu identidad con DNI y selfie",
-    },
-    {
-      key: "bank",
-      title: "Datos bancarios",
-      description: "Información para recibir pagos",
-    },
-  ];
+  if (pending || loading || !user) return <div aria-busy="true" className="h-40" />;
 
-  const currentStepIndex = steps.findIndex((s) => s.key === step);
-  const currentStep = steps[currentStepIndex];
+  const emprendimientoId = createdId ?? existingId ?? null;
+  const currentStep: Step = step ?? (emprendimientoId ? "ubicacion" : "info");
+  const index = STEPS.findIndex((s) => s.key === currentStep);
+  const current = STEPS[index];
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-title mb-4">Configura tu emprendimiento</h1>
-        <div className="flex gap-2">
-          {steps.map((s, i) => (
-            <div
-              key={s.key}
-              className={`flex-1 h-1 rounded-full transition-colors duration-200 ${
-                i <= currentStepIndex ? "bg-action" : "bg-border"
-              }`}
-            />
+    <div className="mx-auto max-w-2xl">
+      <h1 className="text-title pb-6">Sumá tu emprendimiento</h1>
+
+      {currentStep !== "complete" && (
+        <ol className="mb-6 flex gap-2" aria-label="Progreso">
+          {STEPS.map((s, i) => (
+            <li key={s.key} aria-current={i === index ? "step" : undefined} className={`h-1.5 flex-1 rounded-full ${i <= index ? "bg-action" : "bg-border"}`}>
+              <span className="sr-only">{s.title}</span>
+            </li>
           ))}
-        </div>
-      </div>
+        </ol>
+      )}
 
-      <div className="rounded-card border border-border bg-surface p-6 shadow-card">
-        <h2 className="text-heading mb-2">{currentStep.title}</h2>
-        <p className="text-sm text-muted mb-6">{currentStep.description}</p>
+      <div className="card p-6 shadow-card">
+        {currentStep !== "complete" && (
+          <>
+            <p className="text-sm text-muted">
+              Paso {index + 1} de {STEPS.length}
+            </p>
+            <h2 className="text-heading mt-1">{current.title}</h2>
+            <p className="mb-6 mt-1 text-sm text-muted">{current.description}</p>
+          </>
+        )}
 
-        {step === "info" && (
+        {currentStep === "info" && (
           <ProductorForm
             userId={user.id}
-            onSuccess={() => {
-              setStep("sucursal");
+            defaultEmail={user.email ?? ""}
+            onSuccess={(id) => {
+              setCreatedId(id);
+              setStep("ubicacion");
             }}
           />
         )}
 
-        {step === "sucursal" && (
-          <SucursalesForm
-            emprendimientoId={user.id}
-            onSuccess={() => {
-              setStep("biometric");
-            }}
-          />
+        {currentStep === "ubicacion" && emprendimientoId && (
+          <SucursalesForm emprendimientoId={emprendimientoId} onSuccess={() => setStep("biometric")} />
         )}
 
-        {step === "biometric" && (
-          <BiometricVerification
-            userId={user.id}
-            onSuccess={() => {
-              setStep("bank");
-            }}
-          />
-        )}
+        {currentStep === "biometric" && <BiometricVerification userId={user.id} onSuccess={() => setStep("bank")} />}
 
-        {step === "bank" && (
-          <BankForm
-            userId={user.id}
-            onSuccess={() => {
-              setStep("complete");
-            }}
-          />
-        )}
+        {currentStep === "bank" && <BankForm onSuccess={() => setStep("complete")} />}
 
-        {step === "complete" && (
-          <div className="text-center space-y-4">
-            <div className="text-5xl mb-4">✓</div>
-            <h3 className="text-heading">¡Felicitaciones!</h3>
+        {currentStep === "complete" && (
+          <div className="space-y-4 text-center">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-soft text-success">
+              <CheckIcon size={28} />
+            </span>
+            <h2 className="text-title">Tu emprendimiento está creado</h2>
             <p className="text-muted">
-              Tu emprendimiento está listo. Próximamente recibirás la confirmación de la
-              verificación de identidad.
+              Ya podés cargar productos. Los nuevos productos se publican cuando un administrador los aprueba, y te avisamos cuando se confirme tu verificación de identidad.
             </p>
-            <a
-              href="/dashboard/productor"
-              className="inline-block rounded-control bg-action px-6 py-3 font-medium text-on-action transition-colors duration-150 ease-soft hover:bg-action-hover"
-            >
-              Ir al panel
-            </a>
+            <Link href="/dashboard" className="btn btn-primary">
+              Cargar mis productos
+            </Link>
           </div>
         )}
       </div>
-
-      {step !== "complete" && (
-        <div className="mt-4 text-center text-sm text-muted">
-          Paso {currentStepIndex + 1} de {steps.length}
-        </div>
-      )}
     </div>
   );
 }

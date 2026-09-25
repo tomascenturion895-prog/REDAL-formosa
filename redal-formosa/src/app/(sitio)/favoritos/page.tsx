@@ -1,110 +1,56 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth/auth-context";
-import { wishlistService, type WishlistItem } from "@/lib/wishlist/wishlist-service";
-import { WishlistButton } from "@/components/wishlist/wishlist-button";
+
+import { useRequireAuth } from "@/lib/auth/use-require-auth";
+import { useAsync } from "@/lib/hooks/use-async";
+import { wishlistRepository } from "@/lib/wishlist/wishlist-repository";
+import { PageHeader } from "@/components/layout/page-header";
+import { ProductGrid } from "@/components/catalog/product-grid";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/ui/empty-state";
+import { HeartIcon } from "@/components/ui/icons";
 
 export default function FavoritosPage() {
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
-  const [favorites, setFavorites] = useState<WishlistItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user, pending } = useRequireAuth();
+  const { data, error, loading } = useAsync(() => wishlistRepository.listProducts(user!.id), [user?.id], {
+    enabled: Boolean(user),
+  });
+  // Los que la persona quita en esta pantalla desaparecen de la lista sin recargar.
+  const [removed, setRemoved] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (authLoading) return;
+  if (pending || loading) return <div className="page-container py-section" aria-busy="true" />;
 
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
-    loadFavorites();
-  }, [user, authLoading]);
-
-  const loadFavorites = async () => {
-    try {
-      const data = await wishlistService.getWishlist(user!.id);
-      setFavorites(data);
-    } catch (err) {
-      console.error("Error loading favorites:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemove = (productId: string) => {
-    setFavorites(favorites.filter((f) => f.producto_id !== productId));
-  };
-
-  if (authLoading || loading) {
-    return <div className="text-center py-12">Cargando...</div>;
-  }
+  const products = (data ?? []).filter((p) => !removed.has(p.id));
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">❤️ Mis Favoritos</h1>
-        <p className="text-muted">{favorites.length} productos guardados</p>
-      </div>
+    <div className="page-container py-section">
+      <PageHeader
+        title="Favoritos"
+        description={products.length ? `${products.length} ${products.length === 1 ? "producto guardado" : "productos guardados"}` : undefined}
+      />
 
-      {favorites.length === 0 ? (
-        <div className="rounded-card border border-border bg-surface-muted p-12 text-center space-y-4">
-          <p className="text-lg text-muted">Aún no tienes favoritos</p>
-          <Link
-            href="/productos"
-            className="inline-block rounded-control bg-action px-6 py-3 font-medium text-on-action hover:bg-action-hover"
-          >
-            Explorar productos
-          </Link>
-        </div>
+      {error ? (
+        <Alert tone="error">No pudimos cargar tus favoritos.</Alert>
+      ) : products.length === 0 ? (
+        <EmptyState
+          icon={<HeartIcon size={36} />}
+          title="Todavía no guardaste favoritos"
+          description="Tocá el corazón en cualquier producto para guardarlo y encontrarlo rápido."
+          action={
+            <Link href="/productos" className="btn btn-primary">
+              Explorar productos
+            </Link>
+          }
+        />
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {favorites.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-card border border-border bg-surface overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              {item.producto?.imagen_principal && (
-                <img
-                  src={item.producto.imagen_principal}
-                  alt={item.producto.nombre}
-                  className="w-full h-48 object-cover bg-surface-muted"
-                />
-              )}
-
-              <div className="p-4 space-y-3">
-                <Link href={`/productos/${item.producto_id}`}>
-                  <h3 className="font-semibold text-foreground hover:text-action transition-colors line-clamp-2">
-                    {item.producto?.nombre}
-                  </h3>
-                </Link>
-
-                <p className="text-lg font-bold text-action">
-                  ${item.producto?.precio.toFixed(2)}
-                </p>
-
-                <div className="flex gap-2">
-                  <Link
-                    href={`/productos/${item.producto_id}`}
-                    className="flex-1 text-center rounded-control bg-surface-muted px-3 py-2 text-sm font-medium text-foreground hover:bg-surface transition-colors"
-                  >
-                    Ver
-                  </Link>
-                  <WishlistButton
-                    productId={item.producto_id}
-                    onToggle={(isFav) => {
-                      if (!isFav) handleRemove(item.producto_id);
-                    }}
-                    size="sm"
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ProductGrid
+          products={products}
+          onFavoriteChange={(productId, isFavorite) => {
+            if (!isFavorite) setRemoved((prev) => new Set(prev).add(productId));
+          }}
+        />
       )}
     </div>
   );
