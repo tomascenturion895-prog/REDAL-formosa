@@ -3,19 +3,19 @@ import Link from "next/link";
 
 import { siteName } from "@/lib/navigation";
 
-/** Ícono de marca: La 'R' con flecha ascendente */
+/** Ícono de marca: Círculo con la 'R' oficial de REDAL */
 export function LogoMark({ size = 32 }: { size?: number }) {
   return (
     <div
       style={{ width: size, height: size }}
-      className="relative flex shrink-0 items-center justify-center rounded-lg bg-[#14261c] p-1 shadow-xs border border-white/10"
+      className="relative flex shrink-0 items-center justify-center rounded-full overflow-hidden shadow-xs"
     >
       <Image
-        src="/brand/redal-mark.png"
-        alt="REDAL Mark"
-        width={61}
-        height={67}
-        className="h-full w-auto object-contain"
+        src="/icon-192.png"
+        alt="REDAL"
+        width={size}
+        height={size}
+        className="h-full w-full object-cover"
         priority
       />
     </div>
