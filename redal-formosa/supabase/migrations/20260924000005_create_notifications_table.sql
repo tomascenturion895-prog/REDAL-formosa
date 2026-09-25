@@ -63,15 +63,19 @@ CREATE POLICY "Crear propias preferencias" ON preferencias_notificaciones
   WITH CHECK (auth.uid() = usuario_id);
 
 -- Función para crear preferencias por defecto
-CREATE OR REPLACE FUNCTION crear_preferencias_notificaciones()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION public.crear_preferencias_notificaciones()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
-  INSERT INTO preferencias_notificaciones (usuario_id)
+  INSERT INTO public.preferencias_notificaciones (usuario_id)
   VALUES (NEW.id)
   ON CONFLICT (usuario_id) DO NOTHING;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Trigger para crear preferencias al registrarse
 DROP TRIGGER IF EXISTS trigger_crear_preferencias ON auth.users;
