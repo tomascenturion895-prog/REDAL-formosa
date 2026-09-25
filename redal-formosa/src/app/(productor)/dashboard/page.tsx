@@ -8,6 +8,7 @@ import { useAsync } from "@/lib/hooks/use-async";
 import { producerRepository } from "@/lib/producer/producer-repository";
 import { ProductForm } from "@/components/productor/product-form";
 import { ProductList } from "@/components/productor/product-list";
+import { ProductorForm } from "@/components/productor/productor-form";
 import { SucursalesForm } from "@/components/productor/sucursales-form";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -23,7 +24,7 @@ export default function ProductorDashboard() {
   const [showForm, setShowForm] = useState(false);
   const [listVersion, setListVersion] = useState(0);
 
-  if (pending || loading) return <div aria-busy="true" className="h-40" />;
+  if (pending || loading || !user) return <div aria-busy="true" className="h-40" />;
 
   if (!emprendimientos || emprendimientos.length === 0) {
     return (
@@ -108,6 +109,21 @@ export default function ProductorDashboard() {
               <dd className="font-medium">{selected.direccion || "Sin cargar"}</dd>
             </div>
           </dl>
+          <details className="rounded-control border border-border">
+            <summary className="cursor-pointer px-3 py-2 font-medium">
+              Editar información del emprendimiento
+            </summary>
+            <div className="border-t border-border p-3">
+              <ProductorForm
+                key={selected.id}
+                userId={user.id}
+                emprendimientoId={selected.id}
+                initial={selected}
+                submitLabel="Guardar información"
+                onSuccess={() => reload()}
+              />
+            </div>
+          </details>
           <details className="rounded-control border border-border">
             <summary className="cursor-pointer px-3 py-2 font-medium">
               {selected.latitud != null && selected.longitud != null ? "Editar ubicación y horarios" : "Ubicar en el mapa"}

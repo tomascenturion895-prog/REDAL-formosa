@@ -82,6 +82,29 @@ export class ProducerRepository {
     return row.id;
   }
 
+  async updateEmprendimiento(
+    emprendimientoId: string,
+    input: {
+      nombre?: string;
+      descripcion?: string | null;
+      telefono?: string | null;
+      email?: string | null;
+      direccion?: string | null;
+    },
+  ): Promise<void> {
+    const { error } = await this.db
+      .from("emprendimientos")
+      .update({
+        ...(input.nombre !== undefined ? { nombre: input.nombre } : {}),
+        ...(input.descripcion !== undefined ? { descripcion: input.descripcion ?? null } : {}),
+        ...(input.telefono !== undefined ? { telefono: input.telefono ?? null } : {}),
+        ...(input.email !== undefined ? { email: input.email ?? null } : {}),
+        ...(input.direccion !== undefined ? { direccion: input.direccion ?? null } : {}),
+      })
+      .eq("id", emprendimientoId);
+    if (error) throw new RepositoryError(`actualizar emprendimiento: ${error.message}`, error);
+  }
+
   async setLocation(emprendimientoId: string, location: EmprendimientoLocation): Promise<void> {
     const { error } = await this.db.from("emprendimientos").update(location).eq("id", emprendimientoId);
     if (error) throw new RepositoryError(`guardar ubicación: ${error.message}`, error);
@@ -108,6 +131,31 @@ export class ProducerRepository {
       imagen_url: input.imagenUrl || null,
     });
     if (error) throw new RepositoryError(`crear producto: ${error.message}`, error);
+  }
+
+  async updateProduct(
+    productId: string,
+    input: {
+      nombre?: string;
+      descripcion?: string | null;
+      precio?: number;
+      unidad?: string;
+      imagenUrl?: string | null;
+      disponible?: boolean;
+    },
+  ): Promise<void> {
+    const { error } = await this.db
+      .from("productos")
+      .update({
+        ...(input.nombre !== undefined ? { nombre: input.nombre } : {}),
+        ...(input.descripcion !== undefined ? { descripcion: input.descripcion || null } : {}),
+        ...(input.precio !== undefined ? { precio: input.precio } : {}),
+        ...(input.unidad !== undefined ? { unidad: input.unidad } : {}),
+        ...(input.imagenUrl !== undefined ? { imagen_url: input.imagenUrl || null } : {}),
+        ...(input.disponible !== undefined ? { disponible: input.disponible } : {}),
+      })
+      .eq("id", productId);
+    if (error) throw new RepositoryError(`actualizar producto: ${error.message}`, error);
   }
 
   async setProductAvailability(productId: string, disponible: boolean): Promise<void> {
