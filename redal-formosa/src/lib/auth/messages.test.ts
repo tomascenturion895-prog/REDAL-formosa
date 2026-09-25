@@ -25,6 +25,10 @@ describe("authErrorMessage", () => {
     expect(authErrorMessage(new Error("Invalid login credentials"))).toMatch(/no son correctos/);
     expect(authErrorMessage("User already registered")).toMatch(/ya tiene una cuenta/);
     expect(authErrorMessage(new Error("Email not confirmed"))).toMatch(/confirmaste/);
+    expect(authErrorMessage("Provider is not enabled")).toMatch(/no está habilitado/);
+    expect(authErrorMessage("access_denied")).toMatch(/Cancelaste/);
+    expect(authErrorMessage("oauth_error")).toMatch(/No se pudo autenticar/);
+    expect(authErrorMessage("missing_code")).toMatch(/código de autorización/);
   });
 
   it("no filtra mensajes internos desconocidos", () => {

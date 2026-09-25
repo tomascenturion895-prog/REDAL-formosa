@@ -26,12 +26,44 @@ export function useAuthActions() {
     return { data, error };
   };
 
-  const signInWithProvider = async (provider: Extract<Provider, "google" | "facebook" | "twitter">) => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: `${window.location.origin}/` },
+  const signInWithProvider = async (
+    provider: Extract<Provider, "google" | "facebook" | "twitter" | "x">,
+    next: string = "/",
+  ) => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const callbackUrl = new URL("/auth/callback", origin);
+    if (next && next !== "/") {
+      callbackUrl.searchParams.set("next", next);
+    }
+
+    const targetProvider: Provider = provider as Provider;
+    let { data, error } = await supabase.auth.signInWithOAuth({
+      provider: targetProvider,
+      options: {
+        redirectTo: callbackUrl.toString(),
+      },
     });
-    return { error };
+
+    // En Supabase el proveedor de X puede estar registrado como 'twitter' (OAuth 1.0a) o 'x' (OAuth 2.0).
+    // Si el primero no está habilitado, intentamos automáticamente con el alternativo.
+    if (
+      error &&
+      (provider === "x" || provider === "twitter") &&
+      /provider is not enabled|unsupported provider/i.test(error.message)
+    ) {
+      const fallbackProvider: Provider = provider === "x" ? "twitter" : "x";
+      const fallbackResult = await supabase.auth.signInWithOAuth({
+        provider: fallbackProvider,
+        options: {
+          redirectTo: callbackUrl.toString(),
+        },
+      });
+      if (!fallbackResult.error) {
+        return { data: fallbackResult.data, error: null };
+      }
+    }
+
+    return { data, error };
   };
 
   const signOut = async () => {

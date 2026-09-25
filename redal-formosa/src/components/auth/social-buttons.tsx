@@ -43,35 +43,79 @@ const PROVIDERS: { id: SocialProvider; label: string; icon: React.ReactNode }[] 
   },
 ];
 
-/** Botones de acceso con redes. Cada proveedor debe estar habilitado en Supabase (Authentication → Providers). */
-export function SocialButtons({ onError }: { onError: (message: string) => void }) {
+interface SocialButtonsProps {
+  onError: (message: string) => void;
+  next?: string;
+}
+
+/** Botones de acceso con redes (Google, Facebook, X). Cada proveedor debe estar habilitado en Supabase (Authentication → Providers). */
+export function SocialButtons({ onError, next = "/" }: SocialButtonsProps) {
   const { signInWithProvider } = useAuthActions();
   const [pending, setPending] = useState<SocialProvider | null>(null);
 
   const handleClick = async (provider: SocialProvider) => {
     setPending(provider);
-    const { error } = await signInWithProvider(provider);
+    const { error } = await signInWithProvider(provider, next);
     if (error) {
-      onError(/provider is not enabled|unsupported provider/i.test(error.message) ? "Ese método todavía no está habilitado." : authErrorMessage(error));
+      const isUnconfigured = /provider is not enabled|unsupported provider/i.test(error.message);
+      const friendlyName =
+        provider === "google" ? "Google" : provider === "facebook" ? "Facebook" : "X";
+
+      onError(
+        isUnconfigured
+          ? `El inicio de sesión con ${friendlyName} debe habilitarse en el panel de Supabase (Authentication → Providers).`
+          : authErrorMessage(error),
+      );
       setPending(null);
     }
   };
 
   return (
     <div className="flex flex-col gap-3">
-      {PROVIDERS.map(({ id, label, icon }) => (
-        <button
-          key={id}
-          type="button"
-          onClick={() => handleClick(id)}
-          disabled={pending !== null}
-          aria-busy={pending === id}
-          className="btn btn-secondary relative w-full !justify-center !py-3"
-        >
-          <span className="absolute left-4 flex items-center">{icon}</span>
-          {label}
-        </button>
-      ))}
+      {PROVIDERS.map(({ id, label, icon }) => {
+        const isCurrent = pending === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            onClick={() => handleClick(id)}
+            disabled={pending !== null}
+            aria-busy={isCurrent}
+            className="btn btn-secondary relative w-full !justify-center !py-3 font-medium transition hover:shadow-sm disabled:opacity-60"
+          >
+            <span className="absolute left-4 flex items-center" aria-hidden="true">
+              {icon}
+            </span>
+            {isCurrent ? (
+              <span className="flex items-center gap-2">
+                <svg
+                  className="h-4 w-4 animate-spin text-foreground"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                <span>Conectando…</span>
+              </span>
+            ) : (
+              label
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
