@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -8,7 +9,7 @@ import { useAsync } from "@/lib/hooks/use-async";
 import { PageHeader } from "@/components/layout/page-header";
 import { ProductGrid } from "@/components/catalog/product-grid";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PackageIcon, SearchIcon } from "@/components/ui/icons";
+import { SearchIcon } from "@/components/ui/icons";
 
 type SortKey = "relevancia" | "recientes" | "precio_asc" | "precio_desc";
 
@@ -151,8 +152,9 @@ function CatalogContent() {
       <div className="mt-4">
         {error ? (
           <EmptyState
-            title="Algo salió mal"
-            description="No pudimos cargar los productos. Revisá tu conexión e intentá de nuevo."
+            illustration="error"
+            title="Uy, no pudimos traer los productos"
+            description="Puede ser tu conexión o un problema nuestro. Probá de nuevo en un momento."
             action={
               <button className="btn btn-primary" onClick={reload}>
                 Reintentar
@@ -163,12 +165,17 @@ function CatalogContent() {
           <GridSkeleton />
         ) : sorted.length === 0 ? (
           <EmptyState
-            icon={<PackageIcon size={36} />}
-            title={q ? "No encontramos productos con esa búsqueda" : "Todavía no hay productos publicados"}
+            illustration={q ? "search" : "basket"}
+            title={q ? "Ese producto no apareció por acá" : "La feria todavía está armándose"}
             description={
               q
                 ? "Probá con otra palabra, o quitá los filtros de precio y disponibilidad."
                 : "Cuando los emprendedores publiquen sus productos, los vas a ver acá."
+            }
+            action={
+              <Link href="/emprendimientos" className="btn btn-secondary">
+                Ver emprendimientos
+              </Link>
             }
           />
         ) : (

@@ -85,7 +85,7 @@ export default function GuiaDeEstilo() {
 
       <Section title="Tipografía">
         <p className="mb-4 text-sm text-muted">
-          Títulos: Bricolage Grotesque (font-display, automático en h1–h4). Texto: Figtree (font-sans).
+          Títulos: Fraunces (font-display, automático en h1–h4). Texto: Figtree (font-sans).
         </p>
         <div className="space-y-3">
           {sizes.map(([label, cls]) => (

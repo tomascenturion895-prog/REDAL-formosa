@@ -39,18 +39,18 @@
   --color-sky-900: #0a4a6c;
   --color-sky-950: #06304a;
 
-  /* --- Color: ink "tinta" (azul marino para texto y modo oscuro) --- */
-  --color-ink-50: #f1f4f8;
-  --color-ink-100: #e1e7ef;
-  --color-ink-200: #c5cfdc;
-  --color-ink-300: #a0aebf;
-  --color-ink-400: #7c8b9b;
-  --color-ink-500: #5d6e82;
-  --color-ink-600: #44576b;
-  --color-ink-700: #2c4159;
-  --color-ink-800: #123657;
-  --color-ink-900: #0b2545;
-  --color-ink-950: #061529;
+  /* --- Color: ink "monte" (verde bosque casi negro: texto y modo oscuro) --- */
+  --color-ink-50: #f2f5f2;
+  --color-ink-100: #e2e9e3;
+  --color-ink-200: #c8d3ca;
+  --color-ink-300: #a4b3a8;
+  --color-ink-400: #7f9084;
+  --color-ink-500: #5f7165;
+  --color-ink-600: #495a4e;
+  --color-ink-700: #33443a;
+  --color-ink-800: #22352a;
+  --color-ink-900: #14261c;
+  --color-ink-950: #0c1811;
 
   /* --- Color: accent "sol" (ámbar, destacados y llamadas de atención) --- */
   --color-accent-50: #fff8e6;
@@ -96,12 +96,12 @@
 
   /* --- Forma: radios por jerarquía (no un solo radio para todo) --- */
   --radius-control: 0.625rem; /* botones, inputs, selects */
-  --radius-card: 1rem; /* tarjetas de producto/emprendimiento */
-  --radius-sheet: 1.5rem; /* modales, paneles, bottom sheets */
+  --radius-card: 1.25rem; /* tarjetas de producto/emprendimiento */
+  --radius-sheet: 1.75rem; /* modales, paneles, bottom sheets */
 
-  /* --- Sombras --- */
-  --shadow-card: 0 1px 2px rgb(11 37 69 / 0.06), 0 2px 8px rgb(11 37 69 / 0.05);
-  --shadow-pop: 0 8px 24px -4px rgb(11 37 69 / 0.18);
+  /* --- Sombras: difusas y con tinte de monte, nunca grises puras --- */
+  --shadow-card: 0 1px 2px rgb(20 38 28 / 0.05), 0 6px 20px -6px rgb(20 38 28 / 0.1);
+  --shadow-pop: 0 14px 36px -8px rgb(20 38 28 / 0.22);
 
   /* --- Layout --- */
   --container-page: 72rem; /* max-w-page: ancho de página */
@@ -142,15 +142,50 @@
   --info-soft: var(--color-sky-50);
 }
 
+/* Modo oscuro "monte": verde bosque, no azul tecnológico.
+   Se activa con data-theme="dark" (elección explícita) o, sin elección, con la preferencia del sistema.
+   Los dos bloques deben mantenerse idénticos. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0e1a13;
+  --surface: #15251b;
+  --surface-muted: #1d3125;
+  --foreground: #f1eee4;
+  --muted: #a9b9ad;
+  --border: #2b4234;
+  --border-strong: #5f7165;
+
+  --action: var(--color-primary-400);
+  --action-hover: var(--color-primary-300);
+  --on-action: var(--color-ink-950);
+  --link: var(--color-primary-300);
+  --highlight: var(--color-accent-300);
+  --on-highlight: var(--color-ink-950);
+  --ring: var(--color-primary-400);
+
+  --success: var(--color-primary-300);
+  --success-soft: #133a26;
+  --warning: var(--color-accent-300);
+  --warning-soft: #33280d;
+  --danger: #f08070;
+  --danger-soft: #3a1c16;
+  --info: var(--color-sky-300);
+  --info-soft: #12303f;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px -6px rgb(0 0 0 / 0.45);
+  --shadow-pop: 0 14px 36px -8px rgb(0 0 0 / 0.6);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: var(--color-ink-950);
-    --surface: var(--color-ink-900);
-    --surface-muted: var(--color-ink-800);
-    --foreground: var(--color-neutral-50);
-    --muted: var(--color-ink-300);
-    --border: #1e3f63;
-    --border-strong: var(--color-ink-500);
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --background: #0e1a13;
+    --surface: #15251b;
+    --surface-muted: #1d3125;
+    --foreground: #f1eee4;
+    --muted: #a9b9ad;
+    --border: #2b4234;
+    --border-strong: #5f7165;
 
     --action: var(--color-primary-400);
     --action-hover: var(--color-primary-300);
@@ -161,20 +196,22 @@
     --ring: var(--color-primary-400);
 
     --success: var(--color-primary-300);
-    --success-soft: #0f3b2a;
+    --success-soft: #133a26;
     --warning: var(--color-accent-300);
-    --warning-soft: #33240a;
+    --warning-soft: #33280d;
     --danger: #f08070;
-    --danger-soft: #3a1a15;
+    --danger-soft: #3a1c16;
     --info: var(--color-sky-300);
-    --info-soft: #0f2e48;
+    --info-soft: #12303f;
+
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px -6px rgb(0 0 0 / 0.45);
+    --shadow-pop: 0 14px 36px -8px rgb(0 0 0 / 0.6);
   }
 }
 
 @theme inline {
   --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-bricolage), var(--font-figtree), ui-sans-serif,
-    system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
 
   --color-background: var(--background);
   --color-surface: var(--surface);
@@ -297,6 +334,27 @@
   border-radius: var(--radius-card);
   border: 1px solid var(--border);
   background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+/* Tarjeta que se puede abrir: se eleva apenas al pasar el cursor */
+@utility card-interactive {
+  transition:
+    transform 200ms var(--ease-soft),
+    box-shadow 200ms var(--ease-soft),
+    border-color 200ms var(--ease-soft);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-pop);
+    border-color: var(--border-strong);
+  }
+}
+
+/* Fondo orgánico: manchas verdes y ámbar muy suaves detrás del contenido */
+@utility bg-organic {
+  background-image:
+    radial-gradient(60rem 28rem at 8% -10%, color-mix(in srgb, var(--color-primary-400) 16%, transparent), transparent 70%),
+    radial-gradient(44rem 24rem at 100% 0%, color-mix(in srgb, var(--color-accent-300) 18%, transparent), transparent 70%);
 }
 
 @utility chip {
@@ -354,7 +412,7 @@
 
 @layer base {
   html {
-    color-scheme: light dark;
+    color-scheme: light;
     -webkit-text-size-adjust: 100%;
   }
 
@@ -369,6 +427,7 @@
   h3,
   h4 {
     font-family: var(--font-display);
+    font-optical-sizing: auto;
     text-wrap: balance;
   }
 

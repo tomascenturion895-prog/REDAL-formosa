@@ -7,7 +7,7 @@ import { catalogRepository } from "@/lib/catalog/catalog-repository";
 import { directionsUrl, filterPoints, toMapPoints } from "@/lib/domain/map";
 import { useAsync } from "@/lib/hooks/use-async";
 import { EmptyState } from "@/components/ui/empty-state";
-import { CloseIcon, MapPinIcon, SearchIcon, StoreIcon } from "@/components/ui/icons";
+import { CloseIcon, MapPinIcon, SearchIcon } from "@/components/ui/icons";
 import { EmprendimientosMap } from "./lazy-map";
 
 export function ProducersMapView({ initialSelectedId = null }: { initialSelectedId?: string | null }) {
@@ -28,7 +28,8 @@ export function ProducersMapView({ initialSelectedId = null }: { initialSelected
   if (error) {
     return (
       <EmptyState
-        title="No pudimos cargar el mapa"
+        illustration="error"
+        title="Uy, el mapa no cargó"
         description="Revisá tu conexión e intentá de nuevo."
         action={
           <button className="btn btn-primary" onClick={reload}>
@@ -84,7 +85,7 @@ export function ProducersMapView({ initialSelectedId = null }: { initialSelected
                   type="button"
                   onClick={() => setSelectedId(active ? null : point.id)}
                   aria-pressed={active}
-                  className={`card w-full p-4 text-left transition-colors ${active ? "border-action bg-primary-50 dark:bg-surface-muted" : "hover:border-border-strong"}`}
+                  className={`card w-full p-4 text-left transition-colors ${active ? "border-action bg-success-soft" : "hover:border-border-strong"}`}
                 >
                   <span className="block font-display font-semibold leading-tight">{point.nombre}</span>
                   {point.direccion && (
@@ -106,7 +107,7 @@ export function ProducersMapView({ initialSelectedId = null }: { initialSelected
         {!loading && all.length === 0 && (
           <div className="absolute inset-0 z-[1100] flex items-center justify-center bg-background/70 p-6 backdrop-blur-[2px]">
             <EmptyState
-              icon={<StoreIcon size={32} />}
+              illustration="map"
               title="El mapa se está llenando"
               description="Cuando los emprendedores carguen su ubicación, los vas a ver acá."
               action={
