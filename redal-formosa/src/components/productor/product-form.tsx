@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 
+import { stockNote, type VoiceProductDraft } from "@/lib/domain/voice-product";
 import { producerRepository } from "@/lib/producer/producer-repository";
+import { VoiceToProduct } from "./voice-to-product";
 import { Alert } from "@/components/ui/alert";
 import { Field } from "@/components/ui/field";
 import { ProductImage } from "@/components/ui/product-image";
@@ -32,6 +34,18 @@ export function ProductForm({ emprendimientoId, onSuccess }: ProductFormProps) {
   const update =
     (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const applyDraft = (draft: VoiceProductDraft) =>
+    setForm((prev) => {
+      const note = stockNote(draft);
+      return {
+        ...prev,
+        nombre: draft.producto,
+        precio: draft.precio === null ? prev.precio : String(draft.precio),
+        unidad: draft.unidad,
+        descripcion: [prev.descripcion.replace(/\s*Disponibles: [^.]*\.?$/, "").trim(), note].filter(Boolean).join(" "),
+      };
+    });
 
   const handleImage = async (file: File | undefined) => {
     if (!file) return;
@@ -72,6 +86,8 @@ export function ProductForm({ emprendimientoId, onSuccess }: ProductFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && <Alert tone="error">{error}</Alert>}
+
+      <VoiceToProduct onDraft={applyDraft} />
 
       <Field id="nombre" label="Nombre del producto">
         <input id="nombre" required value={form.nombre} onChange={update("nombre")} placeholder="Ej: Miel pura de abeja" className="field" />
