@@ -3,16 +3,17 @@
 import { useState } from "react";
 
 import { formatPrice } from "@/lib/format";
-import { useAsync } from "@/lib/hooks/use-async";
 import { producerRepository, type Product } from "@/lib/producer/producer-repository";
 import { Alert } from "@/components/ui/alert";
-import { EmptyState } from "@/components/ui/empty-state";
-import { PackageIcon } from "@/components/ui/icons";
-import { ProductImage } from "@/components/ui/product-image";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { EmptyState } from "@/components/ui/empty-state";
+import { MicIcon, TrashIcon } from "@/components/ui/icons";
+import { ProductImage } from "@/components/ui/product-image";
 
 interface ProductListProps {
-  emprendimientoId: string;
+  products: Product[];
+  /** Se llama después de cambiar algo, para que el padre vuelva a cargar. */
+  onChanged: () => void;
 }
 
 // Estado que ve el productor según la revisión del administrador.
@@ -26,45 +27,53 @@ function reviewStatus(p: Product): { label: string; tone: string } {
   return { label: "En revisión", tone: "bg-warning-soft text-warning" };
 }
 
-export function ProductList({ emprendimientoId }: ProductListProps) {
-  const { data: products, error: loadError, loading, reload } = useAsync(
-    () => producerRepository.listProducts(emprendimientoId),
-    [emprendimientoId],
-  );
+/** Catálogo del vendedor como grilla de tarjetas: se lee bien en el celular y permite ocultar con un toque. */
+export function ProductList({ products, onChanged }: ProductListProps) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [productToDelete, setProductToDelete] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  const run = async (action: () => Promise<void>, failure: string) => {
+  const toggleAvailability = async (p: Product) => {
     setActionError(null);
+    setTogglingId(p.id);
     try {
-      await action();
-      reload();
+      await producerRepository.setProductAvailability(p.id, !p.disponible);
+      onChanged();
     } catch {
-      setActionError(failure);
+      setActionError("No pudimos actualizar el producto.");
+    } finally {
+      setTogglingId(null);
     }
   };
 
-  const handleDeleteProduct = async () => {
+  const handleDelete = async () => {
     if (!productToDelete) return;
     setIsDeleting(true);
+    setActionError(null);
     try {
-      await run(() => producerRepository.deleteProduct(productToDelete.id), "No se pudo eliminar. Si tiene pedidos, ocultalo en su lugar.");
-      setProductToDelete(null);
+      await producerRepository.deleteProduct(productToDelete.id);
+      onChanged();
+    } catch {
+      setActionError("No se pudo eliminar. Si tiene pedidos, ocultalo en su lugar.");
     } finally {
+      setProductToDelete(null);
       setIsDeleting(false);
     }
   };
 
-  if (loading && !products) return <div aria-busy="true" className="h-24" />;
-  if (loadError) return <Alert tone="error">No pudimos cargar tus productos.</Alert>;
-
-  if (!products || products.length === 0) {
+  if (products.length === 0) {
     return (
       <EmptyState
-        icon={<PackageIcon size={36} />}
+        illustration="basket"
         title="Todavía no cargaste productos"
-        description="Agregá el primero con el botón “Nuevo producto”."
+        description="El camino más rápido: tocá el micrófono de arriba y decí qué tenés."
+        action={
+          <a href="#cargar-por-voz" className="btn btn-primary">
+            <MicIcon size={18} />
+            Cargar por voz
+          </a>
+        }
       />
     );
   }
@@ -73,43 +82,56 @@ export function ProductList({ emprendimientoId }: ProductListProps) {
     <div className="space-y-3">
       {actionError && <Alert tone="error">{actionError}</Alert>}
 
-      <ul className="space-y-3">
+      <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {products.map((p) => {
           const status = reviewStatus(p);
           return (
-            <li key={p.id} className="card flex flex-wrap gap-4 p-4">
-              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-control bg-surface-muted">
-                <ProductImage src={p.imagen_url} sizes="80px" iconSize={26} />
+            <li key={p.id} className={`card flex flex-col overflow-hidden ${p.validado && !p.disponible ? "opacity-75" : ""}`}>
+              <div className="relative aspect-[4/3] bg-surface-muted">
+                <ProductImage src={p.imagen_url} sizes="(min-width: 1280px) 22vw, (min-width: 640px) 45vw, 100vw" iconSize={32} />
+                <span className={`absolute left-2.5 top-2.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${status.tone}`}>{status.label}</span>
               </div>
 
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-display font-semibold">{p.nombre}</h3>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${status.tone}`}>{status.label}</span>
+              <div className="flex flex-1 flex-col gap-3 p-4">
+                <div>
+                  <h3 className="font-display font-semibold leading-tight">{p.nombre}</h3>
+                  <p className="mt-0.5 text-sm text-muted">
+                    <span className="font-semibold text-foreground tabular-nums">{formatPrice(p.precio)}</span> · {p.unidad}
+                  </p>
+                  {!p.validado && p.razon_rechazo && <p className="mt-2 text-sm text-danger">Motivo del rechazo: {p.razon_rechazo}</p>}
                 </div>
-                <p className="mt-0.5 text-sm text-muted">
-                  {formatPrice(p.precio)} · {p.unidad}
-                </p>
-                {!p.validado && p.razon_rechazo && <p className="mt-2 text-sm text-danger">Motivo del rechazo: {p.razon_rechazo}</p>}
-              </div>
 
-              <div className="flex items-start gap-2">
-                {p.validado && (
+                <div className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-3">
+                  {p.validado ? (
+                    <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={p.disponible}
+                        aria-label={`${p.disponible ? "Ocultar" : "Mostrar"} ${p.nombre}`}
+                        disabled={togglingId === p.id}
+                        onClick={() => toggleAvailability(p)}
+                        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${p.disponible ? "bg-action" : "bg-border-strong"} disabled:opacity-60`}
+                      >
+                        <span
+                          className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${p.disponible ? "translate-x-5" : ""}`}
+                        />
+                      </button>
+                      {p.disponible ? "Disponible" : "Oculto"}
+                    </label>
+                  ) : (
+                    <span className="text-sm text-muted">Sin publicar</span>
+                  )}
+
                   <button
                     type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => run(() => producerRepository.setProductAvailability(p.id, !p.disponible), "No pudimos actualizar el producto.")}
+                    className="btn btn-ghost !p-2 text-muted hover:text-danger"
+                    aria-label={`Eliminar ${p.nombre}`}
+                    onClick={() => setProductToDelete({ id: p.id, name: p.nombre })}
                   >
-                    {p.disponible ? "Ocultar" : "Mostrar"}
+                    <TrashIcon size={18} />
                   </button>
-                )}
-                <button
-                  type="button"
-                  className="btn btn-danger btn-sm"
-                  onClick={() => setProductToDelete({ id: p.id, name: p.nombre })}
-                >
-                  Eliminar
-                </button>
+                </div>
               </div>
             </li>
           );
@@ -119,7 +141,7 @@ export function ProductList({ emprendimientoId }: ProductListProps) {
       <ConfirmDialog
         isOpen={Boolean(productToDelete)}
         onClose={() => setProductToDelete(null)}
-        onConfirm={handleDeleteProduct}
+        onConfirm={handleDelete}
         title={productToDelete ? `¿Eliminar “${productToDelete.name}”?` : "¿Eliminar producto?"}
         description="El producto se eliminará de tu catálogo. Si ya tiene pedidos asociados, te recomendamos ocultarlo en su lugar."
         confirmText="Eliminar producto"

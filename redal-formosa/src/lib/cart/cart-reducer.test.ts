@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cartReducer, conflictsWithCart, mergeCarts, MAX_QUANTITY, type CartItem, type CartProduct } from "./cart-reducer";
+import { cartReducer, groupByStore, mergeCarts, MAX_QUANTITY, type CartItem, type CartProduct } from "./cart-reducer";
 import { parseCart } from "./cart-store";
 
 const product = (id: string, store = "store-1", precio = 100): CartProduct => ({
@@ -30,14 +30,14 @@ describe("cartReducer", () => {
     expect(next[0].cantidad).toBe(MAX_QUANTITY);
   });
 
-  it("reemplaza el carrito cuando se pide vaciar el de otro emprendimiento", () => {
-    const next = cartReducer([line("a", 1, "store-1")], {
-      type: "add",
-      producto: product("b", "store-2"),
-      cantidad: 1,
-      replaceOtherStore: true,
-    });
-    expect(next).toEqual([line("b", 1, "store-2")]);
+  it("permite productos de varios emprendimientos en el mismo carrito", () => {
+    const next = cartReducer([line("a", 1, "store-1")], { type: "add", producto: product("b", "store-2"), cantidad: 1 });
+    expect(next).toEqual([line("a", 1, "store-1"), line("b", 1, "store-2")]);
+  });
+
+  it("clearStore vacía solo la cesta de ese emprendimiento", () => {
+    const items = [line("a", 1, "store-1"), line("b", 2, "store-2"), line("c", 1, "store-1")];
+    expect(cartReducer(items, { type: "clearStore", emprendimientoId: "store-1" })).toEqual([line("b", 2, "store-2")]);
   });
 
   it("setQuantity con 0 o menos quita el producto", () => {
@@ -61,14 +61,17 @@ describe("cartReducer", () => {
   });
 });
 
-describe("conflictsWithCart", () => {
-  it("un carrito vacío nunca tiene conflicto", () => {
-    expect(conflictsWithCart([], product("a", "store-9"))).toBe(false);
+describe("groupByStore", () => {
+  it("arma una cesta por emprendimiento con su subtotal, envío y total", () => {
+    const groups = groupByStore([line("a", 2, "store-1"), line("b", 1, "store-2"), line("c", 1, "store-1")]);
+    expect(groups.map((g) => g.emprendimientoId)).toEqual(["store-1", "store-2"]);
+    // 2 x 100 + 1 x 100 = 300; envío 100 + 50 x 2 líneas = 200
+    expect(groups[0]).toMatchObject({ subtotal: 300, envio: 200, total: 500, itemCount: 3 });
+    expect(groups[1]).toMatchObject({ subtotal: 100, envio: 150, total: 250, itemCount: 1 });
   });
 
-  it("detecta un producto de otro emprendimiento", () => {
-    expect(conflictsWithCart([line("a", 1, "store-1")], product("b", "store-2"))).toBe(true);
-    expect(conflictsWithCart([line("a", 1, "store-1")], product("b", "store-1"))).toBe(false);
+  it("un carrito vacío no tiene cestas", () => {
+    expect(groupByStore([])).toEqual([]);
   });
 });
 
@@ -91,8 +94,8 @@ describe("mergeCarts", () => {
     expect(merged).toEqual([line("a", 3), line("b")]);
   });
 
-  it("gana el carrito de recién si es de otro emprendimiento", () => {
-    expect(mergeCarts([line("a")], [line("z", 1, "store-2")])).toEqual([line("z", 1, "store-2")]);
+  it("conserva las cestas de distintos emprendimientos", () => {
+    expect(mergeCarts([line("a")], [line("z", 1, "store-2")])).toEqual([line("a"), line("z", 1, "store-2")]);
   });
 
   it("no cambia nada si no hay carrito de invitado", () => {

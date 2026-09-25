@@ -7,7 +7,9 @@ const nextConfig: NextConfig = {
     // Fotos de producto en Supabase Storage: Next las redimensiona y las sirve en WebP/AVIF.
     remotePatterns: [
       { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },
-      { protocol: "https", hostname: "images.unsplash.com" }
+      { protocol: "https", hostname: "images.unsplash.com" },
+      // Imágenes de relleno de los datos de prueba (npm run seed).
+      { protocol: "https", hostname: "picsum.photos" },
     ],
     formats: ["image/avif", "image/webp"],
   },

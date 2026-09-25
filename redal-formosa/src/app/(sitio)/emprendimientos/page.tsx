@@ -63,7 +63,7 @@ function EmprendimientosContent() {
           description={term ? "Probá con otra palabra." : "Los emprendedores que se sumen van a aparecer acá. ¿Querés ser el primero?"}
           action={
             term ? undefined : (
-              <Link href="/register" className="btn btn-primary">
+              <Link href="/register?next=/setup" className="btn btn-primary">
                 Sumar mi emprendimiento
               </Link>
             )

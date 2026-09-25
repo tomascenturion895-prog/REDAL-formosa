@@ -137,7 +137,7 @@ Tablas del esquema `public`: `profiles`, `emprendimientos`, `categorias`, `produ
 **Estados de un pedido:** `pendiente_pago` → `pagado` → `en_preparacion` → `listo` → `en_camino` → `entregado`
 (o `cancelado`).
 
-**Funciones RPC usadas por la aplicación:** `crear_pedido`, `search_productos`, `productos_mas_vendidos`,
+**Funciones RPC usadas por la aplicación:** `crear_pedido`, `productor_pedidos`, `productor_avanzar_pedido`, `admin_resumen`, `admin_pending_verifications`, `admin_review_verification`, `search_productos`, `productos_mas_vendidos`,
 `recomendaciones_usuario`, `admin_get_stats`, `admin_list_users`, `admin_pending_products`, `admin_review_product`
 y `admin_set_role`.
 
@@ -295,6 +295,7 @@ Crea la cuenta (confirmada) o promueve una existente. Alternativa manual: `supab
 | `npm run lint` | ESLint. |
 | `npx playwright test` | Pruebas E2E (requieren la app en `http://localhost:3000`). |
 | `npm run make-admin -- <email>` | Crear o promover un administrador (solo pruebas). |
+| `npm run seed` | Simulacro de los datos de prueba (5 productores, 2 clientes, 6 categorías, 26 productos). Con `-- --apply` los crea; con `-- --apply --remove` los borra. |
 
 ---
 
@@ -359,6 +360,7 @@ llegan como `{ "error": "<mensaje en español>" }` con el código HTTP correspon
 | `POST /api/producer/bank-account` | Sesión | 5 / min por usuario | Guarda la cuenta bancaria cifrada. |
 | `POST /api/producer/voice-to-product` | Sesión + rol VENDEDOR o ADMIN | 10 / min por usuario | Audio → borrador de producto. |
 | `GET /api/geocode?q=` | Sesión | 15 / min por usuario, 50 / min global | Dirección → coordenadas. |
+| `POST /api/buyer/recipes` | Sesión | 6 / min por usuario | Inventario de un emprendimiento → 2 recetas con sus ingredientes. |
 | `GET /auth/callback` | — | — | Cierre del flujo OAuth. |
 
 ### 6.2 `POST /api/checkout/create-preference`

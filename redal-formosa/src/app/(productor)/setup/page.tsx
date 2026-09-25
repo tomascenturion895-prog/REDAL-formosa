@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { useRequireAuth } from "@/lib/auth/use-require-auth";
 import { useAsync } from "@/lib/hooks/use-async";
@@ -21,8 +22,11 @@ const STEPS: { key: Exclude<Step, "complete">; title: string; description: strin
   { key: "bank", title: "Datos para cobrar", description: "La cuenta donde vas a recibir tus ventas." },
 ];
 
-export default function ProductorSetupPage() {
+const PASO_INICIAL: Record<string, Exclude<Step, "complete">> = { verificacion: "biometric", cobro: "bank", ubicacion: "ubicacion" };
+
+function ProductorSetup() {
   const { user, pending } = useRequireAuth();
+  const requested = PASO_INICIAL[useSearchParams().get("paso") ?? ""];
 
   // Si ya creó su emprendimiento, el asistente sigue desde el paso siguiente (sin duplicarlo).
   const { data: existingId, loading } = useAsync(() => producerRepository.firstEmprendimientoId(user!.id), [user?.id], {
@@ -36,7 +40,7 @@ export default function ProductorSetupPage() {
   if (pending || loading || !user) return <div aria-busy="true" className="h-40" />;
 
   const emprendimientoId = createdId ?? existingId ?? null;
-  const currentStep: Step = step ?? (emprendimientoId ? "ubicacion" : "info");
+  const currentStep: Step = step ?? (emprendimientoId ? (requested ?? "ubicacion") : "info");
   const index = STEPS.findIndex((s) => s.key === currentStep);
   const current = STEPS[index];
 
@@ -80,9 +84,23 @@ export default function ProductorSetupPage() {
           <SucursalesForm emprendimientoId={emprendimientoId} onSuccess={() => setStep("biometric")} />
         )}
 
-        {currentStep === "biometric" && <BiometricVerification userId={user.id} onSuccess={() => setStep("bank")} />}
+        {currentStep === "biometric" && (
+          <>
+            <BiometricVerification userId={user.id} onSuccess={() => setStep("bank")} />
+            <button type="button" onClick={() => setStep("bank")} className="btn btn-ghost mt-3 w-full">
+              Lo hago después
+            </button>
+          </>
+        )}
 
-        {currentStep === "bank" && <BankForm onSuccess={() => setStep("complete")} />}
+        {currentStep === "bank" && (
+          <>
+            <BankForm onSuccess={() => setStep("complete")} />
+            <button type="button" onClick={() => setStep("complete")} className="btn btn-ghost mt-3 w-full">
+              Lo hago después
+            </button>
+          </>
+        )}
 
         {currentStep === "complete" && (
           <div className="space-y-4 text-center">
@@ -100,5 +118,13 @@ export default function ProductorSetupPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ProductorSetupPage() {
+  return (
+    <Suspense fallback={<div aria-busy="true" className="h-40" />}>
+      <ProductorSetup />
+    </Suspense>
   );
 }

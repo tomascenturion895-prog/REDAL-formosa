@@ -3,25 +3,24 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 
 import { useAuth } from "@/lib/auth/auth-context";
-import { estimarEnvio, subtotal as sumSubtotal } from "@/lib/domain/pricing";
-import { conflictsWithCart, type CartItem, type CartProduct } from "./cart-reducer";
+import { groupByStore, type CartGroup, type CartItem, type CartProduct } from "./cart-reducer";
 import { cartStore } from "./cart-store";
 
-export type { CartItem, CartProduct };
+export type { CartGroup, CartItem, CartProduct };
 
 interface CartContextType {
   /** false mientras se resuelve la sesión: todavía no se sabe de quién es el carrito. */
   ready: boolean;
   items: CartItem[];
-  emprendimientoId: string | null;
-  /** Devuelve false si la persona decidió no vaciar un carrito de otro emprendimiento. */
+  /** Una cesta por emprendimiento: cada una se paga por separado. */
+  groups: CartGroup[];
+  /** Devuelve false si todavía no se sabe de quién es el carrito (sesión en curso). */
   addItem: (producto: CartProduct, cantidad?: number) => boolean;
   removeItem: (productoId: string) => void;
   updateQuantity: (productoId: string, cantidad: number) => void;
   clearCart: () => void;
-  subtotal: number;
-  envio: number;
-  total: number;
+  /** Vacía solo la cesta de un emprendimiento (después de pagarla). */
+  clearStore: (emprendimientoId: string) => void;
   itemCount: number;
 }
 
@@ -45,36 +44,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addItem = useCallback(
     (producto: CartProduct, cantidad = 1) => {
       if (owner === undefined) return false;
-      let replaceOtherStore = false;
-      if (conflictsWithCart(items, producto)) {
-        replaceOtherStore = window.confirm(
-          "Tu carrito tiene productos de otro emprendimiento. Solo se puede comprar a uno por pedido. ¿Querés vaciarlo y agregar este?",
-        );
-        if (!replaceOtherStore) return false;
-      }
-      cartStore.dispatch(owner, { type: "add", producto, cantidad, replaceOtherStore });
+      cartStore.dispatch(owner, { type: "add", producto, cantidad });
       return true;
     },
-    [items, owner],
+    [owner],
   );
 
-  const value = useMemo<CartContextType>(() => {
-    const subtotal = sumSubtotal(items.map((i) => ({ precio: i.producto.precio, cantidad: i.cantidad })));
-    const envio = estimarEnvio(items.length);
-    return {
+  const value = useMemo<CartContextType>(
+    () => ({
       ready: owner !== undefined,
       items,
-      emprendimientoId: items[0]?.producto.emprendimiento_id ?? null,
+      groups: groupByStore(items),
       addItem,
       removeItem: (productoId) => cartStore.dispatch(owner, { type: "remove", productoId }),
       updateQuantity: (productoId, cantidad) => cartStore.dispatch(owner, { type: "setQuantity", productoId, cantidad }),
       clearCart: () => cartStore.dispatch(owner, { type: "clear" }),
-      subtotal,
-      envio,
-      total: subtotal + envio,
+      clearStore: (emprendimientoId) => cartStore.dispatch(owner, { type: "clearStore", emprendimientoId }),
       itemCount: items.reduce((sum, i) => sum + i.cantidad, 0),
-    };
-  }, [items, addItem, owner]);
+    }),
+    [items, addItem, owner],
+  );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

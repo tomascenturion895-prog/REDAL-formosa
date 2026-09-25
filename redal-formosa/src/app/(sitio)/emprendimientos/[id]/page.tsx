@@ -7,6 +7,7 @@ import { catalogRepository } from "@/lib/catalog/catalog-repository";
 import { useAsync } from "@/lib/hooks/use-async";
 import { ProductGrid } from "@/components/catalog/product-grid";
 import { ContactActions, ContactBar } from "@/components/contact/contact-actions";
+import { RecipesDialog } from "@/components/recipes/recipes-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MapPinIcon, PackageIcon, StoreIcon } from "@/components/ui/icons";
 
@@ -83,9 +84,12 @@ export default function EmprendimientoPage() {
       </header>
 
       <section aria-labelledby="prods" className="pt-8">
-        <h2 id="prods" className="text-heading pb-5">
-          Productos ({data.productos.length})
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-5">
+          <h2 id="prods" className="text-heading">
+            Productos ({data.productos.length})
+          </h2>
+          {data.productos.length > 0 && <RecipesDialog emprendimientoId={id} />}
+        </div>
         {data.productos.length === 0 ? (
           <EmptyState
             icon={<PackageIcon size={36} />}

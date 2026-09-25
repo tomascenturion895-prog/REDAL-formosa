@@ -36,7 +36,7 @@ export function NewestProducts() {
         title="Estamos sumando emprendedores"
         description="Los primeros productos aparecen acá apenas se publiquen. ¿Producís algo? Sumate."
         action={
-          <Link href="/register" className="btn btn-primary">
+          <Link href="/register?next=/setup" className="btn btn-primary">
             Publicar mi emprendimiento
           </Link>
         }

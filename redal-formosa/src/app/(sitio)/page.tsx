@@ -78,7 +78,7 @@ export default function Home() {
               Publicá tus productos, aparecé en el mapa y cobrá con MercadoPago. Nosotros nos ocupamos de que te encuentren.
             </p>
           </div>
-          <Link href="/register" className="btn btn-accent">
+          <Link href="/register?next=/setup" className="btn btn-accent">
             Sumá tu emprendimiento
           </Link>
         </section>
