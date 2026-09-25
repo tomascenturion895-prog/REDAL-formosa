@@ -44,7 +44,7 @@ export function UserMenu() {
           <Link href="/login" className="btn btn-ghost">
             Ingresar
           </Link>
-          <Link href="/register" className="btn btn-primary">
+          <Link href="/register" className="btn btn-primary !hidden md:!inline-flex">
             Crear cuenta
           </Link>
         </div>

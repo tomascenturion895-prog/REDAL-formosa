@@ -43,7 +43,7 @@ export function Logo() {
           className="h-7 sm:h-8 w-auto object-contain transition-opacity duration-150 group-hover:opacity-90"
           priority
         />
-        <span className="hidden sm:inline-flex items-center text-xs font-bold tracking-widest text-muted uppercase pl-2 border-l border-border select-none">
+        <span className="hidden md:inline-flex items-center text-xs font-bold tracking-widest text-muted uppercase pl-2 border-l border-border select-none">
           Formosa
         </span>
       </div>

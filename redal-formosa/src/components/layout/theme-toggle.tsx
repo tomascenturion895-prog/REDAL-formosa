@@ -40,9 +40,22 @@ function applyTheme(theme: Theme) {
 }
 
 /** Alterna claro/oscuro. Sin elección guardada, respeta la preferencia del sistema. */
-export function ThemeToggle() {
+export function ThemeToggle({ variant = "icon" }: { variant?: "icon" | "menu" }) {
   const theme = useSyncExternalStore(subscribe, readTheme, () => "light" as Theme);
   const next: Theme = theme === "dark" ? "light" : "dark";
+
+  if (variant === "menu") {
+    return (
+      <button
+        type="button"
+        onClick={() => applyTheme(next)}
+        className="flex w-full items-center gap-3 rounded-control px-4 py-3 text-base font-medium text-muted hover:bg-surface-muted hover:text-foreground"
+      >
+        {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+        {next === "dark" ? "Modo oscuro" : "Modo claro"}
+      </button>
+    );
+  }
 
   return (
     <button

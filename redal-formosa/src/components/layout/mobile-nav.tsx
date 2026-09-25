@@ -5,10 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { mainNav } from "@/lib/navigation";
+import { ThemeToggle } from "./theme-toggle";
 import { SearchBox } from "@/components/search/search-box";
 import { CloseIcon, MenuIcon } from "@/components/ui/icons";
 
-/** Menú hamburguesa para pantallas menores a `md`. Se cierra al navegar, con Escape o al tocar afuera. */
+/** Menú hamburguesa para pantallas menores a `lg`. Se cierra al navegar, con Escape o al tocar afuera. */
 export function MobileNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -27,7 +28,7 @@ export function MobileNav() {
   }, [open]);
 
   return (
-    <div className="md:hidden">
+    <div className="lg:hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -53,7 +54,7 @@ export function MobileNav() {
             aria-label="Principal"
             className="absolute inset-x-0 top-full z-40 border-b border-border bg-surface p-3 shadow-pop"
           >
-            <div className="mb-2 px-1 xl:hidden">
+            <div className="mb-2 px-1">
               <Suspense fallback={null}>
                 <SearchBox id="mobile-search" />
               </Suspense>
@@ -76,6 +77,9 @@ export function MobileNav() {
                 );
               })}
             </ul>
+            <div className="mt-2 border-t border-border pt-2 sm:hidden">
+              <ThemeToggle variant="menu" />
+            </div>
           </nav>
         </>
       )}

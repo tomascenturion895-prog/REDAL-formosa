@@ -9,7 +9,7 @@ import { MapPinIcon, ShieldIcon, StoreIcon, TruckIcon } from "@/components/ui/ic
 export default function Home() {
   return (
     <>
-      <section className="bg-organic border-b border-border">
+      <section className="bg-organic overflow-x-clip border-b border-border">
         <div className="page-container grid items-center gap-12 py-section lg:grid-cols-[1.05fr_1fr]">
           <div>
             <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1 text-sm font-medium text-success">

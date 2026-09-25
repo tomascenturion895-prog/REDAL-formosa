@@ -6,8 +6,6 @@ import { CartProvider } from "@/lib/cart/cart-context";
 import { defaultMetadata } from "@/lib/seo/metadata";
 import { PWAInstaller } from "@/components/pwa/pwa-installer";
 import "./globals.css";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
 
 // next/font descarga y sirve las fuentes desde el propio dominio: no hace falta preconectar a Google.
 const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"], display: "swap" });
