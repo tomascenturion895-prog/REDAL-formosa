@@ -1,3 +1,5 @@
+import type { Provider } from "@supabase/supabase-js";
+
 import { createClient } from "@/lib/supabase/client";
 
 export function useAuthActions() {
@@ -24,6 +26,14 @@ export function useAuthActions() {
     return { data, error };
   };
 
+  const signInWithProvider = async (provider: Extract<Provider, "google" | "facebook" | "twitter">) => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/` },
+    });
+    return { error };
+  };
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     return { error };
@@ -44,6 +54,7 @@ export function useAuthActions() {
   return {
     signUp,
     signIn,
+    signInWithProvider,
     signOut,
     resetPassword,
     updatePassword,
