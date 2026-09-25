@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { SearchIcon } from "@/components/ui/icons";
 
-export function SearchBox({ placeholder = "Buscar productos" }: { placeholder?: string }) {
+export function SearchBox({ placeholder = "Buscar productos", id = "header-search" }: { placeholder?: string; id?: string }) {
   const router = useRouter();
   const params = useSearchParams();
   const [query, setQuery] = useState(params?.get("q") ?? "");
@@ -18,12 +18,12 @@ export function SearchBox({ placeholder = "Buscar productos" }: { placeholder?: 
 
   return (
     <form onSubmit={handleSubmit} role="search" className="relative">
-      <label htmlFor="header-search" className="sr-only">
+      <label htmlFor={id} className="sr-only">
         {placeholder}
       </label>
       <SearchIcon size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
       <input
-        id="header-search"
+        id={id}
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}

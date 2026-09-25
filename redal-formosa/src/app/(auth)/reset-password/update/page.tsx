@@ -87,7 +87,7 @@ export default function UpdatePasswordPage() {
             className="field"
           />
         </div>
-        <button type="submit" disabled={loading} className="btn btn-primary w-full !py-3">
+        <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-3">
           {loading ? "Guardando…" : "Guardar contraseña"}
         </button>
       </form>

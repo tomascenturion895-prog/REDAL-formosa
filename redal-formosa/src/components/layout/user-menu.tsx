@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/lib/auth/auth-context";
 import { useAuthActions } from "@/lib/auth/use-auth-actions";
-import { ChevronDownIcon } from "@/components/ui/icons";
+import { ChevronDownIcon, UserIcon } from "@/components/ui/icons";
 
 const itemClass =
   "block w-full rounded-control px-3 py-2 text-left text-sm text-foreground hover:bg-surface-muted";
@@ -37,8 +37,8 @@ export function UserMenu() {
   if (!user) {
     return (
       <>
-        <Link href="/login" className="btn btn-primary sm:hidden">
-          Ingresar
+        <Link href="/login" aria-label="Ingresar" className="btn btn-primary !h-10 !w-10 !rounded-full !p-0 sm:hidden">
+          <UserIcon />
         </Link>
         <div className="hidden items-center gap-1 sm:flex">
           <Link href="/login" className="btn btn-ghost">

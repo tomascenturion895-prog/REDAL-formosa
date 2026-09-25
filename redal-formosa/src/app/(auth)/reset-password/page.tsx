@@ -64,7 +64,7 @@ export default function ResetPasswordPage() {
             className="field"
           />
         </div>
-        <button type="submit" disabled={loading} className="btn btn-primary w-full !py-3">
+        <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-3">
           {loading ? "Enviando…" : "Enviar enlace"}
         </button>
         <Link href="/login" className="block text-center text-sm font-medium text-link hover:underline">

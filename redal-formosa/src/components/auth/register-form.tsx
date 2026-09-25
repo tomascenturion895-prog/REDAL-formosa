@@ -132,7 +132,7 @@ export function RegisterForm() {
           </p>
         </div>
 
-        <button type="submit" disabled={loading} className="btn btn-primary w-full !py-3">
+        <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-3">
           {loading ? "Creando tu cuenta…" : "Crear cuenta"}
         </button>
       </form>

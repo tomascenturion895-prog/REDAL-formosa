@@ -78,7 +78,7 @@ export function BankForm({ onSuccess }: BankFormProps) {
 
       <Alert tone="info">Solo vos y el equipo de RedAL pueden ver estos datos. Los usamos para transferirte tus ventas.</Alert>
 
-      <button type="submit" disabled={loading} className="btn btn-primary w-full !py-3">
+      <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-3">
         {loading ? "Guardando…" : "Guardar datos bancarios"}
       </button>
     </form>

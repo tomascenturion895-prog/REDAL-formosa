@@ -114,7 +114,7 @@ export function ProductForm({ emprendimientoId, onSuccess }: ProductFormProps) {
         </div>
       )}
 
-      <button type="submit" disabled={saving || uploading} className="btn btn-primary w-full !py-3">
+      <button type="submit" disabled={saving || uploading} aria-busy={saving || uploading} className="btn btn-primary w-full !py-3">
         {saving ? "Guardando…" : uploading ? "Subiendo foto…" : "Agregar producto"}
       </button>
     </form>
