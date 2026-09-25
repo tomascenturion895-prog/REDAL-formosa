@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProducerById } from "@/data/mock/producers";
-import { getProductsByProducer } from "@/data/mock/products";
 import { ProducerHero } from "@/components/producer/ProducerHero";
 import { ProducerBio } from "@/components/producer/ProducerBio";
 import { ProductCatalog } from "@/components/producer/ProductCatalog";
@@ -16,11 +14,13 @@ export async function generateMetadata({
   params,
 }: ProducerPageProps): Promise<Metadata> {
   const { id } = await params;
-  const producer = getProducerById(id);
+  
+  // TODO: Fetch from Supabase
+  const producer: any = null;
 
   if (!producer) {
     return {
-      title: "Productor no encontrado | REDAL Formosa",
+      title: "Productor | REDAL Formosa",
     };
   }
 
@@ -32,13 +32,16 @@ export async function generateMetadata({
 
 export default async function ProducerPage({ params }: ProducerPageProps) {
   const { id } = await params;
-  const producer = getProducerById(id);
+  
+  // TODO: Fetch from Supabase
+  const producer: any = null;
 
   if (!producer) {
-    notFound();
+    // notFound();
+    return <div className="p-10 text-center">Catálogo en construcción (Datos estáticos removidos)</div>;
   }
 
-  const products = getProductsByProducer(producer.id);
+  const products: any[] = [];
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-20">
