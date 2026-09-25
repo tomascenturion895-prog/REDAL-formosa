@@ -65,7 +65,11 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
           body: formData,
         });
 
-        if (!res.ok) throw new Error("Error en la transcripción");
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          const detail = errData?.details || errData?.error || res.statusText;
+          throw new Error(`Error del servidor (${res.status}): ${detail}`);
+        }
 
         const data = await res.json();
         
