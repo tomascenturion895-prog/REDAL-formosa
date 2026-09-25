@@ -1,15 +1,43 @@
 import { NextResponse } from "next/server";
 import { AssemblyAI } from "assemblyai";
 
+import { getSpeechToText, limiters } from "@/server/container";
+import { ServiceError } from "@/server/errors";
+import { clientIp, enforceRateLimit, handleRoute } from "@/server/http";
+
+const MAX_AUDIO_BYTES = 2 * 1024 * 1024;
+
+// El grabador del navegador entrega WAV; Whisper deduce el formato por la extensión del nombre.
+const EXTENSIONS: Record<string, string> = {
+  "audio/wav": "wav",
+  "audio/x-wav": "wav",
+  "audio/wave": "wav",
+  "audio/webm": "webm",
+  "audio/ogg": "ogg",
+  "audio/mp4": "mp4",
+  "audio/mpeg": "mp3",
+};
+
+/** Sin clave de AssemblyAI, la búsqueda por voz usa el mismo Whisper que "Voz a Catálogo" (OPENAI_API_KEY). */
+async function transcribeWithWhisper(req: Request) {
+  return handleRoute(async () => {
+    enforceRateLimit(limiters.voiceSearch, clientIp(req));
+
+    const form = await req.formData().catch(() => null);
+    const audio = form?.get("audio");
+    if (!(audio instanceof Blob)) throw new ServiceError("bad_request", "No se proporcionó audio");
+    if (audio.size > MAX_AUDIO_BYTES) throw new ServiceError("bad_request", "El audio es demasiado largo.");
+
+    const extension = EXTENSIONS[audio.type.split(";")[0].trim().toLowerCase()] ?? "wav";
+    const text = await getSpeechToText().transcribe(audio, `audio.${extension}`);
+    return NextResponse.json({ text });
+  });
+}
+
 export async function POST(req: Request) {
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
 
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "ASSEMBLYAI_API_KEY no está configurada en el entorno." },
-      { status: 500 }
-    );
-  }
+  if (!apiKey) return transcribeWithWhisper(req);
 
   try {
     const formData = await req.formData();

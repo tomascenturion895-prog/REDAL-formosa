@@ -24,3 +24,7 @@ node_modules/
 # IDE / System
 .vscode/
 .idea/
+
+# Estado local de la CLI de Supabase (cada persona tiene el suyo; no se comparte)
+supabase/.temp/
+supabase/.branches/

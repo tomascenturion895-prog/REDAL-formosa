@@ -17,7 +17,7 @@ export function SiteHeader() {
         </div>
 
         <div className="ml-auto flex items-center gap-1 sm:gap-3">
-          <div className="hidden w-64 xl:block">
+          <div className="hidden w-56 xl:block">
             <Suspense fallback={null}>
               <SearchBox />
             </Suspense>

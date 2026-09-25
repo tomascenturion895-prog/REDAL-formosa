@@ -1,7 +1,8 @@
+import { existsSync, statSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { CATEGORIES, PRODUCERS, PRODUCTS } from "./data.mjs";
-import { categoryFactory, emprendimientoFactory, placeholderImage, productFactory, slugify, VALID_UNITS } from "./factories.mjs";
+import { categoryFactory, emprendimientoFactory, imageStoragePath, productFactory, slugify, VALID_UNITS } from "./factories.mjs";
 
 describe("datos de prueba", () => {
   it("cubre lo pedido: 5 productores, 6 categorías y al menos 15 productos", () => {
@@ -71,6 +72,30 @@ describe("datos de prueba", () => {
   });
 });
 
+describe("imágenes de los productos", () => {
+  const dir = new URL("./images/", import.meta.url);
+
+  it("cada producto tiene su foto en el repositorio, liviana", () => {
+    for (const p of PRODUCTS) {
+      const file = new URL(`${p.imagen}.jpg`, dir);
+      expect(existsSync(file), `falta images/${p.imagen}.jpg (${p.nombre})`).toBe(true);
+      expect(statSync(file).size).toBeGreaterThan(10_000);
+      expect(statSync(file).size).toBeLessThan(400_000);
+    }
+  });
+
+  it("los productos distintos no comparten foto (salvo pares definidos a propósito)", () => {
+    const counts = new Map();
+    for (const p of PRODUCTS) counts.set(p.imagen, (counts.get(p.imagen) ?? 0) + 1);
+    expect([...counts.values()].every((n) => n === 1)).toBe(true);
+  });
+
+  it("todas las fotos tienen sus créditos", () => {
+    const credits = existsSync(new URL("CREDITS.md", dir));
+    expect(credits).toBe(true);
+  });
+});
+
 describe("factories", () => {
   it("slugify quita acentos y símbolos", () => {
     expect(slugify("Frutas y Verduras de estación")).toBe("frutas-y-verduras-de-estacion");
@@ -88,16 +113,18 @@ describe("factories", () => {
     expect(row.email).toMatch(/@seed\.redal\.test$/);
   });
 
-  it("arma el producto validado con imagen de relleno estable", () => {
-    const row = productFactory(PRODUCTS[0], { emprendimientoId: "e1", categoriaId: "c1", index: 0 });
-    expect(row).toMatchObject({ emprendimiento_id: "e1", categoria_id: "c1", validado: true, disponible: true });
-    expect(row.imagen_url).toBe(placeholderImage("cassava", 0));
-    expect(row.imagen_url).toMatch(/^https:\/\/picsum\.photos\/seed\/cassava-0\//);
+  it("arma el producto validado con la URL de su imagen", () => {
+    const row = productFactory(PRODUCTS[0], { emprendimientoId: "e1", categoriaId: "c1", imageUrl: "https://ejemplo.test/mandioca.jpg" });
+    expect(row).toMatchObject({ emprendimiento_id: "e1", categoria_id: "c1", validado: true, disponible: true, imagen_url: "https://ejemplo.test/mandioca.jpg" });
+  });
+
+  it("las imágenes se suben a una ruta estable dentro del bucket", () => {
+    expect(imageStoragePath("mandioca")).toBe("seed/mandioca.jpg");
   });
 
   it("rechaza unidades o precios inválidos", () => {
     const base = { ...PRODUCTS[0] };
-    expect(() => productFactory({ ...base, unidad: "cajón" }, { emprendimientoId: "e", categoriaId: "c", index: 0 })).toThrow(/Unidad/);
-    expect(() => productFactory({ ...base, precio: 2500.99 }, { emprendimientoId: "e", categoriaId: "c", index: 0 })).toThrow(/Precio/);
+    expect(() => productFactory({ ...base, unidad: "cajón" }, { emprendimientoId: "e", categoriaId: "c", imageUrl: "x" })).toThrow(/Unidad/);
+    expect(() => productFactory({ ...base, precio: 2500.99 }, { emprendimientoId: "e", categoriaId: "c", imageUrl: "x" })).toThrow(/Precio/);
   });
 });
