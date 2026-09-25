@@ -30,7 +30,6 @@ export async function POST(req: Request) {
     const transcript = await client.transcripts.transcribe({
       audio: buffer,
       language_code: "es", // Español
-      speech_model: "nano", // Modelo optimizado para mayor velocidad
     });
 
     if (transcript.status === "error") {
