@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useAuthActions } from "@/lib/auth/use-auth-actions";
 import { authErrorMessage } from "@/lib/auth/messages";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
@@ -61,30 +62,28 @@ export default function UpdatePasswordPage() {
           <label htmlFor="password" className="mb-1 block text-sm font-medium">
             Contraseña nueva
           </label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="new-password"
             minLength={6}
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="field"
+            placeholder="••••••••"
           />
         </div>
         <div>
           <label htmlFor="confirm" className="mb-1 block text-sm font-medium">
             Repetí la contraseña
           </label>
-          <input
+          <PasswordInput
             id="confirm"
-            type="password"
             autoComplete="new-password"
             minLength={6}
             required
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="field"
+            placeholder="••••••••"
           />
         </div>
         <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-3">

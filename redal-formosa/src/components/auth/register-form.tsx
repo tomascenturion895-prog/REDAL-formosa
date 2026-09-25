@@ -8,6 +8,7 @@ import { useAuthActions } from "@/lib/auth/use-auth-actions";
 import { authErrorMessage } from "@/lib/auth/messages";
 import { SocialButtons } from "@/components/auth/social-buttons";
 import { CheckIcon } from "@/components/ui/icons";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -120,16 +121,15 @@ export function RegisterForm() {
           <label htmlFor="password" className="mb-1 block text-sm font-medium">
             Contraseña
           </label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             minLength={6}
             required
             aria-describedby="password-hint"
-            className="field"
+            placeholder="Mínimo 6 caracteres"
           />
           <p id="password-hint" className="mt-1 text-xs text-muted">
             Mínimo 6 caracteres.
@@ -140,9 +140,8 @@ export function RegisterForm() {
           <label htmlFor="confirmPassword" className="mb-1 block text-sm font-medium">
             Confirmar contraseña
           </label>
-          <input
+          <PasswordInput
             id="confirmPassword"
-            type="password"
             autoComplete="new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
@@ -150,7 +149,8 @@ export function RegisterForm() {
             required
             aria-invalid={mismatch}
             aria-describedby={mismatch ? "confirm-error" : undefined}
-            className={`field ${mismatch ? "!border-danger" : ""}`}
+            className={mismatch ? "!border-danger" : ""}
+            placeholder="Repetí tu contraseña"
           />
           {mismatch && (
             <p id="confirm-error" role="alert" className="mt-1 text-xs text-danger">
