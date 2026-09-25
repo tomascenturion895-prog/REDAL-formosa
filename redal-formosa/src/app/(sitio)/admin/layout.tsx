@@ -39,25 +39,29 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="page-container py-section">
-      <h1 className="text-title pb-6">Administración</h1>
+      <div className="mb-8 flex flex-col gap-4 border-b border-border/50 pb-5 lg:flex-row lg:items-center lg:justify-between">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">Panel de Administración</h1>
 
-      <nav aria-label="Administración" className="mb-8 flex gap-1 overflow-x-auto border-b border-border">
-        {links.map(({ href, label }) => {
-          const active = href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              aria-current={active ? "page" : undefined}
-              className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-                active ? "border-action text-foreground" : "border-transparent text-muted hover:text-foreground"
-              }`}
-            >
-              {label}
-            </Link>
-          );
-        })}
-      </nav>
+        <nav aria-label="Administración" className="flex w-full gap-2 overflow-x-auto lg:w-auto">
+          {links.map(({ href, label }) => {
+            const active = href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={`relative flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                  active 
+                    ? "bg-action text-on-action shadow-sm" 
+                    : "text-muted hover:bg-surface-muted hover:text-foreground"
+                }`}
+              >
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
 
       {children}
     </div>
