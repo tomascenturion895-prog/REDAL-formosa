@@ -75,6 +75,8 @@ export const getVoiceCatalogService = lazy(
     ),
 );
 
+export const getSpeechToText = lazy(() => new OpenAiWhisper(process.env.OPENAI_API_KEY));
+
 export const getRecipesService = lazy(() => new RecipesService(new OpenAiRecipeSuggester(process.env.OPENAI_API_KEY)));
 
 export const getGeocoder = lazy(
@@ -90,6 +92,8 @@ export const limiters = {
   bankAccount: new InMemoryRateLimiter({ limit: 5, windowMs: 60_000 }),
   voiceCatalog: new InMemoryRateLimiter({ limit: 10, windowMs: 60_000 }),
   recipes: new InMemoryRateLimiter({ limit: 6, windowMs: 60_000 }),
+  // Búsqueda por voz del encabezado: es pública, así que se limita por IP.
+  voiceSearch: new InMemoryRateLimiter({ limit: 12, windowMs: 60_000 }),
   geocode: new InMemoryRateLimiter({ limit: 15, windowMs: 60_000 }),
   // Nominatim pide como máximo ~1 pedido por segundo en total, sin importar quién lo haga.
   geocodeGlobal: new InMemoryRateLimiter({ limit: 50, windowMs: 60_000 }),

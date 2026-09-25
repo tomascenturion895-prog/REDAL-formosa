@@ -13,13 +13,8 @@ export function slugify(text) {
     .replace(/^-+|-+$/g, "");
 }
 
-/**
- * Imagen de relleno estable. Es un placeholder (foto al azar, fija por semilla), no una foto del producto:
- * `term` queda como pista en inglés para reemplazarla por una foto real (p. ej. de Unsplash) más adelante.
- */
-export function placeholderImage(term, index) {
-  return `https://picsum.photos/seed/${slugify(term)}-${index}/800/600`;
-}
+/** Ruta dentro del bucket product-images donde el seeder sube la foto de cada producto. */
+export const imageStoragePath = (imagen) => `seed/${imagen}.jpg`;
 
 export const seedEmail = (prefix, key) => `${prefix}.${key}@${SEED_EMAIL_DOMAIN}`;
 
@@ -51,7 +46,7 @@ export function emprendimientoFactory(def, ownerId) {
   };
 }
 
-export function productFactory(def, { emprendimientoId, categoriaId, index }) {
+export function productFactory(def, { emprendimientoId, categoriaId, imageUrl }) {
   if (!VALID_UNITS.includes(def.unidad)) throw new Error(`Unidad inválida en "${def.nombre}": ${def.unidad}`);
   if (!Number.isInteger(def.precio) || def.precio <= 0) throw new Error(`Precio inválido en "${def.nombre}": ${def.precio}`);
   return {
@@ -61,7 +56,7 @@ export function productFactory(def, { emprendimientoId, categoriaId, index }) {
     descripcion: def.descripcion,
     precio: def.precio,
     unidad: def.unidad,
-    imagen_url: placeholderImage(def.term, index),
+    imagen_url: imageUrl,
     disponible: true,
     // Los productos de prueba entran ya aprobados; los reales los aprueba un administrador.
     validado: true,

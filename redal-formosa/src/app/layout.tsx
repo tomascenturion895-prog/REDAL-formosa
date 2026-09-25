@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Figtree, Fraunces } from "next/font/google";
 
+import { Suspense } from "react";
+
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { CartProvider } from "@/lib/cart/cart-context";
 import { defaultMetadata } from "@/lib/seo/metadata";
+import { NavigationProgress } from "@/components/layout/navigation-progress";
 import { PWAInstaller } from "@/components/pwa/pwa-installer";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
@@ -32,6 +35,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="flex min-h-full flex-col">
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         <AuthProvider>
           <CartProvider>
             {children}

@@ -33,8 +33,13 @@ export async function openAiJson<T>(
   }
 
   if (!response.ok) {
-    console.error("El servicio de IA respondió", response.status, await response.text().catch(() => ""));
+    const detail = await response.text().catch(() => "");
+    console.error("El servicio de IA respondió", response.status, detail);
+    if (response.status === 429 && /insufficient_quota|no credits|billing/i.test(detail)) {
+      throw new ServiceError("unavailable", "La cuenta del servicio de IA no tiene saldo. Avisale al administrador.");
+    }
     if (response.status === 429) throw new ServiceError("unavailable", "El servicio de IA está saturado. Probá en un momento.");
+    if (response.status === 401) throw new ServiceError("unavailable", "La clave del servicio de IA no es válida. Avisale al administrador.");
     throw new ServiceError("unavailable", "El servicio de IA no pudo procesar el pedido.");
   }
   return (await response.json()) as T;

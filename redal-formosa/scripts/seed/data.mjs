@@ -89,144 +89,144 @@ const CONSERVAS = "Conservas y Escabeches";
 const LACTEOS = "Lácteos y Quesos";
 const ARTESANIAS = "Artesanías y Textiles";
 
-// term: búsqueda en inglés para el placeholder de imagen (ver factories.placeholderImage).
+// imagen: nombre del archivo en scripts/seed/images/ (fotos reales; créditos en CREDITS.md).
 export const PRODUCTS = [
   // --- Chacra El Sol ---
   {
-    producer: "chacraelsol", category: FRUTAS, term: "cassava",
+    producer: "chacraelsol", category: FRUTAS, imagen: "mandioca",
     nombre: "Mandioca fresca", unidad: "kg", precio: 1500,
     descripcion: "Mandioca recién arrancada de la chacra, tierna y de buena cocción. Cultivada sin agrotóxicos.",
   },
   {
-    producer: "chacraelsol", category: FRUTAS, term: "cassava",
+    producer: "chacraelsol", category: FRUTAS, imagen: "cajon-mandioca",
     nombre: "Cajón de mandioca fresca (10 kg)", unidad: "unidad", precio: 12000,
     descripcion: "Cajón de 10 kilos de mandioca de cosecha del día, ideal para familias o para revender. Sin agrotóxicos.",
   },
   {
-    producer: "chacraelsol", category: FRUTAS, term: "pumpkin",
+    producer: "chacraelsol", category: FRUTAS, imagen: "zapallo-plomo",
     nombre: "Zapallo plomo", unidad: "kg", precio: 1200,
     descripcion: "Zapallo plomo de pulpa firme y dulce, criado a campo abierto. Perfecto para sopas, puré y locro.",
   },
   {
-    producer: "chacraelsol", category: FRUTAS, term: "sweet potato",
+    producer: "chacraelsol", category: FRUTAS, imagen: "batata",
     nombre: "Batata colorada", unidad: "kg", precio: 1800,
     descripcion: "Batata de pulpa anaranjada, dulce y cremosa al horno. Cosecha fresca, sin agrotóxicos.",
   },
   {
-    producer: "chacraelsol", category: MIEL, term: "honey jar",
+    producer: "chacraelsol", category: MIEL, imagen: "miel-500",
     nombre: "Miel de monte (frasco 500 g)", unidad: "unidad", precio: 6500,
     descripcion: "Miel pura de monte nativo, cosechada y fraccionada en casa. Sin aditivos ni calentado.",
   },
   {
-    producer: "chacraelsol", category: MIEL, term: "honey jar",
+    producer: "chacraelsol", category: MIEL, imagen: "miel-1kg",
     nombre: "Miel de monte (frasco 1 kg)", unidad: "unidad", precio: 11500,
     descripcion: "El frasco grande de nuestra miel de monte: aroma intenso y sabor de flores del chaco. Hecha en casa, sin agregados.",
   },
 
   // --- Cooperativa Agrícola Pirané ---
   {
-    producer: "coopirane", category: PAN, term: "corn flour",
+    producer: "coopirane", category: PAN, imagen: "harina-maiz",
     nombre: "Harina de maíz amarillo tostado (1 kg)", unidad: "unidad", precio: 3000,
     descripcion: "Maíz amarillo cultivado en Pirané, tostado y molido en piedra. Ideal para tortillas, polenta y postres regionales.",
   },
   {
-    producer: "coopirane", category: PAN, term: "corn",
+    producer: "coopirane", category: PAN, imagen: "maiz-pisado",
     nombre: "Maíz pisado para locro (1 kg)", unidad: "unidad", precio: 2800,
     descripcion: "Maíz blanco pisado a la manera tradicional, listo para tu locro. Cosecha propia, sin conservantes.",
   },
   {
-    producer: "coopirane", category: FRUTAS, term: "squash",
+    producer: "coopirane", category: FRUTAS, imagen: "calabaza",
     nombre: "Calabaza criolla", unidad: "kg", precio: 1000,
     descripcion: "Calabaza criolla de cáscara verde y pulpa naranja intensa. Cultivo tradicional, sin agrotóxicos.",
   },
   {
-    producer: "coopirane", category: FRUTAS, term: "tomatoes",
+    producer: "coopirane", category: FRUTAS, imagen: "tomate",
     nombre: "Tomate platense", unidad: "kg", precio: 2500,
     descripcion: "Tomates de huerta madurados en la planta: jugosos y con sabor de verdad. Sin agrotóxicos.",
   },
   {
-    producer: "coopirane", category: ARTESANIAS, term: "palm basket",
+    producer: "coopirane", category: ARTESANIAS, imagen: "canasto",
     nombre: "Canasto de palma karanday", unidad: "unidad", precio: 18000,
     descripcion: "Canasto tejido a mano por las artesanas de la cooperativa con palma karanday. Resistente y de terminación prolija.",
   },
   {
-    producer: "coopirane", category: ARTESANIAS, term: "woven textile",
+    producer: "coopirane", category: ARTESANIAS, imagen: "mantel",
     nombre: "Mantel tejido en telar", unidad: "unidad", precio: 25000,
     descripcion: "Mantel de algodón tejido en telar, con guardas de colores de la región. Pieza única hecha a mano.",
   },
 
   // --- Familia Bogado ---
   {
-    producer: "bogado", category: PAN, term: "bread rolls",
+    producer: "bogado", category: PAN, imagen: "chipa",
     nombre: "Docena de chipá de almidón artesanal", unidad: "pack", precio: 5000,
     descripcion: "Chipá de almidón de mandioca y queso, horneado en horno de barro. Hecho en casa, crocante por fuera y tierno por dentro.",
   },
   {
-    producer: "bogado", category: PAN, term: "cheese bread",
+    producer: "bogado", category: PAN, imagen: "chipa-soo",
     nombre: "Chipá so'o (docena)", unidad: "pack", precio: 7500,
     descripcion: "Chipá relleno de carne y cebolla de verdeo, receta de la abuela. Se hornea el mismo día del pedido.",
   },
   {
-    producer: "bogado", category: PAN, term: "flatbread",
+    producer: "bogado", category: PAN, imagen: "mbeju",
     nombre: "Mbejú (bandeja de 6)", unidad: "pack", precio: 4500,
     descripcion: "Mbejú tradicional de almidón y queso, cocido en la plancha. Ideal para el mate de la tarde.",
   },
   {
-    producer: "bogado", category: CONSERVAS, term: "jam jar",
+    producer: "bogado", category: CONSERVAS, imagen: "mermelada",
     nombre: "Mermelada artesanal de mamón (frasco 450 g)", unidad: "unidad", precio: 4500,
     descripcion: "Mermelada de mamón de nuestro patio, cocida a fuego lento con poca azúcar. Hecha en casa, sin conservantes.",
   },
   {
-    producer: "bogado", category: LACTEOS, term: "eggs",
+    producer: "bogado", category: LACTEOS, imagen: "huevos-docena",
     nombre: "Huevos caseros de gallinas libres (docena)", unidad: "pack", precio: 3800,
     descripcion: "Huevos de gallinas criadas sueltas, con yema anaranjada y sabor de campo. Sin agrotóxicos en su alimentación.",
   },
   {
-    producer: "bogado", category: LACTEOS, term: "eggs",
+    producer: "bogado", category: LACTEOS, imagen: "huevos-maple",
     nombre: "Huevos caseros de gallinas libres (maple x 30)", unidad: "pack", precio: 9500,
     descripcion: "Maple de 30 huevos de campo, recolectados cada mañana. Ideal para panaderías y familias numerosas.",
   },
 
   // --- Huerta Los Abuelos ---
   {
-    producer: "abuelos", category: CONSERVAS, term: "pickled eggplant",
+    producer: "abuelos", category: CONSERVAS, imagen: "berenjena",
     nombre: "Berenjenas en escabeche (frasco 350 g)", unidad: "unidad", precio: 4200,
     descripcion: "Berenjenas de nuestra huerta en escabeche casero con ajo y orégano. Hechas en tandas chicas, sin conservantes.",
   },
   {
-    producer: "abuelos", category: CONSERVAS, term: "chili oil",
+    producer: "abuelos", category: CONSERVAS, imagen: "aji",
     nombre: "Ají picante en aceite (frasco 250 g)", unidad: "unidad", precio: 3800,
     descripcion: "Ají picante de la huerta macerado en aceite. Picor parejo y aroma fresco; hecho en casa.",
   },
   {
-    producer: "abuelos", category: CONSERVAS, term: "pickled vegetables",
+    producer: "abuelos", category: CONSERVAS, imagen: "zapallitos",
     nombre: "Zapallitos en escabeche (frasco 400 g)", unidad: "unidad", precio: 4000,
     descripcion: "Zapallitos verdes en escabeche suave, listos para el picoteo. Cultivo agroecológico y elaboración casera.",
   },
   {
-    producer: "abuelos", category: FRUTAS, term: "lettuce",
+    producer: "abuelos", category: FRUTAS, imagen: "lechuga",
     nombre: "Lechuga criolla (atado)", unidad: "unidad", precio: 1200,
     descripcion: "Lechuga criolla cosechada por la mañana, crocante y sin agrotóxicos. Se entrega fresca y recién cortada.",
   },
   {
-    producer: "abuelos", category: FRUTAS, term: "red bell pepper",
+    producer: "abuelos", category: FRUTAS, imagen: "morron",
     nombre: "Morrón rojo", unidad: "kg", precio: 3500,
     descripcion: "Morrones rojos de huerta, carnosos y dulces. Cultivados sin agrotóxicos.",
   },
 
   // --- Tambo La Querencia ---
   {
-    producer: "querencia", category: LACTEOS, term: "cheese",
+    producer: "querencia", category: LACTEOS, imagen: "queso",
     nombre: "Queso criollo de campo", unidad: "kg", precio: 11500,
     descripcion: "Queso criollo de leche entera de nuestro rodeo, madurado en la propia quesería. Sabor firme y casero.",
   },
   {
-    producer: "querencia", category: LACTEOS, term: "dulce de leche",
+    producer: "querencia", category: LACTEOS, imagen: "dulce-leche",
     nombre: "Dulce de leche de campo (frasco 500 g)", unidad: "unidad", precio: 5500,
     descripcion: "Dulce de leche cocido en olla de cobre, espeso y de color intenso. Hecho en casa, sin aditivos.",
   },
   {
-    producer: "querencia", category: LACTEOS, term: "ricotta",
+    producer: "querencia", category: LACTEOS, imagen: "ricota",
     nombre: "Ricota fresca (500 g)", unidad: "unidad", precio: 3800,
     descripcion: "Ricota fresca del día, suave y cremosa. Elaborada con el suero de nuestro queso criollo.",
   },

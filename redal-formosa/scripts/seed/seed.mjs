@@ -7,10 +7,12 @@
 // Requiere en .env: NEXT_PUBLIC_SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY.
 // SEED_PASSWORD (opcional): contraseña de las cuentas de prueba; si falta se genera una y se muestra una vez.
 import { randomBytes } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
 
 import { CATEGORIES, CUSTOMERS, PRODUCERS, PRODUCTS, SEED_EMAIL_DOMAIN } from "./data.mjs";
 import {
+  imageStoragePath,
   categoryFactory,
   customerFactory,
   emprendimientoFactory,
@@ -96,8 +98,30 @@ async function ensureUser(row, existing) {
   return { id, created };
 }
 
+const IMAGES_DIR = new URL("./images/", import.meta.url);
+
+/** Sube las fotos al bucket público product-images (se pueden repetir: se reemplazan) y devuelve su URL por clave. */
+async function uploadImages() {
+  const urls = {};
+  for (const key of new Set(PRODUCTS.map((p) => p.imagen))) {
+    const path = imageStoragePath(key);
+    const file = await readFile(new URL(`${key}.jpg`, IMAGES_DIR));
+    // El almacenamiento a veces responde con un corte transitorio (504): se reintenta antes de rendirse.
+    let error;
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      ({ error } = await db.storage.from("product-images").upload(path, file, { contentType: "image/jpeg", upsert: true }));
+      if (!error) break;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+    }
+    if (error) fail(`subir la imagen ${key}`, error);
+    urls[key] = db.storage.from("product-images").getPublicUrl(path).data.publicUrl;
+  }
+  return urls;
+}
+
 async function seed() {
-  const stats = { usuarios: 0, categorias: 0, emprendimientos: 0, productos: 0 };
+  const stats = { usuarios: 0, categorias: 0, emprendimientos: 0, productos: 0, imagenes_actualizadas: 0 };
+  const imageUrl = await uploadImages();
 
   // 1. Categorías (idempotente por slug)
   const { data: cats, error: catError } = await db
@@ -146,7 +170,7 @@ async function seed() {
   }
 
   // 4. Productos (no se pisan por nombre dentro de cada emprendimiento)
-  for (const [index, def] of PRODUCTS.entries()) {
+  for (const def of PRODUCTS) {
     const emprendimientoId = empId[def.producer];
     const { data: found, error: findError } = await db
       .from("productos")
@@ -155,11 +179,16 @@ async function seed() {
       .eq("nombre", def.nombre)
       .maybeSingle();
     if (findError) fail(`buscar ${def.nombre}`, findError);
-    if (found) continue;
+    const row = productFactory(def, { emprendimientoId, categoriaId: categoryId[def.category], imageUrl: imageUrl[def.imagen] });
+    if (found) {
+      // Ya existía: solo se corrige la foto, para no pisar cambios hechos a mano en el resto.
+      const { error: updateError } = await db.from("productos").update({ imagen_url: row.imagen_url }).eq("id", found.id);
+      if (updateError) fail(`actualizar la imagen de ${def.nombre}`, updateError);
+      stats.imagenes_actualizadas++;
+      continue;
+    }
 
-    const { error } = await db
-      .from("productos")
-      .insert(productFactory(def, { emprendimientoId, categoriaId: categoryId[def.category], index }));
+    const { error } = await db.from("productos").insert(row);
     if (error) fail(`crear ${def.nombre}`, error);
     stats.productos++;
   }

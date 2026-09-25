@@ -104,7 +104,7 @@
   --shadow-pop: 0 14px 36px -8px rgb(20 38 28 / 0.22);
 
   /* --- Layout --- */
-  --container-page: 72rem; /* max-w-page: ancho de página */
+  --container-page: 80rem; /* max-w-page: ancho de página */
   --container-narrow: 28rem; /* max-w-narrow: login, formularios */
   --spacing-gutter: clamp(1rem, 4vw, 2rem);
   --spacing-section: clamp(3rem, 8vw, 6rem);
@@ -396,6 +396,79 @@
     background: var(--action);
     color: var(--on-action);
   }
+}
+
+/* Entrada suave de cada página al navegar (ver template.tsx) */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Pantalla de carga entre secciones: fondo difuminado con el pajarito al centro */
+@utility nav-loader {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 200ms ease,
+    visibility 0s linear 200ms;
+  &[data-show="true"] {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition:
+      opacity 200ms ease,
+      visibility 0s;
+  }
+}
+
+@keyframes wing-back {
+  from {
+    transform: rotate(18deg);
+  }
+  to {
+    transform: rotate(-42deg);
+  }
+}
+
+@keyframes wing-front {
+  from {
+    transform: rotate(-16deg);
+  }
+  to {
+    transform: rotate(38deg);
+  }
+}
+
+@keyframes bird-bob {
+  from {
+    transform: translateY(2px);
+  }
+  to {
+    transform: translateY(-5px);
+  }
+}
+
+@utility bird-wing-back {
+  animation: wing-back 380ms ease-in-out infinite alternate;
+}
+
+@utility bird-wing-front {
+  animation: wing-front 380ms ease-in-out infinite alternate;
+}
+
+@utility bird-bob {
+  animation: bird-bob 380ms ease-in-out infinite alternate;
+}
+
+@utility page-enter {
+  animation: page-enter 260ms var(--ease-soft) both;
 }
 
 /* Etiqueta de precio de feria: el rasgo distintivo del sistema */

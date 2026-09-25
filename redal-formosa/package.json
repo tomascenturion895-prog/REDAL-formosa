@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "make-admin": "node --env-file=.env scripts/make-admin.mjs",
-    "seed": "node --env-file=.env scripts/seed/seed.mjs"
+    "seed": "node --env-file=.env scripts/seed/seed.mjs",
+    "seed:demo": "node --env-file=.env scripts/seed/demo-accounts.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

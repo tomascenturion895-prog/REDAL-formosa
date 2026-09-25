@@ -65,9 +65,13 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
           body: formData,
         });
 
-        if (!res.ok) throw new Error("Error en la transcripción");
+        const data = await res.json().catch(() => ({}));
 
-        const data = await res.json();
+        // Un fallo esperable (sin clave, sin saldo, audio vacío) se muestra en pantalla, sin romper la página.
+        if (!res.ok) {
+          setErrorMsg(typeof data.error === "string" ? data.error : "Error al procesar el audio");
+          return;
+        }
         
         if (data.text) {
           setQuery(data.text);
@@ -96,7 +100,7 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
 
       const recorder = new RecordRTC(stream, {
         type: "audio",
-        mimeType: "audio/webm;codecs=opus",
+        mimeType: "audio/wav",
         recorderType: StereoAudioRecorder,
         numberOfAudioChannels: 1,
         desiredSampRate: 16000

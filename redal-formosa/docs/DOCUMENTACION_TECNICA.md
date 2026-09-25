@@ -295,7 +295,7 @@ Crea la cuenta (confirmada) o promueve una existente. Alternativa manual: `supab
 | `npm run lint` | ESLint. |
 | `npx playwright test` | Pruebas E2E (requieren la app en `http://localhost:3000`). |
 | `npm run make-admin -- <email>` | Crear o promover un administrador (solo pruebas). |
-| `npm run seed` | Simulacro de los datos de prueba (5 productores, 2 clientes, 6 categorías, 26 productos). Con `-- --apply` los crea; con `-- --apply --remove` los borra. |
+| `npm run seed` | Simulacro de los datos de prueba (5 productores, 2 clientes, 6 categorías, 26 productos con fotos reales; créditos en `scripts/seed/images/CREDITS.md`). Con `-- --apply` los crea; con `-- --apply --remove` los borra. |
 
 ---
 

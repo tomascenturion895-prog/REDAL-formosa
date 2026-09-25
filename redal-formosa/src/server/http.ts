@@ -28,7 +28,7 @@ export async function handleRoute(handler: () => Promise<NextResponse>): Promise
 }
 
 /** Origen de la petición. Detrás de un proxy inverso confiable, viene en x-forwarded-for. */
-export function clientIp(req: NextRequest): string {
+export function clientIp(req: { headers: Headers }): string {
   return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "desconocida";
 }
 
