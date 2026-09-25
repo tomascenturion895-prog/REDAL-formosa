@@ -8,13 +8,14 @@ import { useAsync } from "@/lib/hooks/use-async";
 import { producerRepository } from "@/lib/producer/producer-repository";
 import { ProductForm } from "@/components/productor/product-form";
 import { ProductList } from "@/components/productor/product-list";
+import { SucursalesForm } from "@/components/productor/sucursales-form";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PlusIcon, StoreIcon } from "@/components/ui/icons";
 
 export default function ProductorDashboard() {
   const { user, pending } = useRequireAuth();
-  const { data: emprendimientos, loading } = useAsync(() => producerRepository.ownEmprendimientos(user!.id), [user?.id], {
+  const { data: emprendimientos, loading, reload } = useAsync(() => producerRepository.ownEmprendimientos(user!.id), [user?.id], {
     enabled: Boolean(user),
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -106,6 +107,20 @@ export default function ProductorDashboard() {
               <dd className="font-medium">{selected.direccion || "Sin cargar"}</dd>
             </div>
           </dl>
+          <details className="rounded-control border border-border">
+            <summary className="cursor-pointer px-3 py-2 font-medium">
+              {selected.latitud != null && selected.longitud != null ? "Editar ubicación y horarios" : "Ubicar en el mapa"}
+            </summary>
+            <div className="border-t border-border p-3">
+              <SucursalesForm
+                key={selected.id}
+                emprendimientoId={selected.id}
+                initial={selected}
+                submitLabel="Guardar ubicación"
+                onSuccess={reload}
+              />
+            </div>
+          </details>
           <Link href={`/emprendimientos/${selected.id}`} className="btn btn-secondary btn-sm w-full">
             Ver cómo lo ven los compradores
           </Link>

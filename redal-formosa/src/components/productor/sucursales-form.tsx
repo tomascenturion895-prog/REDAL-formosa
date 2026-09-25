@@ -5,22 +5,26 @@ import { useState } from "react";
 import { producerRepository } from "@/lib/producer/producer-repository";
 import { Alert } from "@/components/ui/alert";
 import { Field } from "@/components/ui/field";
+import { LocationPicker } from "./location-picker";
 
 interface SucursalFormProps {
   emprendimientoId: string;
   onSuccess?: () => void;
+  /** Valores actuales, para editar la ubicación de un emprendimiento ya creado. */
+  initial?: Partial<{ direccion: string | null; latitud: number | null; longitud: number | null; horario_apertura: string | null; horario_cierre: string | null }>;
+  submitLabel?: string;
 }
 
 // Ubicación y horarios del emprendimiento (actualiza el que se acaba de crear).
-export function SucursalesForm({ emprendimientoId, onSuccess }: SucursalFormProps) {
+export function SucursalesForm({ emprendimientoId, onSuccess, initial, submitLabel = "Continuar" }: SucursalFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
-    direccion: "",
-    latitud: "",
-    longitud: "",
-    horario_apertura: "09:00",
-    horario_cierre: "18:00",
+    direccion: initial?.direccion ?? "",
+    latitud: initial?.latitud != null ? String(initial.latitud) : "",
+    longitud: initial?.longitud != null ? String(initial.longitud) : "",
+    horario_apertura: initial?.horario_apertura?.slice(0, 5) || "09:00",
+    horario_cierre: initial?.horario_cierre?.slice(0, 5) || "18:00",
   });
 
   const update = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -53,6 +57,12 @@ export function SucursalesForm({ emprendimientoId, onSuccess }: SucursalFormProp
         <input id="direccion" required value={form.direccion} onChange={update("direccion")} placeholder="Calle, número y barrio" className="field" />
       </Field>
 
+      <LocationPicker address={form.direccion} onLocate={(coords) => setForm((prev) => ({ ...prev, ...coords }))} />
+
+      {!form.latitud || !form.longitud ? (
+        <Alert tone="warning">Sin ubicación, tu emprendimiento no aparece en el mapa. Usá los botones de arriba para cargarla.</Alert>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <Field id="latitud" label="Latitud" optional>
           <input id="latitud" type="number" step="any" value={form.latitud} onChange={update("latitud")} placeholder="-26.1775" className="field" />
@@ -72,7 +82,7 @@ export function SucursalesForm({ emprendimientoId, onSuccess }: SucursalFormProp
       </div>
 
       <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-3">
-        {loading ? "Guardando…" : "Continuar"}
+        {loading ? "Guardando…" : submitLabel}
       </button>
     </form>
   );

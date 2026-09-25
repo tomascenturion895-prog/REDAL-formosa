@@ -1,2 +1,26 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
 
+# Testing & Build
+/.next/
+/out/
+/build/
+/dist/
+*.tsbuildinfo
+*.log
+
+# Environment variables
+.env*.local
+.env.local
+.env
+
+# Storage & Temp
 *.zip
+.DS_Store
+*.pem
+
+# IDE / System
+.vscode/
+.idea/
