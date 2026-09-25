@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
       admin_audit_log: {
@@ -1438,7 +1443,6 @@ export type Database = {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
-      _st_concavehull: { Args: { param_inputgeom: unknown }; Returns: unknown }
       _st_contains: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
@@ -1581,8 +1585,27 @@ export type Database = {
           unidad: string
         }[]
       }
+      admin_pending_verifications: {
+        Args: never
+        Returns: {
+          created_at: string
+          dni_frente_url: string
+          dni_reverso_url: string
+          email: string
+          emprendimiento_nombre: string
+          full_name: string
+          id: string
+          selfie_url: string
+          user_id: string
+        }[]
+      }
+      admin_resumen: { Args: never; Returns: Json }
       admin_review_product: {
         Args: { approve: boolean; product_id: string; reason?: string }
+        Returns: undefined
+      }
+      admin_review_verification: {
+        Args: { p_approve: boolean; p_id: string; p_reason?: string }
         Returns: undefined
       }
       admin_set_role: {
@@ -1608,7 +1631,6 @@ export type Database = {
           out_pedido_id: string
         }[]
       }
-      dearmor: { Args: { "": string }; Returns: string }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
@@ -1642,8 +1664,6 @@ export type Database = {
         | { Args: { table_name: string }; Returns: string }
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
-      gen_random_uuid: { Args: never; Returns: string }
-      gen_salt: { Args: { "": string }; Returns: string }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
@@ -1747,10 +1767,6 @@ export type Database = {
       is_buyer_of_repartidor: { Args: { rid: string }; Returns: boolean }
       longtransactionsenabled: { Args: never; Returns: boolean }
       owns_repartidor: { Args: { rid: string }; Returns: boolean }
-      pgp_armor_headers: {
-        Args: { "": string }
-        Returns: Record<string, unknown>[]
-      }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
@@ -1766,12 +1782,8 @@ export type Database = {
         Args: { geomcolumn: string; geomschema: string; geomtable: string }
         Returns: string
       }
-      postgis_extensions_upgrade: {
-        Args: { target_version?: string }
-        Returns: string
-      }
+      postgis_extensions_upgrade: { Args: never; Returns: string }
       postgis_full_version: { Args: never; Returns: string }
-      postgis_geos_compiled_version: { Args: never; Returns: string }
       postgis_geos_version: { Args: never; Returns: string }
       postgis_lib_build_date: { Args: never; Returns: string }
       postgis_lib_revision: { Args: never; Returns: string }
@@ -1784,53 +1796,7 @@ export type Database = {
       postgis_scripts_build_date: { Args: never; Returns: string }
       postgis_scripts_installed: { Args: never; Returns: string }
       postgis_scripts_released: { Args: never; Returns: string }
-      postgis_srs: {
-        Args: { auth_name: string; auth_srid: string }
-        Returns: {
-          auth_name: string
-          auth_srid: string
-          point_ne: unknown
-          point_sw: unknown
-          proj4text: string
-          srname: string
-          srtext: string
-        }[]
-      }
-      postgis_srs_all: {
-        Args: never
-        Returns: {
-          auth_name: string
-          auth_srid: string
-          point_ne: unknown
-          point_sw: unknown
-          proj4text: string
-          srname: string
-          srtext: string
-        }[]
-      }
-      postgis_srs_codes: { Args: { auth_name: string }; Returns: string[] }
-      postgis_srs_search: {
-        Args: { authname?: string; bounds: unknown }
-        Returns: {
-          auth_name: string
-          auth_srid: string
-          point_ne: unknown
-          point_sw: unknown
-          proj4text: string
-          srname: string
-          srtext: string
-        }[]
-      }
       postgis_svn_version: { Args: never; Returns: string }
-      postgis_transform_pipeline_geometry: {
-        Args: {
-          forward: boolean
-          geom: unknown
-          pipeline: string
-          to_srid: number
-        }
-        Returns: unknown
-      }
       postgis_type_name: {
         Args: {
           coord_dimension: number
@@ -1841,6 +1807,30 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      productor_avanzar_pedido: {
+        Args: {
+          p_estado: Database["public"]["Enums"]["order_status"]
+          p_pedido_id: string
+        }
+        Returns: undefined
+      }
+      productor_pedidos: {
+        Args: never
+        Returns: {
+          comprador_nombre: string
+          creado_en: string
+          direccion_entrega: string
+          emprendimiento_id: string
+          emprendimiento_nombre: string
+          estado: Database["public"]["Enums"]["order_status"]
+          id: string
+          items: Json
+          monto_envio: number
+          monto_total: number
+          nota_cliente: string
+          numero_pedido: string
+        }[]
+      }
       productos_mas_vendidos: {
         Args: { max_results?: number }
         Returns: {
@@ -2226,10 +2216,6 @@ export type Database = {
       st_intersects:
         | { Args: { geog1: unknown; geog2: unknown }; Returns: boolean }
         | { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
-      st_inversetransformpipeline: {
-        Args: { geom: unknown; pipeline: string; to_srid?: number }
-        Returns: unknown
-      }
       st_isvaliddetail: {
         Args: { flags?: number; geom: unknown }
         Returns: Database["public"]["CompositeTypes"]["valid_detail"]
@@ -2240,10 +2226,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      st_largestemptycircle: {
-        Args: { boundary?: unknown; geom: unknown; tolerance?: number }
-        Returns: Record<string, unknown>
-      }
       st_length:
         | { Args: { geog: unknown; use_spheroid?: boolean }; Returns: number }
         | { Args: { "": string }; Returns: number }
@@ -2251,14 +2233,6 @@ export type Database = {
       st_linecrossingdirection: {
         Args: { line1: unknown; line2: unknown }
         Returns: number
-      }
-      st_lineextend: {
-        Args: {
-          distance_backward?: number
-          distance_forward: number
-          geom: unknown
-        }
-        Returns: unknown
       }
       st_linefromencodedpolyline: {
         Args: { nprecision?: number; txtin: string }
@@ -2366,23 +2340,10 @@ export type Database = {
       }
       st_polyfromtext: { Args: { "": string }; Returns: unknown }
       st_polygonfromtext: { Args: { "": string }; Returns: unknown }
-      st_project:
-        | {
-            Args: { azimuth: number; distance: number; geog: unknown }
-            Returns: unknown
-          }
-        | {
-            Args: { distance: number; geog_from: unknown; geog_to: unknown }
-            Returns: unknown
-          }
-        | {
-            Args: { azimuth: number; distance: number; geom1: unknown }
-            Returns: unknown
-          }
-        | {
-            Args: { distance: number; geom1: unknown; geom2: unknown }
-            Returns: unknown
-          }
+      st_project: {
+        Args: { azimuth: number; distance: number; geog: unknown }
+        Returns: unknown
+      }
       st_quantizecoordinates: {
         Args: {
           g: unknown
@@ -2470,10 +2431,6 @@ export type Database = {
             Returns: unknown
           }
         | { Args: { geom: unknown; to_proj: string }; Returns: unknown }
-      st_transformpipeline: {
-        Args: { geom: unknown; pipeline: string; to_srid?: number }
-        Returns: unknown
-      }
       st_triangulatepolygon: { Args: { g1: unknown }; Returns: unknown }
       st_union:
         | { Args: { geom1: unknown; geom2: unknown }; Returns: unknown }

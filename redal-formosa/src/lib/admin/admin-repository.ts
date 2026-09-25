@@ -1,6 +1,21 @@
 import { createClient, type Db } from "@/lib/supabase/client";
 import { RepositoryError, unwrap } from "@/lib/supabase/repository";
 import type { UserRole } from "@/lib/supabase/types";
+import { parseSummary, type AdminSummary } from "@/lib/domain/admin-summary";
+
+export type { AdminSummary };
+
+export interface PendingVerification {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+  emprendimiento_nombre: string | null;
+  dni_frente_url: string;
+  dni_reverso_url: string;
+  selfie_url: string;
+  created_at: string;
+}
 
 export interface AdminStats {
   total_usuarios: number;
@@ -79,6 +94,27 @@ export class AdminRepository {
   async rejectProduct(productId: string, reason: string): Promise<void> {
     const { error } = await this.db.rpc("admin_review_product", { product_id: productId, approve: false, reason });
     if (error) throw new RepositoryError(`rechazar producto: ${error.message}`, error);
+  }
+
+  async summary(): Promise<AdminSummary> {
+    return parseSummary(await unwrap(this.db.rpc("admin_resumen"), "cargar el resumen"));
+  }
+
+  async pendingVerifications(): Promise<PendingVerification[]> {
+    const rows = await unwrap(this.db.rpc("admin_pending_verifications"), "listar verificaciones pendientes");
+    return rows.map((r) => ({ ...r, full_name: r.full_name ?? null, email: r.email ?? null, emprendimiento_nombre: r.emprendimiento_nombre ?? null }));
+  }
+
+  /** Enlace temporal (5 minutos) a un documento del bucket privado; solo un administrador puede generarlo. */
+  async documentUrl(path: string): Promise<string> {
+    const { data, error } = await this.db.storage.from("biometric-verification").createSignedUrl(path, 300);
+    if (error || !data) throw new RepositoryError(`abrir documento: ${error?.message ?? "sin enlace"}`, error ?? undefined);
+    return data.signedUrl;
+  }
+
+  async reviewVerification(id: string, approve: boolean, reason?: string): Promise<void> {
+    const { error } = await this.db.rpc("admin_review_verification", { p_id: id, p_approve: approve, p_reason: reason });
+    if (error) throw new RepositoryError(`revisar verificación: ${error.message}`, error);
   }
 
   async setRole(userId: string, role: UserRole): Promise<void> {

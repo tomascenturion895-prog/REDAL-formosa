@@ -57,6 +57,17 @@ function documentColumns(kind: IdentityDocument, path: string) {
 export class ProducerRepository {
   constructor(private readonly db: Db = createClient()) {}
 
+  /** Lo que falta para poder cobrar: identidad verificada y cuenta bancaria cargada (el dato en sí nunca se lee). */
+  async payoutReadiness(
+    userId: string,
+  ): Promise<{ verification: "pendiente" | "approved" | "rejected" | "pending_review"; hasBankAccount: boolean }> {
+    const row = await unwrapOptional(
+      this.db.from("profiles").select("verification_status, bank_account").eq("id", userId).maybeSingle(),
+      "cargar estado de cobro",
+    );
+    return { verification: row?.verification_status ?? "pendiente", hasBankAccount: Boolean(row?.bank_account) };
+  }
+
   async ownEmprendimientos(ownerId: string): Promise<Emprendimiento[]> {
     return await unwrap(
       this.db.from("emprendimientos").select("*").eq("owner_id", ownerId).order("created_at", { ascending: true }),

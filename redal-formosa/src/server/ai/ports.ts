@@ -9,3 +9,14 @@ export interface SpeechToText {
 export interface ProductExtractor {
   extract(transcript: string): Promise<VoiceProductDraft | null>;
 }
+
+export interface RecipeSource {
+  id: string;
+  nombre: string;
+  unidad: string;
+}
+
+/** Inventario → recetas (respuesta sin validar: la valida el servicio). */
+export interface RecipeSuggester {
+  suggest(products: readonly RecipeSource[]): Promise<unknown>;
+}

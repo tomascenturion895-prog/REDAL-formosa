@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { OpenAiProductExtractor } from "./ai/openai-product-extractor";
 import { OpenAiWhisper } from "./ai/openai-whisper";
+import { OpenAiRecipeSuggester } from "./ai/openai-recipe-suggester";
+import { RecipesService } from "./ai/recipes-service";
 import { VoiceCatalogService } from "./ai/voice-catalog-service";
 import { NominatimGeocoder } from "./geo/geocoder";
 import { EventBus } from "./events/event-bus";
@@ -73,6 +75,8 @@ export const getVoiceCatalogService = lazy(
     ),
 );
 
+export const getRecipesService = lazy(() => new RecipesService(new OpenAiRecipeSuggester(process.env.OPENAI_API_KEY)));
+
 export const getGeocoder = lazy(
   () =>
     new NominatimGeocoder({
@@ -85,6 +89,7 @@ export const limiters = {
   checkout: new InMemoryRateLimiter({ limit: 10, windowMs: 60_000 }),
   bankAccount: new InMemoryRateLimiter({ limit: 5, windowMs: 60_000 }),
   voiceCatalog: new InMemoryRateLimiter({ limit: 10, windowMs: 60_000 }),
+  recipes: new InMemoryRateLimiter({ limit: 6, windowMs: 60_000 }),
   geocode: new InMemoryRateLimiter({ limit: 15, windowMs: 60_000 }),
   // Nominatim pide como máximo ~1 pedido por segundo en total, sin importar quién lo haga.
   geocodeGlobal: new InMemoryRateLimiter({ limit: 50, windowMs: 60_000 }),

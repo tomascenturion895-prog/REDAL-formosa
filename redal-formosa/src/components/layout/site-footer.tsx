@@ -34,7 +34,7 @@ export function SiteFooter() {
         </nav>
         <nav aria-label="Vender" className="flex flex-col gap-2">
           <p className="font-semibold text-foreground">Vender</p>
-          <Link href="/register" className="text-muted hover:text-foreground">
+          <Link href="/register?next=/setup" className="text-muted hover:text-foreground">
             Sumá tu emprendimiento
           </Link>
           <Link href="/dashboard" className="text-muted hover:text-foreground">

@@ -1,5 +1,5 @@
 import type { SpeechToText } from "./ports";
-import { openAiJson } from "./openai-http";
+import { openAiJson, transcribeModel } from "./openai-http";
 
 /** Adaptador de Whisper (OpenAI) para el puerto SpeechToText. */
 export class OpenAiWhisper implements SpeechToText {
@@ -8,7 +8,7 @@ export class OpenAiWhisper implements SpeechToText {
   async transcribe(audio: Blob, filename: string): Promise<string> {
     const form = new FormData();
     form.append("file", audio, filename);
-    form.append("model", "whisper-1");
+    form.append("model", transcribeModel());
     form.append("language", "es");
     form.append("temperature", "0");
     // Sesga el reconocimiento hacia el vocabulario esperado (precios, kilos, verduras).

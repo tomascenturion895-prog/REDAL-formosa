@@ -1,6 +1,6 @@
 import { PRODUCT_UNITS, parseDraft, type VoiceProductDraft } from "@/lib/domain/voice-product";
 import type { ProductExtractor } from "./ports";
-import { openAiJson } from "./openai-http";
+import { chatJson } from "./openai-http";
 
 const SYSTEM_PROMPT = `Sos un asistente que carga productos en el catálogo de un marketplace local de Formosa, Argentina.
 Recibís la transcripción de lo que dijo un vendedor y devolvés SOLO los datos del producto que menciona.
@@ -13,7 +13,6 @@ Si no menciona ningún producto, devolvé "producto" vacío.`;
 
 const SCHEMA = {
   name: "producto",
-  strict: true,
   schema: {
     type: "object",
     additionalProperties: false,
@@ -25,36 +24,14 @@ const SCHEMA = {
       unidad: { type: "string", enum: [...PRODUCT_UNITS] },
     },
   },
-} as const;
+};
 
-interface ChatResponse {
-  choices?: { message?: { content?: string | null } }[];
-}
-
-/** Adaptador de GPT-4o-mini (salida estructurada) para el puerto ProductExtractor. */
+/** Adaptador del modelo de chat (OpenAI u otro compatible) para el puerto ProductExtractor. */
 export class OpenAiProductExtractor implements ProductExtractor {
   constructor(private readonly apiKey: string | undefined) {}
 
   async extract(transcript: string): Promise<VoiceProductDraft | null> {
-    const data = await openAiJson<ChatResponse>(this.apiKey, "/chat/completions", {
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        temperature: 0,
-        response_format: { type: "json_schema", json_schema: SCHEMA },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: transcript },
-        ],
-      }),
-    });
-
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) return null;
-    try {
-      return parseDraft(JSON.parse(content));
-    } catch {
-      return null;
-    }
+    const raw = await chatJson({ apiKey: this.apiKey, system: SYSTEM_PROMPT, user: transcript, temperature: 0, schema: SCHEMA });
+    return parseDraft(raw);
   }
 }

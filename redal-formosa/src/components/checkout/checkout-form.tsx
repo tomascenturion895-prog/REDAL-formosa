@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { useCart } from "@/lib/cart/cart-context";
+import { useCart, type CartGroup } from "@/lib/cart/cart-context";
 import { formatPrice } from "@/lib/format";
 import type { LatLng } from "@/lib/domain/geo";
 import { getCurrentPosition, type GeolocationFailure } from "@/lib/geolocation/geolocation";
@@ -14,9 +14,10 @@ import { LockIcon, MapPinIcon } from "@/components/ui/icons";
 import { PaymentMethods } from "@/components/payment/payment-methods";
 import { RedirectOverlay } from "@/components/payment/redirect-overlay";
 
-export function CheckoutForm() {
+export function CheckoutForm({ group }: { group: CartGroup }) {
   const router = useRouter();
-  const { items, emprendimientoId, clearCart, total } = useCart();
+  const { clearStore } = useCart();
+  const { items, emprendimientoId, total } = group;
   const [loading, setLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +44,7 @@ export function CheckoutForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!emprendimientoId || items.length === 0) return;
+    if (items.length === 0) return;
     setError(null);
     setLoading(true);
 
@@ -57,8 +58,8 @@ export function CheckoutForm() {
         ubicacion: ubicacion ?? undefined,
       });
 
-      // El pedido ya existe: el carrito se vacía aunque el pago todavía no esté habilitado.
-      clearCart();
+      // El pedido ya existe: esta cesta se vacía aunque el pago todavía no esté habilitado (las demás quedan).
+      clearStore(emprendimientoId);
 
       const response = await fetch("/api/checkout/create-preference", {
         method: "POST",

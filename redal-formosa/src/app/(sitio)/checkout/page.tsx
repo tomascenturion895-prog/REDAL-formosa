@@ -1,6 +1,8 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { useAuth } from "@/lib/auth/auth-context";
 import { useCart } from "@/lib/cart/cart-context";
@@ -12,13 +14,34 @@ import { ProductImage } from "@/components/ui/product-image";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CartIcon, UserIcon } from "@/components/ui/icons";
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const { user, loading } = useAuth();
-  const { items, subtotal, envio, total } = useCart();
+  const { ready, groups } = useCart();
+  const cesta = useSearchParams().get("cesta");
 
-  if (loading) return <div className="page-container py-section" aria-busy="true" />;
+  // Con una sola cesta no hace falta elegir; con varias, se paga la indicada en la URL.
+  const group = groups.find((g) => g.emprendimientoId === cesta) ?? (groups.length === 1 ? groups[0] : undefined);
 
-  if (items.length === 0) {
+  if (loading || !ready) return <div className="page-container py-section" aria-busy="true" />;
+
+  if (groups.length > 1 && !group) {
+    return (
+      <div className="page-container py-section">
+        <EmptyState
+          icon={<CartIcon size={36} />}
+          title="Elegí qué cesta querés pagar"
+          description="Tenés productos de varios emprendimientos y cada uno se paga por separado."
+          action={
+            <Link href="/carrito" className="btn btn-primary">
+              Volver al carrito
+            </Link>
+          }
+        />
+      </div>
+    );
+  }
+
+  if (!group) {
     return (
       <div className="page-container py-section">
         <EmptyState
@@ -63,13 +86,13 @@ export default function CheckoutPage() {
       <h1 className="text-title pb-8">Finalizar pedido</h1>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
-        <CheckoutForm />
+        <CheckoutForm group={group} />
 
         <aside className="card h-fit space-y-4 p-6 lg:sticky lg:top-24">
           <h2 className="text-heading">Tu pedido</h2>
 
           <ul className="space-y-3 border-b border-border pb-4 text-sm">
-            {items.map(({ producto, cantidad }) => (
+            {group.items.map(({ producto, cantidad }) => (
               <li key={producto.id} className="flex items-center gap-3">
                 <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-control bg-surface-muted">
                   <ProductImage src={producto.imagen_url} sizes="48px" iconSize={18} />
@@ -86,17 +109,17 @@ export default function CheckoutPage() {
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
               <dt className="text-muted">Productos</dt>
-              <dd className="tabular-nums">{formatPrice(subtotal)}</dd>
+              <dd className="tabular-nums">{formatPrice(group.subtotal)}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted">Envío</dt>
-              <dd className="tabular-nums">{formatPrice(envio)}</dd>
+              <dd className="tabular-nums">{formatPrice(group.envio)}</dd>
             </div>
           </dl>
 
           <div className="flex items-baseline justify-between border-t border-border pt-4">
             <span className="font-semibold">Total</span>
-            <span className="font-display text-2xl font-bold tabular-nums">{formatPrice(total)}</span>
+            <span className="font-display text-2xl font-bold tabular-nums">{formatPrice(group.total)}</span>
           </div>
 
           <PaymentTrust />
@@ -106,5 +129,13 @@ export default function CheckoutPage() {
         </aside>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div className="page-container py-section" aria-busy="true" />}>
+      <CheckoutContent />
+    </Suspense>
   );
 }
