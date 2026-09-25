@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { useAuthActions } from "@/lib/auth/use-auth-actions";
 import { authErrorMessage, safeNextPath } from "@/lib/auth/messages";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export function LoginForm() {
   const router = useRouter();
@@ -73,14 +74,13 @@ export function LoginForm() {
               Olvidé mi contraseña
             </Link>
           </div>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="field"
+            placeholder="••••••••"
           />
         </div>
 
