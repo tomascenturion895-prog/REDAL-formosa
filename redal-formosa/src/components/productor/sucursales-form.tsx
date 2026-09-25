@@ -1,18 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { insertEmprendimiento } from "@/lib/supabase/db-helpers";
+
+import { producerRepository } from "@/lib/producer/producer-repository";
+import { Alert } from "@/components/ui/alert";
+import { Field } from "@/components/ui/field";
 
 interface SucursalFormProps {
   emprendimientoId: string;
   onSuccess?: () => void;
 }
 
+// Ubicación y horarios del emprendimiento (actualiza el que se acaba de crear).
 export function SucursalesForm({ emprendimientoId, onSuccess }: SucursalFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    nombre: "",
+  const [form, setForm] = useState({
     direccion: "",
     latitud: "",
     longitud: "",
@@ -20,158 +23,56 @@ export function SucursalesForm({ emprendimientoId, onSuccess }: SucursalFormProp
     horario_cierre: "18:00",
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const update = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
     try {
-      const latitud = formData.latitud ? parseFloat(formData.latitud) : null;
-      const longitud = formData.longitud ? parseFloat(formData.longitud) : null;
-
-      const { error: err } = await insertEmprendimiento({
-        nombre: formData.nombre,
-        direccion: formData.direccion,
-        latitud,
-        longitud,
-        horario_apertura: formData.horario_apertura,
-        horario_cierre: formData.horario_cierre,
-        owner_id: emprendimientoId,
-      });
-
-      if (err) throw err;
-
-      setFormData({
-        nombre: "",
-        direccion: "",
-        latitud: "",
-        longitud: "",
-        horario_apertura: "09:00",
-        horario_cierre: "18:00",
+      await producerRepository.setLocation(emprendimientoId, {
+        direccion: form.direccion.trim(),
+        latitud: form.latitud ? parseFloat(form.latitud) : null,
+        longitud: form.longitud ? parseFloat(form.longitud) : null,
+        horario_apertura: form.horario_apertura,
+        horario_cierre: form.horario_cierre,
       });
       onSuccess?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al agregar sucursal");
-    } finally {
+    } catch {
+      setError("No pudimos guardar la ubicación. Intentá de nuevo.");
       setLoading(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h3 className="text-heading">Agregar sucursal</h3>
+      {error && <Alert tone="error">{error}</Alert>}
 
-      {error && (
-        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
-          {error}
-        </div>
-      )}
+      <Field id="direccion" label="Dirección">
+        <input id="direccion" required value={form.direccion} onChange={update("direccion")} placeholder="Calle, número y barrio" className="field" />
+      </Field>
 
-      <div>
-        <label htmlFor="nombre" className="block text-sm font-medium text-foreground mb-1">
-          Nombre de la sucursal
-        </label>
-        <input
-          id="nombre"
-          type="text"
-          name="nombre"
-          value={formData.nombre}
-          onChange={handleChange}
-          required
-          placeholder="Ej: Local Centro"
-          className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="direccion" className="block text-sm font-medium text-foreground mb-1">
-          Dirección
-        </label>
-        <input
-          id="direccion"
-          type="text"
-          name="direccion"
-          value={formData.direccion}
-          onChange={handleChange}
-          required
-          placeholder="Ej: Calle Principal 123"
-          className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field id="latitud" label="Latitud" optional>
+          <input id="latitud" type="number" step="any" value={form.latitud} onChange={update("latitud")} placeholder="-26.1775" className="field" />
+        </Field>
+        <Field id="longitud" label="Longitud" optional>
+          <input id="longitud" type="number" step="any" value={form.longitud} onChange={update("longitud")} placeholder="-58.1781" className="field" />
+        </Field>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor="latitud" className="block text-sm font-medium text-foreground mb-1">
-            Latitud
-          </label>
-          <input
-            id="latitud"
-            type="number"
-            name="latitud"
-            value={formData.latitud}
-            onChange={handleChange}
-            step="0.00001"
-            placeholder="-25.4944"
-            className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </div>
-        <div>
-          <label htmlFor="longitud" className="block text-sm font-medium text-foreground mb-1">
-            Longitud
-          </label>
-          <input
-            id="longitud"
-            type="number"
-            name="longitud"
-            value={formData.longitud}
-            onChange={handleChange}
-            step="0.00001"
-            placeholder="-55.5038"
-            className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground placeholder-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </div>
+        <Field id="horario_apertura" label="Abrís a las">
+          <input id="horario_apertura" type="time" value={form.horario_apertura} onChange={update("horario_apertura")} className="field" />
+        </Field>
+        <Field id="horario_cierre" label="Cerrás a las">
+          <input id="horario_cierre" type="time" value={form.horario_cierre} onChange={update("horario_cierre")} className="field" />
+        </Field>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor="horario_apertura" className="block text-sm font-medium text-foreground mb-1">
-            Hora de apertura
-          </label>
-          <input
-            id="horario_apertura"
-            type="time"
-            name="horario_apertura"
-            value={formData.horario_apertura}
-            onChange={handleChange}
-            className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </div>
-        <div>
-          <label htmlFor="horario_cierre" className="block text-sm font-medium text-foreground mb-1">
-            Hora de cierre
-          </label>
-          <input
-            id="horario_cierre"
-            type="time"
-            name="horario_cierre"
-            value={formData.horario_cierre}
-            onChange={handleChange}
-            className="w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </div>
-      </div>
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded-control bg-highlight px-5 py-2.5 font-medium text-on-highlight transition-colors duration-150 ease-soft disabled:opacity-60"
-      >
-        {loading ? "Agregando..." : "Agregar sucursal"}
+      <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-3">
+        {loading ? "Guardando…" : "Continuar"}
       </button>
     </form>
   );
