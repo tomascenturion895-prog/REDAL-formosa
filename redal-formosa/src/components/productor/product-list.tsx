@@ -9,6 +9,7 @@ import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PackageIcon } from "@/components/ui/icons";
 import { ProductImage } from "@/components/ui/product-image";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ProductListProps {
   emprendimientoId: string;
@@ -31,6 +32,8 @@ export function ProductList({ emprendimientoId }: ProductListProps) {
     [emprendimientoId],
   );
   const [actionError, setActionError] = useState<string | null>(null);
+  const [productToDelete, setProductToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const run = async (action: () => Promise<void>, failure: string) => {
     setActionError(null);
@@ -39,6 +42,17 @@ export function ProductList({ emprendimientoId }: ProductListProps) {
       reload();
     } catch {
       setActionError(failure);
+    }
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return;
+    setIsDeleting(true);
+    try {
+      await run(() => producerRepository.deleteProduct(productToDelete.id), "No se pudo eliminar. Si tiene pedidos, ocultalo en su lugar.");
+      setProductToDelete(null);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -92,11 +106,7 @@ export function ProductList({ emprendimientoId }: ProductListProps) {
                 <button
                   type="button"
                   className="btn btn-danger btn-sm"
-                  onClick={() => {
-                    if (window.confirm(`¿Eliminar “${p.nombre}”?`)) {
-                      void run(() => producerRepository.deleteProduct(p.id), "No se pudo eliminar. Si tiene pedidos, ocultalo en su lugar.");
-                    }
-                  }}
+                  onClick={() => setProductToDelete({ id: p.id, name: p.nombre })}
                 >
                   Eliminar
                 </button>
@@ -105,6 +115,16 @@ export function ProductList({ emprendimientoId }: ProductListProps) {
           );
         })}
       </ul>
+
+      <ConfirmDialog
+        isOpen={Boolean(productToDelete)}
+        onClose={() => setProductToDelete(null)}
+        onConfirm={handleDeleteProduct}
+        title={productToDelete ? `¿Eliminar “${productToDelete.name}”?` : "¿Eliminar producto?"}
+        description="El producto se eliminará de tu catálogo. Si ya tiene pedidos asociados, te recomendamos ocultarlo en su lugar."
+        confirmText="Eliminar producto"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

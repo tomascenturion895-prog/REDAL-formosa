@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/format";
 import { useAsync } from "@/lib/hooks/use-async";
 import type { UserRole } from "@/lib/supabase/types";
 import { Alert } from "@/components/ui/alert";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const ROLE_LABEL: Record<UserRole, string> = {
   comprador: "Comprador",
@@ -20,15 +21,16 @@ export default function AdminUsuariosPage() {
   const { data: users, error: loadError, reload } = useAsync(() => adminRepository.users(), []);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [roleChangeTarget, setRoleChangeTarget] = useState<{ target: AdminUser; nextRole: UserRole } | null>(null);
 
-  const changeRole = async (target: AdminUser, role: UserRole) => {
-    const action = role === "admin" ? "dar permisos de administrador a" : "quitar permisos de administrador a";
-    if (!window.confirm(`¿Querés ${action} ${target.email}?`)) return;
-
+  const confirmRoleChange = async () => {
+    if (!roleChangeTarget) return;
+    const { target, nextRole } = roleChangeTarget;
     setBusy(target.id);
     setError(null);
     try {
-      await adminRepository.setRole(target.id, role);
+      await adminRepository.setRole(target.id, nextRole);
+      setRoleChangeTarget(null);
       reload();
     } catch {
       setError("No se pudo cambiar el rol.");
@@ -39,6 +41,10 @@ export default function AdminUsuariosPage() {
 
   if (loadError) return <Alert tone="error">No pudimos cargar los usuarios.</Alert>;
   if (!users) return <div aria-busy="true" className="h-40" />;
+
+  const actionText = roleChangeTarget?.nextRole === "admin"
+    ? "dar permisos de administrador a"
+    : "quitar permisos de administrador a";
 
   return (
     <div className="space-y-4">
@@ -82,7 +88,7 @@ export default function AdminUsuariosPage() {
                       type="button"
                       className="btn btn-ghost btn-sm"
                       disabled={busy === u.id}
-                      onClick={() => changeRole(u, u.role === "admin" ? "comprador" : "admin")}
+                      onClick={() => setRoleChangeTarget({ target: u, nextRole: u.role === "admin" ? "comprador" : "admin" })}
                     >
                       {u.role === "admin" ? "Quitar admin" : "Hacer admin"}
                     </button>
@@ -93,6 +99,17 @@ export default function AdminUsuariosPage() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(roleChangeTarget)}
+        onClose={() => setRoleChangeTarget(null)}
+        onConfirm={confirmRoleChange}
+        title={roleChangeTarget?.nextRole === "admin" ? "¿Asignar rol de Administrador?" : "¿Quitar rol de Administrador?"}
+        description={`¿Estás seguro de que querés ${actionText} ${roleChangeTarget?.target.email}?`}
+        confirmText={roleChangeTarget?.nextRole === "admin" ? "Hacer admin" : "Quitar admin"}
+        isDestructive={roleChangeTarget?.nextRole !== "admin"}
+        isLoading={Boolean(busy)}
+      />
     </div>
   );
 }

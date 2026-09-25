@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { formatDate } from "@/lib/format";
 import { useAsync } from "@/lib/hooks/use-async";
 import { ratingsRepository } from "@/lib/ratings/ratings-repository";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StarRating } from "./star-rating";
 
 interface RatingsListProps {
@@ -13,10 +15,25 @@ interface RatingsListProps {
 
 export function RatingsList({ productoId, limit = 10 }: RatingsListProps) {
   const { user } = useAuth();
+  const [ratingToDelete, setRatingToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const { data: ratings, error, loading, reload } = useAsync(
     () => ratingsRepository.listForProduct(productoId, limit),
     [productoId, limit],
   );
+
+  const handleDelete = async () => {
+    if (!ratingToDelete) return;
+    setIsDeleting(true);
+    try {
+      await ratingsRepository.delete(ratingToDelete);
+      setRatingToDelete(null);
+      reload();
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (loading && !ratings) return <div aria-busy="true" className="h-16" />;
 
@@ -33,34 +50,41 @@ export function RatingsList({ productoId, limit = 10 }: RatingsListProps) {
   }
 
   return (
-    <ul className="space-y-3">
-      {ratings.map((rating) => (
-        <li key={rating.id} className="card p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <StarRating rating={rating.puntuacion} size="sm" />
-              {rating.creado_en && <p className="mt-1 text-xs text-muted">{formatDate(rating.creado_en)}</p>}
+    <>
+      <ul className="space-y-3">
+        {ratings.map((rating) => (
+          <li key={rating.id} className="card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <StarRating rating={rating.puntuacion} size="sm" />
+                {rating.creado_en && <p className="mt-1 text-xs text-muted">{formatDate(rating.creado_en)}</p>}
+              </div>
+
+              {user?.id === rating.usuario_id && (
+                <button
+                  type="button"
+                  className="text-xs font-medium text-danger hover:underline cursor-pointer"
+                  onClick={() => setRatingToDelete(rating.id)}
+                >
+                  Eliminar
+                </button>
+              )}
             </div>
 
-            {user?.id === rating.usuario_id && (
-              <button
-                type="button"
-                className="text-xs font-medium text-danger hover:underline"
-                onClick={async () => {
-                  if (window.confirm("¿Eliminar tu calificación?")) {
-                    await ratingsRepository.delete(rating.id);
-                    reload();
-                  }
-                }}
-              >
-                Eliminar
-              </button>
-            )}
-          </div>
+            {rating.comentario && <p className="mt-2 text-sm">{rating.comentario}</p>}
+          </li>
+        ))}
+      </ul>
 
-          {rating.comentario && <p className="mt-2 text-sm">{rating.comentario}</p>}
-        </li>
-      ))}
-    </ul>
+      <ConfirmDialog
+        isOpen={Boolean(ratingToDelete)}
+        onClose={() => setRatingToDelete(null)}
+        onConfirm={handleDelete}
+        title="¿Eliminar tu calificación?"
+        description="Tu opinión y puntuación serán borradas permanentemente de este producto."
+        confirmText="Eliminar calificación"
+        isLoading={isDeleting}
+      />
+    </>
   );
 }
