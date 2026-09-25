@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 
+import { CheckoutStepper } from "@/components/payment/checkout-stepper";
+import { MercadoPagoBadge } from "@/components/payment/mercadopago-badge";
+import { OrderProgress } from "@/components/payment/order-progress";
+import { PaymentMethods } from "@/components/payment/payment-methods";
+
 export const metadata: Metadata = { title: "Guía de estilo" };
 
 const scales = [
@@ -140,6 +145,17 @@ export default function GuiaDeEstilo() {
           className="mt-6 w-full max-w-narrow rounded-control border border-border-strong bg-surface px-3 py-2.5"
           placeholder="Campo de texto (probá el foco con Tab)"
         />
+      </Section>
+
+      <Section title="Pagos">
+        <div className="space-y-6">
+          <MercadoPagoBadge />
+          <CheckoutStepper current={1} />
+          <PaymentMethods />
+          <div className="card p-6">
+            <OrderProgress estado="en_preparacion" />
+          </div>
+        </div>
       </Section>
     </div>
   );

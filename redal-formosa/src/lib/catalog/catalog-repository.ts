@@ -49,11 +49,11 @@ export class CatalogRepository {
   }
 
   /** Producto con el nombre de su emprendimiento, en una sola consulta. */
-  async getProduct(id: string): Promise<(Product & { emprendimiento: { id: string; nombre: string } | null }) | null> {
+  async getProduct(id: string): Promise<(Product & { emprendimiento: { id: string; nombre: string; telefono: string | null } | null }) | null> {
     return await unwrapOptional(
       this.db
         .from("productos")
-        .select("*, emprendimiento:emprendimientos(id, nombre)")
+        .select("*, emprendimiento:emprendimientos(id, nombre, telefono)")
         .eq("id", id)
         .maybeSingle(),
       "cargar producto",

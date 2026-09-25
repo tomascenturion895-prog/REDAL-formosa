@@ -29,7 +29,7 @@ export default function Home() {
               {[
                 { icon: <StoreIcon size={18} />, label: "Directo del productor" },
                 { icon: <TruckIcon size={18} />, label: "Entrega local" },
-                { icon: <ShieldIcon size={18} />, label: "Pago seguro" },
+                { icon: <ShieldIcon size={18} />, label: "Pago seguro con Mercado Pago" },
               ].map((item) => (
                 <li key={item.label} className="flex items-center gap-2">
                   <span className="text-action">{item.icon}</span>

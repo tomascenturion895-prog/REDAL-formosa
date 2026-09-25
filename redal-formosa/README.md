@@ -35,4 +35,5 @@ npx supabase gen types typescript --project-id <ref> --schema public > src/lib/s
 
 ## Documentación
 
+- [docs/DOCUMENTACION_TECNICA.md](docs/DOCUMENTACION_TECNICA.md): documentación técnica completa (arquitectura, instalación, API, pendientes).
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): capas, patrones de diseño, modelo de seguridad y convenciones.

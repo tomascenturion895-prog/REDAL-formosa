@@ -6,15 +6,19 @@ import { catalogRepository } from "@/lib/catalog/catalog-repository";
 import { useCart } from "@/lib/cart/cart-context";
 import { formatPrice } from "@/lib/format";
 import { useAsync } from "@/lib/hooks/use-async";
+import { CheckoutStepper } from "@/components/payment/checkout-stepper";
+import { PaymentTrust } from "@/components/payment/payment-methods";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CartIcon, MinusIcon, PlusIcon, TrashIcon } from "@/components/ui/icons";
 import { ProductImage } from "@/components/ui/product-image";
 
 export default function CarritoPage() {
-  const { items, emprendimientoId, removeItem, updateQuantity, clearCart, subtotal, envio, total } = useCart();
+  const { ready, items, emprendimientoId, removeItem, updateQuantity, clearCart, subtotal, envio, total } = useCart();
   const { data: emprendimiento } = useAsync(() => catalogRepository.getEmprendimiento(emprendimientoId!), [emprendimientoId], {
     enabled: Boolean(emprendimientoId),
   });
+
+  if (!ready) return <div className="page-container py-section" aria-busy="true" />;
 
   if (items.length === 0) {
     return (
@@ -35,6 +39,7 @@ export default function CarritoPage() {
 
   return (
     <div className="page-container py-section">
+      <CheckoutStepper current={0} />
       <div className="flex flex-wrap items-end justify-between gap-2 pb-8">
         <div>
           <h1 className="text-title">Tu carrito</h1>
@@ -112,6 +117,7 @@ export default function CarritoPage() {
           <Link href="/checkout" className="btn btn-primary w-full !py-3">
             Continuar con el pedido
           </Link>
+          <PaymentTrust />
           <Link href="/productos" className="block text-center text-sm font-medium text-link hover:underline">
             Seguir comprando
           </Link>

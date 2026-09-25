@@ -6,6 +6,9 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { useCart } from "@/lib/cart/cart-context";
 import { formatPrice } from "@/lib/format";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
+import { CheckoutStepper } from "@/components/payment/checkout-stepper";
+import { PaymentTrust } from "@/components/payment/payment-methods";
+import { ProductImage } from "@/components/ui/product-image";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CartIcon, UserIcon } from "@/components/ui/icons";
 
@@ -56,6 +59,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="page-container py-section">
+      <CheckoutStepper current={1} />
       <h1 className="text-title pb-8">Finalizar pedido</h1>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
@@ -64,11 +68,15 @@ export default function CheckoutPage() {
         <aside className="card h-fit space-y-4 p-6 lg:sticky lg:top-24">
           <h2 className="text-heading">Tu pedido</h2>
 
-          <ul className="space-y-2 border-b border-border pb-4 text-sm">
+          <ul className="space-y-3 border-b border-border pb-4 text-sm">
             {items.map(({ producto, cantidad }) => (
-              <li key={producto.id} className="flex justify-between gap-3">
-                <span className="min-w-0 truncate">
-                  {cantidad} × {producto.nombre}
+              <li key={producto.id} className="flex items-center gap-3">
+                <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-control bg-surface-muted">
+                  <ProductImage src={producto.imagen_url} sizes="48px" iconSize={18} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{producto.nombre}</span>
+                  <span className="text-muted">Cantidad: {cantidad}</span>
                 </span>
                 <span className="tabular-nums">{formatPrice(Number(producto.precio) * cantidad)}</span>
               </li>
@@ -91,6 +99,7 @@ export default function CheckoutPage() {
             <span className="font-display text-2xl font-bold tabular-nums">{formatPrice(total)}</span>
           </div>
 
+          <PaymentTrust />
           <Link href="/carrito" className="block text-center text-sm font-medium text-link hover:underline">
             Volver al carrito
           </Link>

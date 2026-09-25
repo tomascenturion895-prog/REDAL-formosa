@@ -13,6 +13,7 @@ import { ratingsRepository } from "@/lib/ratings/ratings-repository";
 import { StarRating } from "@/components/ratings/star-rating";
 import { RatingForm } from "@/components/ratings/rating-form";
 import { RatingsList } from "@/components/ratings/ratings-list";
+import { WhatsAppButton } from "@/components/contact/whatsapp-button";
 import { WishlistButton } from "@/components/wishlist/wishlist-button";
 import { RecommendationsCarousel } from "@/components/recommendations/recommendations-carousel";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -162,6 +163,13 @@ export default function ProductoDetailPage() {
             )}
 
             <WishlistButton productId={producto.id} variant="full" />
+
+            <WhatsAppButton
+              telefono={producto.emprendimiento?.telefono}
+              mensaje={`Hola, vi ${producto.nombre} en RedAL Formosa y quería consultarte.`}
+              label="Consultar por este producto"
+              className="w-full"
+            />
           </div>
         </div>
       </div>

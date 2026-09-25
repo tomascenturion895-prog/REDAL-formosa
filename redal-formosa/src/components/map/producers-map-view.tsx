@@ -6,6 +6,7 @@ import Link from "next/link";
 import { catalogRepository } from "@/lib/catalog/catalog-repository";
 import { directionsUrl, filterPoints, toMapPoints } from "@/lib/domain/map";
 import { useAsync } from "@/lib/hooks/use-async";
+import { ContactActions, ContactBar } from "@/components/contact/contact-actions";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CloseIcon, MapPinIcon, SearchIcon } from "@/components/ui/icons";
 import { EmprendimientosMap } from "./lazy-map";
@@ -131,18 +132,22 @@ export function ProducersMapView({ initialSelectedId = null }: { initialSelected
               </button>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link href={`/emprendimientos/${selected.id}`} className="btn btn-primary btn-sm">
-                Ver productos
-              </Link>
-              <a href={directionsUrl(selected.position)} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
-                Cómo llegar
-              </a>
-              {selected.telefono && (
-                <a href={`tel:${selected.telefono}`} className="btn btn-secondary btn-sm">
-                  Llamar
+            <div className="mt-4 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                <Link href={`/emprendimientos/${selected.id}`} className="btn btn-primary btn-sm">
+                  Ver productos
+                </Link>
+                <a href={directionsUrl(selected.position)} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
+                  Cómo llegar
                 </a>
-              )}
+              </div>
+              <ContactBar>
+                <ContactActions
+                  telefono={selected.telefono}
+                  mensaje={`Hola, vi tu emprendimiento ${selected.nombre} en RedAL Formosa y quería consultarte.`}
+                  size="sm"
+                />
+              </ContactBar>
             </div>
           </div>
         )}
