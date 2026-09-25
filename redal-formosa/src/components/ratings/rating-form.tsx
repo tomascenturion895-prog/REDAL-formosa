@@ -19,6 +19,7 @@ export function RatingForm({ productoId, onSuccess }: RatingFormProps) {
   // Si la persona ya calificó, el formulario parte de su calificación y permite editarla.
   const { data: previous } = useAsync(() => ratingsRepository.myRatingForProduct(productoId), [user?.id, productoId], {
     enabled: Boolean(user),
+    scope: user?.id,
   });
 
   const [stars, setStars] = useState<number | null>(null);

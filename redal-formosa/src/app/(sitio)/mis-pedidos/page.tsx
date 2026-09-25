@@ -23,7 +23,7 @@ export default function MisPedidosPage() {
   const { user, pending } = useRequireAuth();
   const [filter, setFilter] = useState<OrderStatus | null>(null);
 
-  const { data, error, loading } = useAsync(() => loadHistory(user!.id), [user?.id], { enabled: Boolean(user) });
+  const { data, error, loading } = useAsync(() => loadHistory(user!.id), [user?.id], { enabled: Boolean(user), scope: user?.id });
 
   if (pending || loading) return <div className="page-container py-section" aria-busy="true" />;
 

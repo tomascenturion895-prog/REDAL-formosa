@@ -17,6 +17,7 @@ export default function ProductorDashboard() {
   const { user, pending } = useRequireAuth();
   const { data: emprendimientos, loading, reload } = useAsync(() => producerRepository.ownEmprendimientos(user!.id), [user?.id], {
     enabled: Boolean(user),
+    scope: user?.id,
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);

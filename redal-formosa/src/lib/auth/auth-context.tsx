@@ -41,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const { data: role, loading: roleLoading } = useAsync(() => profileRepository.roleOf(user!.id), [user?.id], {
     enabled: Boolean(user),
+    scope: user?.id,
   });
 
   return (

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cartReducer, conflictsWithCart, MAX_QUANTITY, type CartItem, type CartProduct } from "./cart-reducer";
+import { cartReducer, conflictsWithCart, mergeCarts, MAX_QUANTITY, type CartItem, type CartProduct } from "./cart-reducer";
 import { parseCart } from "./cart-store";
 
 const product = (id: string, store = "store-1", precio = 100): CartProduct => ({
@@ -82,5 +82,21 @@ describe("parseCart", () => {
   it("descarta ítems con forma inválida y conserva los válidos", () => {
     const raw = JSON.stringify([line("a", 2), { producto: { id: 1 }, cantidad: 2 }, { cantidad: -1 }, line("b", 1.5)]);
     expect(parseCart(raw)).toEqual([line("a", 2)]);
+  });
+});
+
+describe("mergeCarts", () => {
+  it("suma cantidades del mismo emprendimiento", () => {
+    const merged = mergeCarts([line("a", 2)], [line("a", 1), line("b")]);
+    expect(merged).toEqual([line("a", 3), line("b")]);
+  });
+
+  it("gana el carrito de recién si es de otro emprendimiento", () => {
+    expect(mergeCarts([line("a")], [line("z", 1, "store-2")])).toEqual([line("z", 1, "store-2")]);
+  });
+
+  it("no cambia nada si no hay carrito de invitado", () => {
+    const saved = [line("a")];
+    expect(mergeCarts(saved, [])).toBe(saved);
   });
 });

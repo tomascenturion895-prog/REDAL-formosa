@@ -30,6 +30,7 @@ export function NotificationPreferences() {
   const { user } = useAuth();
   const { data: saved, loading } = useAsync(() => preferencesRepository.get(user!.id), [user?.id], {
     enabled: Boolean(user),
+    scope: user?.id,
   });
 
   // Los cambios sin guardar se superponen a lo cargado.

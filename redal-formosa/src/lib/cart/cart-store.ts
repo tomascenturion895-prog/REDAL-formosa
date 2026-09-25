@@ -1,10 +1,20 @@
-import { cartReducer, type CartAction, type CartItem } from "./cart-reducer";
+import { cartReducer, mergeCarts, type CartAction, type CartItem } from "./cart-reducer";
 
 // Almacén externo del carrito (localStorage) para useSyncExternalStore: sin efecto de
 // hidratación, sin parpadeo y sincronizado entre pestañas.
+//
+// Cada cuenta tiene su propio carrito (clave por id de usuario); sin sesión hay uno de invitado.
+// Así, al cerrar sesión el carrito de la cuenta no queda a la vista de la siguiente persona.
 
-const STORAGE_KEY = "redal.cart.v1";
+const KEY_PREFIX = "redal.cart.v2:";
+const LEGACY_KEY = "redal.cart.v1";
+const GUEST = "guest";
 const EMPTY: CartItem[] = [];
+
+/** null = sin sesión (invitado); undefined = todavía no se sabe quién es (la sesión se está resolviendo). */
+export type CartOwner = string | null | undefined;
+
+const keyFor = (owner: string | null) => `${KEY_PREFIX}${owner ?? GUEST}`;
 
 function isCartItem(value: unknown): value is CartItem {
   if (typeof value !== "object" || value === null) return false;
@@ -35,13 +45,13 @@ export function parseCart(raw: string | null): CartItem[] {
 }
 
 const listeners = new Set<() => void>();
-let snapshot: { raw: string | null; items: CartItem[] } = { raw: null, items: EMPTY };
-// Si localStorage no está disponible (modo privado) el carrito vive solo en memoria.
-let memoryOnly: CartItem[] | null = null;
+const snapshots = new Map<string, { raw: string | null; items: CartItem[] }>();
+// Si localStorage no está disponible (modo privado) el carrito vive solo en memoria, por cuenta.
+const memoryOnly = new Map<string, CartItem[]>();
 
-function readRaw(): string | null {
+function readRaw(key: string): string | null {
   try {
-    return localStorage.getItem(STORAGE_KEY);
+    return localStorage.getItem(key);
   } catch {
     return null;
   }
@@ -51,20 +61,41 @@ function notify() {
   listeners.forEach((listener) => listener());
 }
 
+function read(owner: string | null): CartItem[] {
+  const key = keyFor(owner);
+  const inMemory = memoryOnly.get(key);
+  if (inMemory) return inMemory;
+
+  const raw = readRaw(key);
+  const cached = snapshots.get(key);
+  // Misma referencia mientras lo guardado no cambie (requisito de useSyncExternalStore).
+  if (cached && cached.raw === raw) return cached.items;
+  const entry = { raw, items: parseCart(raw) };
+  snapshots.set(key, entry);
+  return entry.items;
+}
+
+function write(owner: string | null, items: CartItem[]) {
+  const key = keyFor(owner);
+  try {
+    if (items.length === 0) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(items));
+    memoryOnly.delete(key);
+  } catch {
+    memoryOnly.set(key, items);
+  }
+}
+
 export const cartStore = {
-  /** Devuelve la misma referencia mientras lo guardado no cambie (requisito de useSyncExternalStore). */
-  getSnapshot(): CartItem[] {
-    if (memoryOnly) return memoryOnly;
-    const raw = readRaw();
-    if (raw !== snapshot.raw) snapshot = { raw, items: parseCart(raw) };
-    return snapshot.items;
+  getSnapshot(owner: CartOwner): CartItem[] {
+    return owner === undefined ? EMPTY : read(owner);
   },
 
   getServerSnapshot: (): CartItem[] => EMPTY,
 
   subscribe(listener: () => void): () => void {
     listeners.add(listener);
-    const onStorage = (e: StorageEvent) => e.key === STORAGE_KEY && listener();
+    const onStorage = (e: StorageEvent) => e.key?.startsWith(KEY_PREFIX) && listener();
     window.addEventListener("storage", onStorage);
     return () => {
       listeners.delete(listener);
@@ -72,15 +103,27 @@ export const cartStore = {
     };
   },
 
-  dispatch(action: CartAction): void {
-    const next = cartReducer(cartStore.getSnapshot(), action);
-    try {
-      if (next.length === 0) localStorage.removeItem(STORAGE_KEY);
-      else localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      memoryOnly = null;
-    } catch {
-      memoryOnly = next;
-    }
+  dispatch(owner: CartOwner, action: CartAction): void {
+    if (owner === undefined) return;
+    write(owner, cartReducer(read(owner), action));
     notify();
+  },
+
+  /** Al iniciar sesión: pasa el carrito de invitado a la cuenta y lo borra del invitado. */
+  adoptGuestCart(userId: string): void {
+    const guest = read(null);
+    if (guest.length === 0) return;
+    write(userId, mergeCarts(read(userId), guest));
+    write(null, EMPTY);
+    notify();
+  },
+
+  /** Borra el carrito anterior (v1), que era compartido entre cuentas. */
+  dropLegacy(): void {
+    try {
+      localStorage.removeItem(LEGACY_KEY);
+    } catch {
+      // Sin almacenamiento no hay nada que borrar.
+    }
   },
 };

@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-
 import { useAuth } from "@/lib/auth/auth-context";
+import { useUserScopedState } from "@/lib/auth/use-user-scoped-state";
 import { useAsync } from "@/lib/hooks/use-async";
 import type { RatingSummary } from "@/lib/catalog/catalog-repository";
 import { wishlistRepository } from "@/lib/wishlist/wishlist-repository";
@@ -21,8 +20,9 @@ export function ProductGrid({ products, emprendimientoNombres, ratings, onFavori
   // Una sola consulta para toda la grilla; los cambios de la persona se superponen al resultado.
   const { data: saved } = useAsync(() => wishlistRepository.favoriteIds(user!.id), [user?.id], {
     enabled: Boolean(user),
+    scope: user?.id,
   });
-  const [changes, setChanges] = useState<Record<string, boolean>>({});
+  const [changes, setChanges] = useUserScopedState<Record<string, boolean>>(() => ({}));
 
   const handleChange = (productId: string, isFavorite: boolean) => {
     setChanges((prev) => ({ ...prev, [productId]: isFavorite }));
