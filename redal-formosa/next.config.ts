@@ -24,8 +24,8 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          // La geolocalización se usa en el seguimiento de entregas; cámara y micrófono no.
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
+          // Geolocalización: seguimiento de entregas. Micrófono: "Voz a Catálogo". La cámara no se usa.
+          { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=(self)" },
         ],
       },
     ];
