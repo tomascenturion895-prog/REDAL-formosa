@@ -1,33 +1,69 @@
+import Image from "next/image";
 import Link from "next/link";
 
-import { siteName, siteTagline } from "@/lib/navigation";
+import { siteName } from "@/lib/navigation";
 
-/** Marca: el toldo de un puesto de feria (la venta directa) junto al nombre. */
+/** Ícono de marca: La 'R' con flecha ascendente */
 export function LogoMark({ size = 32 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 512 512" aria-hidden="true" className="shrink-0">
-      <rect width="512" height="512" rx="112" fill="var(--color-primary-700)" />
-      <path d="M96 216h320l-28-88H124z" fill="var(--color-accent-300)" />
-      <path
-        d="M96 216c0 30 24 52 53 52s53-22 53-52c0 30 24 52 53 52s53-22 53-52c0 30 24 52 53 52s53-22 53-52"
-        fill="var(--color-accent-400)"
+    <div
+      style={{ width: size, height: size }}
+      className="relative flex shrink-0 items-center justify-center rounded-lg bg-[#14261c] p-1 shadow-xs border border-white/10"
+    >
+      <Image
+        src="/brand/redal-mark.png"
+        alt="REDAL Mark"
+        width={61}
+        height={67}
+        className="h-full w-auto object-contain"
+        priority
       />
-      <rect x="128" y="288" width="256" height="112" rx="12" fill="var(--color-neutral-50)" />
-      <rect x="224" y="320" width="64" height="80" rx="8" fill="var(--color-ink-900)" />
-    </svg>
+    </div>
   );
 }
 
-export function Logo({ descriptor = false }: { descriptor?: boolean }) {
+/**
+ * Logotipo oficial REDAL adaptado para el Topbar y Navbar.
+ * Integra la imagen oficial de marca optimizada para contrastar y encajar perfecto.
+ */
+export function Logo({
+  variant = "badge",
+}: {
+  variant?: "badge" | "clean";
+  descriptor?: boolean;
+} = {}) {
   return (
-    <Link href="/" className="flex shrink-0 items-center gap-2.5 whitespace-nowrap" aria-label={`${siteName}, ir al inicio`}>
-      <LogoMark />
-      <span className="flex flex-col leading-none">
-        <span className="font-display text-lg font-bold sm:text-xl tracking-tight">
-          <span className="text-action">RedAL</span> Formosa
-        </span>
-        {descriptor && <span className="mt-1 hidden text-xs text-muted xl:block">{siteTagline}</span>}
-      </span>
+    <Link
+      href="/"
+      className="group flex shrink-0 items-center gap-2.5 whitespace-nowrap transition-transform duration-150 active:scale-98"
+      aria-label={`${siteName}, ir al inicio`}
+    >
+      {variant === "badge" ? (
+        <div className="flex items-center gap-2.5 rounded-xl bg-[#14261c] px-3.5 py-1.5 border border-[#223d2e] shadow-xs group-hover:border-action/60 group-hover:shadow-md transition-all duration-200">
+          <Image
+            src="/brand/redal-logo.png"
+            alt="REDAL"
+            width={124}
+            height={27}
+            className="h-6 sm:h-7 w-auto object-contain drop-shadow-xs"
+            priority
+          />
+          <span className="hidden sm:inline-flex items-center text-[10px] font-bold tracking-widest text-[#2fa8de] uppercase pl-2 border-l border-white/15">
+            Formosa
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Image
+            src="/brand/redal-logo.png"
+            alt="REDAL Formosa"
+            width={130}
+            height={28}
+            className="h-7 w-auto object-contain"
+            priority
+          />
+        </div>
+      )}
     </Link>
   );
 }
