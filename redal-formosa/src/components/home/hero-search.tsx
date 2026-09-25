@@ -36,7 +36,7 @@ export function HeroSearch() {
             aria-checked={scope === s.value}
             onClick={() => setScope(s.value)}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              scope === s.value ? "bg-ink-900 text-neutral-50 dark:bg-action dark:text-on-action" : "text-muted hover:text-foreground"
+              scope === s.value ? "bg-action text-on-action" : "text-muted hover:text-foreground"
             }`}
           >
             {s.label}

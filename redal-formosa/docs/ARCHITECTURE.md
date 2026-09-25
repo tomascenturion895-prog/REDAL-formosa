@@ -75,8 +75,10 @@ lo que no corresponde.
 
 ## Sistema de diseño
 
-Identidad: **crema** (fondo), **tinta** azul marino (texto), **chacra** verde (acción), **sol** ámbar
-(destacado) y **río** celeste (información). Se define en tres capas en `globals.css`: escalas crudas
+Identidad: **crema** (fondo), **monte** verde bosque (texto y modo oscuro), **chacra** verde (acción), **sol** ámbar
+(destacado) y **río** celeste (información). Tipografía: Fraunces (serif con carácter, títulos) + Figtree (interfaz).
+Tema claro/oscuro: `data-theme` en `<html>` (botón en el encabezado, guardado en `localStorage`; sin elección
+sigue al sistema). Los estados vacíos usan ilustraciones (`ui/illustrations.tsx`) según el caso: canasta, mapa, búsqueda, error. Se define en tres capas en `globals.css`: escalas crudas
 (`primary`, `accent`, `sky`, `ink`, `neutral`), tokens semánticos (`--background`, `--action`, `--muted`…) que
 cambian en modo oscuro, y utilidades de Tailwind expuestas desde esos semánticos. Para cambiar la marca
 alcanza con tocar las escalas o los semánticos; los componentes no se modifican.

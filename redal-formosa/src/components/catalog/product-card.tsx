@@ -35,7 +35,7 @@ export function ProductCard({ product, emprendimientoNombre, rating, favorite, o
   };
 
   return (
-    <article className="card group flex flex-col overflow-hidden">
+    <article className="card card-interactive group flex flex-col overflow-hidden">
       <div className="relative">
         <Link href={`/productos/${product.id}`} className="block" tabIndex={-1} aria-hidden="true">
           <div className="relative aspect-[4/3] overflow-hidden bg-surface-muted">

@@ -8,7 +8,7 @@ import { catalogRepository } from "@/lib/catalog/catalog-repository";
 import { useAsync } from "@/lib/hooks/use-async";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { MapPinIcon, SearchIcon, StoreIcon } from "@/components/ui/icons";
+import { MapPinIcon, SearchIcon } from "@/components/ui/icons";
 
 function EmprendimientosContent() {
   const { data: items, error } = useAsync(() => catalogRepository.listEmprendimientos(), []);
@@ -40,7 +40,16 @@ function EmprendimientosContent() {
       </div>
 
       {error ? (
-        <EmptyState title="No pudimos cargar los emprendimientos" description="Revisá tu conexión e intentá de nuevo." />
+        <EmptyState
+          illustration="error"
+          title="Uy, no pudimos traer los emprendimientos"
+          description="Revisá tu conexión y volvé a intentar en un momento."
+          action={
+            <button className="btn btn-primary" onClick={() => window.location.reload()}>
+              Reintentar
+            </button>
+          }
+        />
       ) : !items ? (
         <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -49,9 +58,16 @@ function EmprendimientosContent() {
         </ul>
       ) : filtered.length === 0 ? (
         <EmptyState
-          icon={<StoreIcon size={36} />}
-          title={term ? "No encontramos emprendimientos con ese nombre" : "Todavía no hay emprendimientos"}
-          description={term ? "Probá con otra palabra." : "Los emprendedores que se sumen van a aparecer acá."}
+          illustration={term ? "search" : "map"}
+          title={term ? "No encontramos ese emprendimiento" : "Todavía no hay emprendimientos"}
+          description={term ? "Probá con otra palabra." : "Los emprendedores que se sumen van a aparecer acá. ¿Querés ser el primero?"}
+          action={
+            term ? undefined : (
+              <Link href="/register" className="btn btn-primary">
+                Sumar mi emprendimiento
+              </Link>
+            )
+          }
         />
       ) : (
         <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -59,7 +75,7 @@ function EmprendimientosContent() {
             <li key={emp.id}>
               <Link
                 href={`/emprendimientos/${emp.id}`}
-                className="card group flex h-full flex-col gap-4 p-5 transition-colors hover:border-border-strong"
+                className="card group flex h-full flex-col gap-4 p-5 card-interactive"
               >
                 <div className="flex items-center gap-3">
                   <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-control bg-primary-100 font-display text-xl font-bold text-primary-800">
