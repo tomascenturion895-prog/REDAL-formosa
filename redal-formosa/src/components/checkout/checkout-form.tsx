@@ -116,7 +116,7 @@ export function CheckoutForm() {
 
       <Alert tone="info">Vas a pagar de forma segura con MercadoPago. Tu pedido se confirma cuando se acredita el pago.</Alert>
 
-      <button type="submit" disabled={loading} className="btn btn-primary w-full !py-3">
+      <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-3">
         {loading ? "Creando tu pedido…" : "Pagar con MercadoPago"}
       </button>
     </form>

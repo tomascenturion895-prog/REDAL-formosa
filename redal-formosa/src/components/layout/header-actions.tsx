@@ -6,7 +6,7 @@ import { UserMenu } from "./user-menu";
 
 export function HeaderActions() {
   return (
-    <div className="flex items-center gap-2 sm:gap-3">
+    <div className="flex items-center gap-1 sm:gap-3">
       <ThemeToggle />
       <CartBadge />
       <UserMenu />

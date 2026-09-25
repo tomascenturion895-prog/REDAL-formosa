@@ -83,6 +83,13 @@ sigue al sistema). Los estados vacíos usan ilustraciones (`ui/illustrations.tsx
 cambian en modo oscuro, y utilidades de Tailwind expuestas desde esos semánticos. Para cambiar la marca
 alcanza con tocar las escalas o los semánticos; los componentes no se modifican.
 
+- Carga: un botón con `aria-busy={cargando}` muestra spinner (CSS en `.btn`) y va con `disabled` para evitar doble envío.
+  Las rutas pesadas tienen `loading.tsx` con esqueletos (`ui/skeleton.tsx`) que pulsan sobre `surface-muted`.
+- Errores: `not-found.tsx` (404), `error.tsx` (500) y `global-error.tsx`, con `ErrorScreen` e ilustraciones.
+- Espaciado: página `page-container` (gutter fluido) con `py-section` en portadas y `py-8` en listados; grillas
+  con `gap-5`; tarjetas con `p-4`/`p-5`; separación entre bloques de una página `space-y-14`. Mobile-first:
+  una columna por defecto, `sm:` 2 columnas, `lg:` 3–4; el mapa apila lista y mapa hasta `lg`. Debajo de `md`
+  la navegación es un menú hamburguesa (`mobile-nav.tsx`).
 - Contraste: el verde 500 (`#17924E`) es solo para rellenos; el texto blanco sobre verde y los enlaces usan
   el 700 (`#0E7A3F`, 5.2:1). Los bordes de controles usan `--border-strong` (≥3:1).
 - Elemento distintivo: la etiqueta de precio (`price-tag`) y el mapa de emprendimientos.

@@ -23,7 +23,7 @@ export function Logo({ descriptor = false }: { descriptor?: boolean }) {
     <Link href="/" className="flex shrink-0 items-center gap-2.5 whitespace-nowrap" aria-label={`${siteName}, ir al inicio`}>
       <LogoMark />
       <span className="flex flex-col leading-none">
-        <span className="font-display text-xl font-bold tracking-tight">
+        <span className="font-display text-lg font-bold sm:text-xl tracking-tight">
           <span className="text-action">RedAL</span> Formosa
         </span>
         {descriptor && <span className="mt-1 hidden text-xs text-muted xl:block">{siteTagline}</span>}

@@ -8,6 +8,7 @@ import { catalogRepository, type ProductSearchResult } from "@/lib/catalog/catal
 import { useAsync } from "@/lib/hooks/use-async";
 import { PageHeader } from "@/components/layout/page-header";
 import { ProductGrid } from "@/components/catalog/product-grid";
+import { ProductGridSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SearchIcon } from "@/components/ui/icons";
 
@@ -32,23 +33,6 @@ async function loadCatalog(query: string, priceMax: number | undefined, disponib
   const products = await catalogRepository.searchProducts({ query, priceMax, disponibleOnly });
   const names = await catalogRepository.getEmprendimientoNames(products.map((p) => p.emprendimiento_id));
   return { products, names };
-}
-
-function GridSkeleton() {
-  return (
-    <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-hidden="true">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <li key={i} className="card animate-pulse overflow-hidden">
-          <div className="aspect-[4/3] bg-surface-muted" />
-          <div className="space-y-2 p-4">
-            <div className="h-4 w-3/4 rounded bg-surface-muted" />
-            <div className="h-3 w-1/2 rounded bg-surface-muted" />
-            <div className="mt-4 h-8 rounded bg-surface-muted" />
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
 }
 
 /** Campo de búsqueda con estado propio. El padre lo remonta (key) cuando cambia la URL. */
@@ -162,7 +146,7 @@ function CatalogContent() {
             }
           />
         ) : !sorted || loading ? (
-          <GridSkeleton />
+          <ProductGridSkeleton />
         ) : sorted.length === 0 ? (
           <EmptyState
             illustration={q ? "search" : "basket"}

@@ -98,7 +98,7 @@ export function RatingForm({ productoId, onSuccess }: RatingFormProps) {
         </p>
       )}
 
-      <button type="submit" disabled={saving} className="btn btn-primary w-full">
+      <button type="submit" disabled={saving} aria-busy={saving} className="btn btn-primary w-full">
         {saving ? "Guardando…" : hasPrevious ? "Actualizar calificación" : "Enviar calificación"}
       </button>
     </form>

@@ -86,7 +86,7 @@ export function NotificationPreferences() {
         </div>
       )}
 
-      <button type="button" onClick={save} disabled={saving || loading} className="btn btn-primary">
+      <button type="button" onClick={save} disabled={saving || loading} aria-busy={saving} className="btn btn-primary">
         {saving ? "Guardando…" : "Guardar preferencias"}
       </button>
     </div>

@@ -84,7 +84,7 @@ export function LoginForm() {
           />
         </div>
 
-        <button type="submit" disabled={loading} className="btn btn-primary w-full !py-3">
+        <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-3">
           {loading ? "Ingresando…" : "Ingresar"}
         </button>
       </form>

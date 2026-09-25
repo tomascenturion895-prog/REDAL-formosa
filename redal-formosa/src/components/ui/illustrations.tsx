@@ -1,4 +1,4 @@
-export type IllustrationName = "basket" | "map" | "search" | "error";
+export type IllustrationName = "basket" | "map" | "search" | "error" | "road";
 
 /** Ilustraciones vectoriales de los estados vacíos. Solo usan tokens, así que siguen el tema claro/oscuro. */
 const PRIMARY = "var(--color-primary-500)";
@@ -66,11 +66,26 @@ function ErrorIllustration() {
   );
 }
 
+function Road() {
+  return (
+    <Frame>
+      <circle cx="80" cy="58" r="44" fill={SOFT} />
+      <path d="M62 104 74 40h12l12 64z" fill="var(--color-neutral-300)" stroke={LINE} strokeWidth="2.5" strokeLinejoin="round" />
+      <path d="M80 46v8M80 62v10M80 80v14" stroke="var(--surface)" strokeWidth="3" strokeLinecap="round" />
+      <path d="M80 18v22" stroke={LINE} strokeWidth="3" strokeLinecap="round" />
+      <path d="M80 20h26l8 7-8 7H80z" fill={SUN} stroke={LINE} strokeWidth="2.5" strokeLinejoin="round" />
+      <path d="M80 30H54l-8 7 8 7h26z" fill="var(--surface)" stroke={LINE} strokeWidth="2.5" strokeLinejoin="round" />
+      <path d="M30 96c6-2 8-8 6-14-4 4-8 8-6 14ZM130 96c-6-2-8-8-6-14 4 4 8 8 6 14Z" fill={PRIMARY} stroke={LINE} strokeWidth="2" strokeLinejoin="round" />
+    </Frame>
+  );
+}
+
 const MAP: Record<IllustrationName, () => React.ReactNode> = {
   basket: Basket,
   map: MapIllustration,
   search: SearchIllustration,
   error: ErrorIllustration,
+  road: Road,
 };
 
 export function Illustration({ name }: { name: IllustrationName }) {
