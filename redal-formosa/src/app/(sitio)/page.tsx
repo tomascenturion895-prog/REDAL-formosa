@@ -3,6 +3,7 @@ import Link from "next/link";
 import { HeroSearch } from "@/components/home/hero-search";
 import { HomeMapPreview } from "@/components/home/home-map-preview";
 import { NewestProducts } from "@/components/home/newest-products";
+import { ProducerFeed } from "@/components/producer/ProducerFeed";
 import { RecommendationsCarousel } from "@/components/recommendations/recommendations-carousel";
 import { MapPinIcon, ShieldIcon, StoreIcon, TruckIcon } from "@/components/ui/icons";
 
@@ -52,6 +53,8 @@ export default function Home() {
       </section>
 
       <div className="page-container space-y-14 py-section">
+        <ProducerFeed />
+
         <RecommendationsCarousel kind="personalized" title="Elegidos para vos" description="Según tus favoritos y tus compras." />
 
         <section aria-labelledby="newest" className="space-y-5">
