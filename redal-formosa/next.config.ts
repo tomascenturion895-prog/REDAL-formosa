@@ -5,7 +5,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: {
     // Fotos de producto en Supabase Storage: Next las redimensiona y las sirve en WebP/AVIF.
-    remotePatterns: [{ protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" }],
+    remotePatterns: [
+      { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },
+      { protocol: "https", hostname: "images.unsplash.com" }
+    ],
     formats: ["image/avif", "image/webp"],
   },
   async headers() {
