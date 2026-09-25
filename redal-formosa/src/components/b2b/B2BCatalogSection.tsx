@@ -1,9 +1,11 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MOCK_B2B_DEALS } from "@/data/mock/b2b";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+
+// TODO: Fetch from Supabase
+const B2B_DEALS: any[] = [];
 
 export function B2BCatalogSection() {
   return (
@@ -26,7 +28,7 @@ export function B2BCatalogSection() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {MOCK_B2B_DEALS.map((deal) => (
+        {B2B_DEALS.map((deal) => (
           <div
             key={deal.id}
             className="flex flex-col justify-between overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-sm transition-all hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-700"
