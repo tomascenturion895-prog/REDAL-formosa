@@ -80,9 +80,15 @@ export function TodayPanel({ orders, published, inReview, checklist }: TodayPane
                   {item.label}
                 </span>
                 {!item.done && (
-                  <Link href={item.href} className="btn btn-secondary btn-sm shrink-0">
-                    {item.cta}
-                  </Link>
+                  item.href.startsWith("#") ? (
+                    <a href={item.href} className="btn btn-secondary btn-sm shrink-0">
+                      {item.cta}
+                    </a>
+                  ) : (
+                    <Link href={item.href} className="btn btn-secondary btn-sm shrink-0">
+                      {item.cta}
+                    </Link>
+                  )
                 )}
               </li>
             ))}

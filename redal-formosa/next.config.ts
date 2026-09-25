@@ -4,9 +4,11 @@ const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   images: {
-    // Fotos de producto en Supabase Storage: Next las redimensiona y las sirve en WebP/AVIF.
+    dangerouslyAllowLocalIP: true,
     remotePatterns: [
       { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },
+      { protocol: "http", hostname: "127.0.0.1", port: "54321", pathname: "/storage/v1/object/public/**" },
+      { protocol: "http", hostname: "localhost", port: "54321", pathname: "/storage/v1/object/public/**" },
       { protocol: "https", hostname: "images.unsplash.com" },
       // Imágenes de relleno de los datos de prueba (npm run seed).
       { protocol: "https", hostname: "picsum.photos" },
