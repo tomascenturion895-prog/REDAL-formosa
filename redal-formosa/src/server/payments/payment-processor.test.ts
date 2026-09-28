@@ -13,10 +13,11 @@ type Row = Record<string, unknown>;
 function fakeDb(tables: Record<string, Row[]>): Db {
   const from = (table: string) => {
     const filters: [string, unknown][] = [];
+    const inFilters: [string, unknown[]][] = [];
     let patch: Row | null = null;
     let returning = false;
 
-    const matching = () => (tables[table] ?? []).filter((row) => filters.every(([col, val]) => row[col] === val));
+    const matching = () => (tables[table] ?? []).filter((row) => filters.every(([col, val]) => row[col] === val) && inFilters.every(([col, vals]) => vals.includes(row[col])));
     const run = () => {
       if (patch) {
         const rows = matching();
@@ -37,6 +38,10 @@ function fakeDb(tables: Record<string, Row[]>): Db {
       },
       eq: (col: string, val: unknown) => {
         filters.push([col, val]);
+        return builder;
+      },
+      in: (col: string, vals: unknown[]) => {
+        inFilters.push([col, vals]);
         return builder;
       },
       maybeSingle: () => Promise.resolve({ data: matching()[0] ?? null, error: null }),
@@ -92,7 +97,7 @@ describe("PaymentProcessor", () => {
   it("un pago aprobado por el monto completo confirma el pedido y publica el evento", async () => {
     const result = await processor(fakeGateway()).handle(notification);
 
-    expect(result).toEqual({ status: "processed", orderId: "order-1", paid: true });
+    expect(result).toEqual({ status: "processed", orderId: "order-1", paid: true, cancelled: false });
     expect(tables.pedidos[0].estado).toBe("pagado");
     expect(tables.pagos[0]).toMatchObject({ estado: "aprobado", transaccion_id: "pay-1" });
     expect(paidHandler).toHaveBeenCalledExactlyOnceWith({ orderId: "order-1" });
@@ -129,6 +134,37 @@ describe("PaymentProcessor", () => {
     await processor(fakeGateway({ outcome: "pending" })).handle(notification);
     expect(tables.pagos[0].estado).toBe("pendiente");
     expect(paidHandler).not.toHaveBeenCalled();
+  });
+
+  describe("reembolsos y contracargos", () => {
+    it.each(["pagado", "en_preparacion", "listo"])("cancelan un pedido que estaba %s", async (estado) => {
+      tables.pedidos[0].estado = estado;
+      const result = await processor(fakeGateway({ outcome: "refunded" })).handle(notification);
+
+      expect(result).toEqual({ status: "processed", orderId: "order-1", paid: false, cancelled: true });
+      expect(tables.pedidos[0].estado).toBe("cancelado");
+      expect(tables.pagos[0].estado).toBe("reembolsado");
+      expect(paidHandler).not.toHaveBeenCalled();
+    });
+
+    it.each(["en_camino", "entregado"])("no tocan un pedido ya %s, pero registran el pago como reembolsado", async (estado) => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      tables.pedidos[0].estado = estado;
+      const result = await processor(fakeGateway({ outcome: "refunded" })).handle(notification);
+
+      expect(result).toMatchObject({ cancelled: false });
+      expect(tables.pedidos[0].estado).toBe(estado);
+      expect(tables.pagos[0].estado).toBe("reembolsado");
+    });
+
+    it("un reembolso repetido es idempotente", async () => {
+      tables.pedidos[0].estado = "pagado";
+      const p = processor(fakeGateway({ outcome: "refunded" }));
+      await p.handle(notification);
+      const again = await p.handle(notification);
+      expect(again).toMatchObject({ cancelled: false });
+      expect(tables.pedidos[0].estado).toBe("cancelado");
+    });
   });
 
   it("falla si el pago apunta a un pedido inexistente", async () => {
