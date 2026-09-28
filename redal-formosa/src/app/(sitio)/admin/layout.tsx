@@ -14,6 +14,7 @@ const links = [
   { href: "/admin", label: "Resumen", badge: null },
   { href: "/admin/productos", label: "Moderar productos", badge: "productos_pendientes" },
   { href: "/admin/verificaciones", label: "Verificaciones", badge: "verificaciones_pendientes" },
+  { href: "/admin/liquidaciones", label: "Liquidaciones", badge: null },
   { href: "/admin/usuarios", label: "Usuarios", badge: null },
   { href: "/admin/repartidores", label: "Repartidores", badge: null },
 ] as const;
