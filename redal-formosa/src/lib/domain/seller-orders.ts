@@ -23,10 +23,12 @@ export interface SellerOrder {
   items: SellerOrderItem[];
 }
 
-/** Lo único que el vendedor puede hacer con un pedido; el resto de las etapas las cubre el reparto. */
+/** Lo que el vendedor puede hacer con un pedido. Las dos últimas etapas cubren la entrega propia o el retiro. */
 export const NEXT_STEP: Partial<Record<OrderStatus, { estado: OrderStatus; label: string }>> = {
   pagado: { estado: "en_preparacion", label: "Empezar a preparar" },
   en_preparacion: { estado: "listo", label: "Marcar como listo" },
+  listo: { estado: "en_camino", label: "Salió a entregar" },
+  en_camino: { estado: "entregado", label: "Marcar como entregado" },
 };
 
 export type OrderGroupKey = "por_preparar" | "en_preparacion" | "listos" | "cerrados";
@@ -84,10 +86,12 @@ export function buyerMessage(order: Pick<SellerOrder, "comprador_nombre" | "empr
   const first = order.comprador_nombre.split(" ")[0] || "";
   const hello = first ? `Hola ${first}` : "Hola";
   const state =
-    order.estado === "listo"
-      ? "ya está listo"
-      : order.estado === "en_preparacion"
-        ? "lo estamos preparando"
-        : "lo recibimos";
+    order.estado === "en_camino"
+      ? "ya está en camino"
+      : order.estado === "listo"
+        ? "ya está listo"
+        : order.estado === "en_preparacion"
+          ? "lo estamos preparando"
+          : "lo recibimos";
   return `${hello}, te escribe ${order.emprendimiento_nombre} por tu pedido ${order.numero_pedido} de RedAL Formosa: ${state}.`;
 }
