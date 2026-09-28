@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/lib/auth/auth-context";
 import { useAuthActions } from "@/lib/auth/use-auth-actions";
+import { deliveryRepository } from "@/lib/delivery/delivery-repository";
+import { useAsync } from "@/lib/hooks/use-async";
 import { ChevronDownIcon, UserIcon } from "@/components/ui/icons";
 
 const itemClass =
@@ -15,6 +17,8 @@ export function UserMenu() {
   const router = useRouter();
   const { user, role, loading } = useAuth();
   const { signOut } = useAuthActions();
+  // Solo los repartidores ven "Mis entregas"; la consulta devuelve null para el resto.
+  const { data: courier } = useAsync(() => deliveryRepository.findByUser(user!.id), [user?.id], { enabled: Boolean(user), scope: user?.id });
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -98,6 +102,11 @@ export function UserMenu() {
           <Link role="menuitem" href="/dashboard" className={itemClass} onClick={() => setOpen(false)}>
             Mi emprendimiento
           </Link>
+          {courier?.activo && (
+            <Link role="menuitem" href="/tracking" className={itemClass} onClick={() => setOpen(false)}>
+              Mis entregas
+            </Link>
+          )}
           {role === "admin" && (
             <Link role="menuitem" href="/admin" className={itemClass} onClick={() => setOpen(false)}>
               Panel de administración

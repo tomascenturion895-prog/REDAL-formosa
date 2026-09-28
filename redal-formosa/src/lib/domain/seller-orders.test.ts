@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buyerMessage, extractBuyerPhone, groupOrders, NEXT_STEP, timeAgo, type SellerOrder } from "./seller-orders";
+import { buyerMessage, canAssignCourier, extractBuyerPhone, groupOrders, NEXT_STEP, timeAgo, type SellerOrder } from "./seller-orders";
 
 const order = (over: Partial<SellerOrder>): SellerOrder => ({
   id: "1",
@@ -15,6 +15,8 @@ const order = (over: Partial<SellerOrder>): SellerOrder => ({
   emprendimiento_id: "e1",
   emprendimiento_nombre: "Chacra El Sol",
   items: [],
+  repartidor_id: null,
+  repartidor_nombre: null,
   ...over,
 });
 
@@ -96,5 +98,17 @@ describe("buyerMessage", () => {
 
   it("avisa que el pedido va en camino", () => {
     expect(buyerMessage(order({ estado: "en_camino" }))).toContain("ya está en camino");
+  });
+});
+
+describe("canAssignCourier", () => {
+  it("permite elegir repartidor hasta que el pedido sale", () => {
+    expect(canAssignCourier("pagado")).toBe(true);
+    expect(canAssignCourier("en_preparacion")).toBe(true);
+    expect(canAssignCourier("listo")).toBe(true);
+    expect(canAssignCourier("en_camino")).toBe(false);
+    expect(canAssignCourier("entregado")).toBe(false);
+    expect(canAssignCourier("cancelado")).toBe(false);
+    expect(canAssignCourier("pendiente_pago")).toBe(false);
   });
 });
