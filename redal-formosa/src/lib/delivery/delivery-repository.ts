@@ -1,5 +1,5 @@
 import { createClient, type Db } from "@/lib/supabase/client";
-import { unwrap, unwrapOptional } from "@/lib/supabase/repository";
+import { RepositoryError, unwrap, unwrapOptional } from "@/lib/supabase/repository";
 import { DELIVERY_ACTIVE_STATUSES } from "@/lib/domain/order-status";
 import type { LatLng } from "@/lib/domain/geo";
 import type { OrderStatus } from "@/lib/supabase/types";
@@ -37,6 +37,12 @@ export class DeliveryRepository {
       ...order,
       entrega: entrega_lat !== null && entrega_lng !== null ? { lat: entrega_lat, lng: entrega_lng } : null,
     }));
+  }
+
+  /** El repartidor marca que salió (listo → en camino) o que entregó (en camino → entregado). */
+  async advance(orderId: string, estado: OrderStatus): Promise<void> {
+    const { error } = await this.db.rpc("repartidor_avanzar_pedido", { p_pedido_id: orderId, p_estado: estado });
+    if (error) throw new RepositoryError(`actualizar entrega: ${error.message}`, error);
   }
 }
 

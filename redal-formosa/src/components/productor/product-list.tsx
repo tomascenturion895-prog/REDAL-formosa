@@ -7,8 +7,9 @@ import { producerRepository, type Product } from "@/lib/producer/producer-reposi
 import { Alert } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { MicIcon, TrashIcon } from "@/components/ui/icons";
+import { EditIcon, MicIcon, TrashIcon } from "@/components/ui/icons";
 import { ProductImage } from "@/components/ui/product-image";
+import { ProductForm } from "./product-form";
 
 interface ProductListProps {
   products: Product[];
@@ -33,6 +34,7 @@ export function ProductList({ products, onChanged }: ProductListProps) {
   const [productToDelete, setProductToDelete] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Product | null>(null);
 
   const toggleAvailability = async (p: Product) => {
     setActionError(null);
@@ -82,6 +84,24 @@ export function ProductList({ products, onChanged }: ProductListProps) {
     <div className="space-y-3">
       {actionError && <Alert tone="error">{actionError}</Alert>}
 
+      {editing && (
+        <section aria-labelledby="editar-producto-title" className="card space-y-4 border-action p-5">
+          <h3 id="editar-producto-title" className="text-heading">
+            Editar “{editing.nombre}”
+          </h3>
+          <ProductForm
+            key={editing.id}
+            product={editing}
+            emprendimientoId={editing.emprendimiento_id}
+            onCancel={() => setEditing(null)}
+            onSuccess={() => {
+              setEditing(null);
+              onChanged();
+            }}
+          />
+        </section>
+      )}
+
       <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {products.map((p) => {
           const status = reviewStatus(p);
@@ -123,14 +143,24 @@ export function ProductList({ products, onChanged }: ProductListProps) {
                     <span className="text-sm text-muted">Sin publicar</span>
                   )}
 
-                  <button
-                    type="button"
-                    className="btn btn-ghost !p-2 text-muted hover:text-danger"
-                    aria-label={`Eliminar ${p.nombre}`}
-                    onClick={() => setProductToDelete({ id: p.id, name: p.nombre })}
-                  >
-                    <TrashIcon size={18} />
-                  </button>
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      className="btn btn-ghost !p-2 text-muted hover:text-foreground"
+                      aria-label={`Editar ${p.nombre}`}
+                      onClick={() => setEditing(p)}
+                    >
+                      <EditIcon size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost !p-2 text-muted hover:text-danger"
+                      aria-label={`Eliminar ${p.nombre}`}
+                      onClick={() => setProductToDelete({ id: p.id, name: p.nombre })}
+                    >
+                      <TrashIcon size={18} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </li>

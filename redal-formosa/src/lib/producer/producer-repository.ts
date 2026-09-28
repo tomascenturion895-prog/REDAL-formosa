@@ -22,6 +22,15 @@ export interface EmprendimientoLocation {
   horario_cierre: string;
 }
 
+export interface ProductChanges {
+  nombre: string;
+  descripcion: string;
+  precio: number;
+  unidad: string;
+  /** null quita la foto; un texto la reemplaza. */
+  imagenUrl: string | null;
+}
+
 export interface NewProduct {
   emprendimientoId: string;
   nombre: string;
@@ -93,6 +102,20 @@ export class ProducerRepository {
     return row.id;
   }
 
+  /** Edita los datos de contacto y la descripción del emprendimiento (no cambia dueño ni estado). */
+  async updateEmprendimiento(emprendimientoId: string, changes: Omit<NewEmprendimiento, "ownerId">): Promise<void> {
+    const { error } = await this.db
+      .from("emprendimientos")
+      .update({
+        nombre: changes.nombre,
+        descripcion: changes.descripcion ?? null,
+        telefono: changes.telefono ?? null,
+        email: changes.email ?? null,
+      })
+      .eq("id", emprendimientoId);
+    if (error) throw new RepositoryError(`editar emprendimiento: ${error.message}`, error);
+  }
+
   async setLocation(emprendimientoId: string, location: EmprendimientoLocation): Promise<void> {
     const { error } = await this.db.from("emprendimientos").update(location).eq("id", emprendimientoId);
     if (error) throw new RepositoryError(`guardar ubicación: ${error.message}`, error);
@@ -119,6 +142,21 @@ export class ProducerRepository {
       imagen_url: input.imagenUrl || null,
     });
     if (error) throw new RepositoryError(`crear producto: ${error.message}`, error);
+  }
+
+  /** Edita un producto propio. Si cambia nombre, descripción o foto, la base lo devuelve a revisión. */
+  async updateProduct(productId: string, changes: ProductChanges): Promise<void> {
+    const { error } = await this.db
+      .from("productos")
+      .update({
+        nombre: changes.nombre,
+        descripcion: changes.descripcion || null,
+        precio: changes.precio,
+        unidad: changes.unidad,
+        imagen_url: changes.imagenUrl || null,
+      })
+      .eq("id", productId);
+    if (error) throw new RepositoryError(`editar producto: ${error.message}`, error);
   }
 
   async setProductAvailability(productId: string, disponible: boolean): Promise<void> {

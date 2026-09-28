@@ -429,6 +429,35 @@ export type Database = {
         }
         Relationships: []
       }
+      novedades: {
+        Row: {
+          contenido: string
+          created_at: string
+          emprendimiento_id: string
+          id: string
+        }
+        Insert: {
+          contenido: string
+          created_at?: string
+          emprendimiento_id: string
+          id?: string
+        }
+        Update: {
+          contenido?: string
+          created_at?: string
+          emprendimiento_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "novedades_emprendimiento_id_fkey"
+            columns: ["emprendimiento_id"]
+            isOneToOne: false
+            referencedRelation: "emprendimientos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagos: {
         Row: {
           actualizado_en: string | null
@@ -931,6 +960,68 @@ export type Database = {
             columns: ["emprendimiento_id"]
             isOneToOne: false
             referencedRelation: "emprendimientos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solicitudes_b2b: {
+        Row: {
+          contacto_nombre: string
+          created_at: string
+          cuit: string | null
+          estado: string
+          expires_at: string
+          frecuencia: string
+          id: string
+          localidad: string
+          mensaje: string | null
+          productos: string
+          razon_social: string
+          telefono: string
+          tipo_comercio: string
+          user_id: string
+          volumen: string
+        }
+        Insert: {
+          contacto_nombre: string
+          created_at?: string
+          cuit?: string | null
+          estado?: string
+          expires_at?: string
+          frecuencia: string
+          id?: string
+          localidad: string
+          mensaje?: string | null
+          productos: string
+          razon_social: string
+          telefono: string
+          tipo_comercio: string
+          user_id: string
+          volumen: string
+        }
+        Update: {
+          contacto_nombre?: string
+          created_at?: string
+          cuit?: string | null
+          estado?: string
+          expires_at?: string
+          frecuencia?: string
+          id?: string
+          localidad?: string
+          mensaje?: string | null
+          productos?: string
+          razon_social?: string
+          telefono?: string
+          tipo_comercio?: string
+          user_id?: string
+          volumen?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitudes_b2b_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1560,6 +1651,14 @@ export type Database = {
           total_usuarios: number
         }[]
       }
+      admin_alta_repartidor: {
+        Args: {
+          p_email: string
+          p_vehiculo: Database["public"]["Enums"]["vehicle_type"]
+        }
+        Returns: string
+      }
+      admin_baja_repartidor: { Args: { p_id: string }; Returns: undefined }
       admin_list_users: {
         Args: never
         Returns: {
@@ -1600,6 +1699,19 @@ export type Database = {
         }[]
       }
       admin_resumen: { Args: never; Returns: Json }
+      admin_repartidores: {
+        Args: never
+        Returns: {
+          activo: boolean
+          email: string
+          entregas_activas: number
+          full_name: string
+          id: string
+          tipo_vehiculo: Database["public"]["Enums"]["vehicle_type"]
+          user_id: string
+          viajes_completados: number
+        }[]
+      }
       admin_review_product: {
         Args: { approve: boolean; product_id: string; reason?: string }
         Returns: undefined
@@ -1615,7 +1727,23 @@ export type Database = {
         }
         Returns: undefined
       }
+      cerrar_solicitud_b2b: { Args: { p_id: string }; Returns: undefined }
       calcular_envio: { Args: { cantidad_lineas: number }; Returns: number }
+      crear_solicitud_b2b: {
+        Args: {
+          p_contacto: string
+          p_cuit: string
+          p_frecuencia: string
+          p_localidad: string
+          p_mensaje: string
+          p_productos: string
+          p_razon_social: string
+          p_telefono: string
+          p_tipo: string
+          p_volumen: string
+        }
+        Returns: string
+      }
       crear_pedido: {
         Args: {
           p_direccion: string
@@ -1807,6 +1935,10 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      productor_asignar_repartidor: {
+        Args: { p_pedido_id: string; p_repartidor_id: string }
+        Returns: undefined
+      }
       productor_avanzar_pedido: {
         Args: {
           p_estado: Database["public"]["Enums"]["order_status"]
@@ -1829,6 +1961,40 @@ export type Database = {
           monto_total: number
           nota_cliente: string
           numero_pedido: string
+          repartidor_id: string
+          repartidor_nombre: string
+        }[]
+      }
+      repartidor_avanzar_pedido: {
+        Args: {
+          p_estado: Database["public"]["Enums"]["order_status"]
+          p_pedido_id: string
+        }
+        Returns: undefined
+      }
+      productor_repartidores: {
+        Args: never
+        Returns: {
+          id: string
+          nombre: string
+          tipo_vehiculo: Database["public"]["Enums"]["vehicle_type"]
+        }[]
+      }
+      productor_solicitudes_b2b: {
+        Args: never
+        Returns: {
+          contacto_nombre: string
+          created_at: string
+          expires_at: string
+          frecuencia: string
+          id: string
+          localidad: string
+          mensaje: string
+          productos: string
+          razon_social: string
+          telefono: string
+          tipo_comercio: string
+          volumen: string
         }[]
       }
       productos_mas_vendidos: {

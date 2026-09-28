@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import type RecordRTCRecorder from "recordrtc";
 
 import { SearchIcon, MicIcon } from "@/components/ui/icons";
 
@@ -13,15 +14,22 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const recorderRef = useRef<any>(null);
+  const recorderRef = useRef<RecordRTCRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Limpiar recursos si el componente se desmonta
-  useEffect(() => {
-    return () => {
-      cleanupAudio();
-    };
+  const cleanupAudio = useCallback(() => {
+    if (recorderRef.current) {
+      recorderRef.current.stopRecording();
+      recorderRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+      streamRef.current = null;
+    }
   }, []);
+
+  // Limpiar recursos si el componente se desmonta
+  useEffect(() => cleanupAudio, [cleanupAudio]);
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -33,27 +41,17 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
     }
   };
 
-  const cleanupAudio = () => {
-    if (recorderRef.current) {
-      recorderRef.current.stopRecording();
-      recorderRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
-      streamRef.current = null;
-    }
-  };
-
   const stopVoiceSearch = async () => {
     setIsRecording(false);
 
-    if (!recorderRef.current) return;
+    const recorder = recorderRef.current;
+    if (!recorder) return;
 
     setIsProcessing(true);
 
-    recorderRef.current.stopRecording(async () => {
+    recorder.stopRecording(async () => {
       try {
-        const blob = recorderRef.current.getBlob();
+        const blob = recorder.getBlob();
         cleanupAudio();
 
         // Enviar al servidor para procesar con AssemblyAI

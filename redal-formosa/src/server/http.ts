@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 import { ServiceError } from "./errors";
 import { PaymentsNotConfiguredError } from "./payments/payment-gateway";
