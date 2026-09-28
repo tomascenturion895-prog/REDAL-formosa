@@ -1,0 +1,35 @@
+name: E2E (Playwright)
+
+# Los tests end-to-end necesitan un proyecto de Supabase con datos de prueba, así que no corren en cada PR.
+# Se lanzan a mano desde la pestaña Actions cuando hay un entorno de pruebas configurado.
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: redal-formosa
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: redal-formosa/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - run: npx playwright test
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: redal-formosa/playwright-report/
+          retention-days: 30
