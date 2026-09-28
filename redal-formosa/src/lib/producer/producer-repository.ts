@@ -22,6 +22,15 @@ export interface EmprendimientoLocation {
   horario_cierre: string;
 }
 
+export interface ProductChanges {
+  nombre: string;
+  descripcion: string;
+  precio: number;
+  unidad: string;
+  /** null quita la foto; un texto la reemplaza. */
+  imagenUrl: string | null;
+}
+
 export interface NewProduct {
   emprendimientoId: string;
   nombre: string;
@@ -119,6 +128,21 @@ export class ProducerRepository {
       imagen_url: input.imagenUrl || null,
     });
     if (error) throw new RepositoryError(`crear producto: ${error.message}`, error);
+  }
+
+  /** Edita un producto propio. Si cambia nombre, descripción o foto, la base lo devuelve a revisión. */
+  async updateProduct(productId: string, changes: ProductChanges): Promise<void> {
+    const { error } = await this.db
+      .from("productos")
+      .update({
+        nombre: changes.nombre,
+        descripcion: changes.descripcion || null,
+        precio: changes.precio,
+        unidad: changes.unidad,
+        imagen_url: changes.imagenUrl || null,
+      })
+      .eq("id", productId);
+    if (error) throw new RepositoryError(`editar producto: ${error.message}`, error);
   }
 
   async setProductAvailability(productId: string, disponible: boolean): Promise<void> {
