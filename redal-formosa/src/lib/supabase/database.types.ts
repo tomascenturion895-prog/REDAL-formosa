@@ -1793,6 +1793,14 @@ export type Database = {
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       geometry: { Args: { "": string }; Returns: unknown }
+      has_received_delivery: {
+        Args: { p_repartidor: string }
+        Returns: boolean
+      }
+      has_received_product: {
+        Args: { p_producto: string }
+        Returns: boolean
+      }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean
