@@ -112,6 +112,15 @@ describe("PaymentProcessor", () => {
     expect(paidHandler).toHaveBeenCalledTimes(1);
   });
 
+  it("un pago aprobado sobre un pedido cancelado sin pagar lo reactiva", async () => {
+    tables.pedidos[0].estado = "cancelado";
+    const result = await processor(fakeGateway()).handle(notification);
+
+    expect(result).toMatchObject({ paid: true });
+    expect(tables.pedidos[0].estado).toBe("pagado");
+    expect(paidHandler).toHaveBeenCalledExactlyOnceWith({ orderId: "order-1" });
+  });
+
   it("un pago aprobado por menos del total NO confirma el pedido", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const result = await processor(fakeGateway({ amount: 1 })).handle(notification);
