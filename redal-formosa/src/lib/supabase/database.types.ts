@@ -458,6 +458,23 @@ export type Database = {
           },
         ]
       }
+      liquidaciones: {
+        Row: {
+          cantidad_pedidos: number
+          comision: number
+          comision_pct: number
+          emprendimiento_id: string
+          id: string
+          monto_bruto: number
+          monto_neto: number
+          pagado_en: string
+          pagado_por: string
+          referencia: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       pagos: {
         Row: {
           actualizado_en: string | null
@@ -1699,6 +1716,37 @@ export type Database = {
         }[]
       }
       admin_resumen: { Args: never; Returns: Json }
+      admin_comision: { Args: never; Returns: number }
+      admin_liquidar: {
+        Args: { p_emprendimiento: string; p_referencia: string }
+        Returns: string
+      }
+      admin_liquidaciones_pendientes: {
+        Args: never
+        Returns: {
+          cantidad_pedidos: number
+          comision: number
+          comision_pct: number
+          emprendimiento_id: string
+          emprendimiento_nombre: string
+          monto_bruto: number
+          monto_neto: number
+          owner_id: string
+        }[]
+      }
+      admin_set_comision: { Args: { p_pct: number }; Returns: undefined }
+      productor_cobro_pendiente: {
+        Args: never
+        Returns: {
+          cantidad_pedidos: number
+          comision: number
+          comision_pct: number
+          emprendimiento_id: string
+          emprendimiento_nombre: string
+          monto_bruto: number
+          monto_neto: number
+        }[]
+      }
       admin_repartidores: {
         Args: never
         Returns: {
