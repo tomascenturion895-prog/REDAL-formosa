@@ -13,10 +13,11 @@ type Row = Record<string, unknown>;
 function fakeDb(tables: Record<string, Row[]>): Db {
   const from = (table: string) => {
     const filters: [string, unknown][] = [];
+    const inFilters: [string, unknown[]][] = [];
     let patch: Row | null = null;
     let returning = false;
 
-    const matching = () => (tables[table] ?? []).filter((row) => filters.every(([col, val]) => row[col] === val));
+    const matching = () => (tables[table] ?? []).filter((row) => filters.every(([col, val]) => row[col] === val) && inFilters.every(([col, vals]) => vals.includes(row[col])));
     const run = () => {
       if (patch) {
         const rows = matching();
@@ -37,6 +38,10 @@ function fakeDb(tables: Record<string, Row[]>): Db {
       },
       eq: (col: string, val: unknown) => {
         filters.push([col, val]);
+        return builder;
+      },
+      in: (col: string, vals: unknown[]) => {
+        inFilters.push([col, vals]);
         return builder;
       },
       maybeSingle: () => Promise.resolve({ data: matching()[0] ?? null, error: null }),
@@ -105,6 +110,15 @@ describe("PaymentProcessor", () => {
 
     expect(second).toMatchObject({ status: "processed", paid: false });
     expect(paidHandler).toHaveBeenCalledTimes(1);
+  });
+
+  it("un pago aprobado sobre un pedido cancelado sin pagar lo reactiva", async () => {
+    tables.pedidos[0].estado = "cancelado";
+    const result = await processor(fakeGateway()).handle(notification);
+
+    expect(result).toMatchObject({ paid: true });
+    expect(tables.pedidos[0].estado).toBe("pagado");
+    expect(paidHandler).toHaveBeenCalledExactlyOnceWith({ orderId: "order-1" });
   });
 
   it("un pago aprobado por menos del total NO confirma el pedido", async () => {

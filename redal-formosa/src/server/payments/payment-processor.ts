@@ -72,12 +72,14 @@ export class PaymentProcessor {
     let paid = false;
     if (rowState === "aprobado") {
       // Transición atómica: solo un webhook (MercadoPago reintenta y duplica) pasa de
-      // pendiente_pago a pagado y dispara el evento una única vez.
+      // pendiente_pago a pagado y dispara el evento una única vez. Un pedido que el comprador canceló sin
+      // pagar también pasa a pagado si el dinero igual se acreditó (pagó desde un enlace ya abierto): el
+      // estado del pago se lee del proveedor, así que un pedido reembolsado nunca llega acá.
       const { data: transitioned, error } = await this.db
         .from("pedidos")
         .update({ estado: "pagado" })
         .eq("id", order.id)
-        .eq("estado", "pendiente_pago")
+        .in("estado", ["pendiente_pago", "cancelado"])
         .select("id");
       if (error) throw new Error(`No se pudo confirmar el pedido: ${error.message}`);
 
