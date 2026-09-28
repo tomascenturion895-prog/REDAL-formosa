@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buyerMessage, canAssignCourier, extractBuyerPhone, groupOrders, NEXT_STEP, timeAgo, type SellerOrder } from "./seller-orders";
+import { buyerMessage, canAssignCourier, canCancelAndRefund, extractBuyerPhone, groupOrders, NEXT_STEP, timeAgo, type SellerOrder } from "./seller-orders";
 
 const order = (over: Partial<SellerOrder>): SellerOrder => ({
   id: "1",
@@ -110,5 +110,12 @@ describe("canAssignCourier", () => {
     expect(canAssignCourier("entregado")).toBe(false);
     expect(canAssignCourier("cancelado")).toBe(false);
     expect(canAssignCourier("pendiente_pago")).toBe(false);
+  });
+});
+
+describe("canCancelAndRefund", () => {
+  it("solo mientras el pedido está pago y no salió", () => {
+    expect(["pagado", "en_preparacion", "listo"].every((e) => canCancelAndRefund(e as never))).toBe(true);
+    expect(["pendiente_pago", "en_camino", "entregado", "cancelado"].some((e) => canCancelAndRefund(e as never))).toBe(false);
   });
 });

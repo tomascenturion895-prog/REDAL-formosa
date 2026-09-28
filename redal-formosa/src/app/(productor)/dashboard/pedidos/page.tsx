@@ -59,6 +59,19 @@ export default function PedidosDelVendedorPage() {
     }
   };
 
+  const cancel = async (order: SellerOrder) => {
+    setBusyId(order.id);
+    setActionError(null);
+    try {
+      await sellerOrdersRepository.cancelAndRefund(order.id);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "No pudimos cancelar el pedido.");
+    } finally {
+      setBusyId(null);
+      reload();
+    }
+  };
+
   if (pending || (loading && !orders)) {
     return (
       <div className="space-y-4" aria-busy="true">
@@ -111,6 +124,7 @@ export default function PedidosDelVendedorPage() {
                   onAdvance={advance}
                   couriers={couriers}
                   onAssign={assign}
+                  onCancel={cancel}
                 />
               ))}
             </div>
