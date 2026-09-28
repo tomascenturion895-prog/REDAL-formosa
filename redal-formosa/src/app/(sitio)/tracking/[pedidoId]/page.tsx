@@ -69,6 +69,12 @@ export default function TrackingPage() {
 
         {pedido.repartidor_id ? (
           <RepartidorTracker repartidorId={pedido.repartidor_id} destino={pedido.entrega ?? FORMOSA_CENTER} isRepartidor={false} />
+        ) : pedido.estado === "en_camino" || pedido.estado === "entregado" ? (
+          <EmptyState
+            icon={<TruckIcon size={36} />}
+            title={pedido.estado === "entregado" ? "Tu pedido fue entregado" : "Tu pedido va en camino"}
+            description="Lo entrega el propio emprendimiento, por eso no hay recorrido en el mapa. Si tenés dudas, escribile desde el detalle del pedido."
+          />
         ) : (
           <EmptyState
             icon={<TruckIcon size={36} />}

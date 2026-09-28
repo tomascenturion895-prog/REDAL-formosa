@@ -48,11 +48,17 @@ describe("groupOrders", () => {
 });
 
 describe("NEXT_STEP", () => {
-  it("solo permite empezar a preparar y marcar listo", () => {
+  it("cubre todo el ciclo hasta la entrega, en orden", () => {
     expect(NEXT_STEP.pagado?.estado).toBe("en_preparacion");
     expect(NEXT_STEP.en_preparacion?.estado).toBe("listo");
-    expect(NEXT_STEP.listo).toBeUndefined();
+    expect(NEXT_STEP.listo?.estado).toBe("en_camino");
+    expect(NEXT_STEP.en_camino?.estado).toBe("entregado");
+  });
+
+  it("no ofrece pasos sobre pedidos sin pagar, entregados o cancelados", () => {
+    expect(NEXT_STEP.pendiente_pago).toBeUndefined();
     expect(NEXT_STEP.entregado).toBeUndefined();
+    expect(NEXT_STEP.cancelado).toBeUndefined();
   });
 });
 
@@ -86,5 +92,9 @@ describe("buyerMessage", () => {
     expect(text).toContain("Chacra El Sol");
     expect(text).toContain("RED-0001");
     expect(text).toContain("ya está listo");
+  });
+
+  it("avisa que el pedido va en camino", () => {
+    expect(buyerMessage(order({ estado: "en_camino" }))).toContain("ya está en camino");
   });
 });
