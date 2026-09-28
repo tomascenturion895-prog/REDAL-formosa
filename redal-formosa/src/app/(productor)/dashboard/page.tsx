@@ -7,6 +7,7 @@ import { useRequireAuth } from "@/lib/auth/use-require-auth";
 import { useAsync } from "@/lib/hooks/use-async";
 import { sellerOrdersRepository } from "@/lib/orders/seller-orders-repository";
 import { producerRepository } from "@/lib/producer/producer-repository";
+import { VoicePostCreator } from "@/components/producer/VoicePostCreator";
 import { ProductForm } from "@/components/productor/product-form";
 import { ProductList } from "@/components/productor/product-list";
 import { SucursalesForm } from "@/components/productor/sucursales-form";
@@ -101,6 +102,8 @@ export default function ProductorDashboard() {
       />
 
       <VoiceQuickAdd emprendimientoId={selected.id} onCreated={reloadProducts} />
+
+      <VoicePostCreator key={selected.id} emprendimientoId={selected.id} />
 
       {showForm && (
         <div className="card space-y-4 p-6">

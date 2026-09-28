@@ -429,6 +429,35 @@ export type Database = {
         }
         Relationships: []
       }
+      novedades: {
+        Row: {
+          contenido: string
+          created_at: string
+          emprendimiento_id: string
+          id: string
+        }
+        Insert: {
+          contenido: string
+          created_at?: string
+          emprendimiento_id: string
+          id?: string
+        }
+        Update: {
+          contenido?: string
+          created_at?: string
+          emprendimiento_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "novedades_emprendimiento_id_fkey"
+            columns: ["emprendimiento_id"]
+            isOneToOne: false
+            referencedRelation: "emprendimientos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagos: {
         Row: {
           actualizado_en: string | null
