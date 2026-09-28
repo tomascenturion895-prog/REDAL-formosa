@@ -22,6 +22,12 @@ export function RatingForm({ productoId, onSuccess }: RatingFormProps) {
     scope: user?.id,
   });
 
+  // Solo se califica lo que se recibió: la base lo impone, acá evitamos mostrar un formulario que fallaría.
+  const { data: canRate, loading: checking } = useAsync(() => ratingsRepository.canRateProduct(productoId), [user?.id, productoId], {
+    enabled: Boolean(user),
+    scope: user?.id,
+  });
+
   const [stars, setStars] = useState<number | null>(null);
   const [comment, setComment] = useState<string | null>(null);
   const [savedOnce, setSavedOnce] = useState(false);
@@ -61,6 +67,16 @@ export function RatingForm({ productoId, onSuccess }: RatingFormProps) {
           Ingresá
         </Link>{" "}
         para calificar este producto.
+      </p>
+    );
+  }
+
+  if (checking) return <div className="h-24" aria-busy="true" />;
+
+  if (!canRate && !previous) {
+    return (
+      <p className="rounded-control bg-info-soft px-4 py-3 text-sm text-info">
+        Podés calificar este producto cuando recibas un pedido que lo incluya.
       </p>
     );
   }

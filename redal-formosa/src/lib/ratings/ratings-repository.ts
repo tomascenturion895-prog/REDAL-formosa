@@ -42,6 +42,15 @@ export class RatingsRepository {
     );
   }
 
+  /** Solo quien recibió el producto puede calificarlo (la base lo exige con una política RLS). */
+  async canRateProduct(productId: string): Promise<boolean> {
+    const { data } = await this.db.auth.getUser();
+    if (!data.user) return false;
+    const { data: allowed, error } = await this.db.rpc("has_received_product", { p_producto: productId });
+    if (error) throw new RepositoryError(`verificar compra: ${error.message}`, error);
+    return allowed === true;
+  }
+
   async delete(ratingId: string): Promise<void> {
     const usuario_id = await this.currentUserId();
     const { error } = await this.db.from("calificaciones").delete().eq("id", ratingId).eq("usuario_id", usuario_id);
