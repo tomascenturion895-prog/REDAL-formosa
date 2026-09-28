@@ -70,7 +70,7 @@ export function useAuthActions() {
       return res;
     };
 
-    let result = await checkAndRedirect(provider as Provider);
+    const result = await checkAndRedirect(provider as Provider);
 
     // En Supabase el proveedor de X puede estar registrado como 'twitter' (OAuth 1.0a) o 'x' (OAuth 2.0).
     // Si el primero no está habilitado, intentamos automáticamente con el alternativo.
