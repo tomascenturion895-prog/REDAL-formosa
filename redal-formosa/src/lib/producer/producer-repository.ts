@@ -93,6 +93,20 @@ export class ProducerRepository {
     return row.id;
   }
 
+  /** Edita los datos de contacto y la descripción del emprendimiento (no cambia dueño ni estado). */
+  async updateEmprendimiento(emprendimientoId: string, changes: Omit<NewEmprendimiento, "ownerId">): Promise<void> {
+    const { error } = await this.db
+      .from("emprendimientos")
+      .update({
+        nombre: changes.nombre,
+        descripcion: changes.descripcion ?? null,
+        telefono: changes.telefono ?? null,
+        email: changes.email ?? null,
+      })
+      .eq("id", emprendimientoId);
+    if (error) throw new RepositoryError(`editar emprendimiento: ${error.message}`, error);
+  }
+
   async setLocation(emprendimientoId: string, location: EmprendimientoLocation): Promise<void> {
     const { error } = await this.db.from("emprendimientos").update(location).eq("id", emprendimientoId);
     if (error) throw new RepositoryError(`guardar ubicación: ${error.message}`, error);
