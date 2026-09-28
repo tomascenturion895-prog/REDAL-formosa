@@ -1,17 +1,15 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Portal B2B', () => {
-  test('debe cargar la página del portal B2B con sus beneficios y secciones', async ({ page }) => {
+test.describe('Compras mayoristas', () => {
+  test('la página presenta el canal y pide ingresar para solicitar cotización', async ({ page }) => {
     await page.goto('/b2b');
 
-    // Verificar breadcrumbs y título
-    await expect(page.locator('text=Portal B2B & Mayoristas')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /Comprá por volumen/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Directo de la chacra' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Pedí tu cotización' })).toBeVisible();
 
-    // Verificar las secciones usando los títulos (hero, beneficios, etc)
-    // El Hero suele tener H1 o H2 importantes (no puedo ver exacto el contenido de B2BHero pero busco enlaces del banner)
-    await expect(page.locator('text=Ver perfil de Chacra La Esperanza')).toBeVisible();
-
-    // El catálogo B2BSection probablemente tiene algún título, pero con verificar que carga es un buen smoke test.
-    await expect(page.locator('nav[aria-label="Breadcrumb"]')).toBeVisible();
+    // Sin sesión no se muestra el formulario: se invita a ingresar y se vuelve a /b2b.
+    const login = page.getByRole('link', { name: 'Ingresar' }).last();
+    await expect(login).toHaveAttribute('href', '/login?next=%2Fb2b');
   });
 });

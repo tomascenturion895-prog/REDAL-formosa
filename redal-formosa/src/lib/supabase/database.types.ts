@@ -964,6 +964,68 @@ export type Database = {
           },
         ]
       }
+      solicitudes_b2b: {
+        Row: {
+          contacto_nombre: string
+          created_at: string
+          cuit: string | null
+          estado: string
+          expires_at: string
+          frecuencia: string
+          id: string
+          localidad: string
+          mensaje: string | null
+          productos: string
+          razon_social: string
+          telefono: string
+          tipo_comercio: string
+          user_id: string
+          volumen: string
+        }
+        Insert: {
+          contacto_nombre: string
+          created_at?: string
+          cuit?: string | null
+          estado?: string
+          expires_at?: string
+          frecuencia: string
+          id?: string
+          localidad: string
+          mensaje?: string | null
+          productos: string
+          razon_social: string
+          telefono: string
+          tipo_comercio: string
+          user_id: string
+          volumen: string
+        }
+        Update: {
+          contacto_nombre?: string
+          created_at?: string
+          cuit?: string | null
+          estado?: string
+          expires_at?: string
+          frecuencia?: string
+          id?: string
+          localidad?: string
+          mensaje?: string | null
+          productos?: string
+          razon_social?: string
+          telefono?: string
+          tipo_comercio?: string
+          user_id?: string
+          volumen?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitudes_b2b_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spatial_ref_sys: {
         Row: {
           auth_name: string | null
@@ -1665,7 +1727,23 @@ export type Database = {
         }
         Returns: undefined
       }
+      cerrar_solicitud_b2b: { Args: { p_id: string }; Returns: undefined }
       calcular_envio: { Args: { cantidad_lineas: number }; Returns: number }
+      crear_solicitud_b2b: {
+        Args: {
+          p_contacto: string
+          p_cuit: string
+          p_frecuencia: string
+          p_localidad: string
+          p_mensaje: string
+          p_productos: string
+          p_razon_social: string
+          p_telefono: string
+          p_tipo: string
+          p_volumen: string
+        }
+        Returns: string
+      }
       crear_pedido: {
         Args: {
           p_direccion: string
@@ -1900,6 +1978,23 @@ export type Database = {
           id: string
           nombre: string
           tipo_vehiculo: Database["public"]["Enums"]["vehicle_type"]
+        }[]
+      }
+      productor_solicitudes_b2b: {
+        Args: never
+        Returns: {
+          contacto_nombre: string
+          created_at: string
+          expires_at: string
+          frecuencia: string
+          id: string
+          localidad: string
+          mensaje: string
+          productos: string
+          razon_social: string
+          telefono: string
+          tipo_comercio: string
+          volumen: string
         }[]
       }
       productos_mas_vendidos: {
