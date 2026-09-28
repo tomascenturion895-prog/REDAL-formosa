@@ -21,7 +21,20 @@ export interface SellerOrder {
   emprendimiento_id: string;
   emprendimiento_nombre: string;
   items: SellerOrderItem[];
+  /** Repartidor asignado (null si entrega el propio emprendimiento o todavía no se eligió). */
+  repartidor_id: string | null;
+  repartidor_nombre: string | null;
 }
+
+/** Repartidor que un vendedor puede elegir. La base solo le muestra el primer nombre y el vehículo. */
+export interface CourierOption {
+  id: string;
+  nombre: string;
+  tipo_vehiculo: string;
+}
+
+/** Mientras el pedido no salió todavía se puede elegir o cambiar quién lo lleva. */
+export const canAssignCourier = (estado: OrderStatus) => estado === "pagado" || estado === "en_preparacion" || estado === "listo";
 
 /** Lo que el vendedor puede hacer con un pedido. Las dos últimas etapas cubren la entrega propia o el retiro. */
 export const NEXT_STEP: Partial<Record<OrderStatus, { estado: OrderStatus; label: string }>> = {

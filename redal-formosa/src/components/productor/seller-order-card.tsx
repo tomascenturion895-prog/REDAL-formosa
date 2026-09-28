@@ -3,7 +3,7 @@
 import { WhatsAppButton } from "@/components/contact/whatsapp-button";
 import { MapPinIcon } from "@/components/ui/icons";
 import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/domain/order-status";
-import { buyerMessage, extractBuyerPhone, NEXT_STEP, timeAgo, type SellerOrder } from "@/lib/domain/seller-orders";
+import { buyerMessage, canAssignCourier, extractBuyerPhone, NEXT_STEP, timeAgo, type CourierOption, type SellerOrder } from "@/lib/domain/seller-orders";
 import { formatPrice } from "@/lib/format";
 
 interface SellerOrderCardProps {
@@ -12,9 +12,14 @@ interface SellerOrderCardProps {
   onAdvance: (order: SellerOrder) => void;
   /** Mostrar el nombre del emprendimiento (cuando la persona tiene más de uno). */
   showStore?: boolean;
+  /** Repartidores disponibles; si es null/vacío no se ofrece elegir (entrega el propio emprendimiento). */
+  couriers?: CourierOption[] | null;
+  onAssign?: (order: SellerOrder, courierId: string | null) => void;
 }
 
-export function SellerOrderCard({ order, busy, onAdvance, showStore }: SellerOrderCardProps) {
+const VEHICLE_LABEL: Record<string, string> = { bicicleta: "bici", moto: "moto", auto: "auto", camion: "camión" };
+
+export function SellerOrderCard({ order, busy, onAdvance, showStore, couriers, onAssign }: SellerOrderCardProps) {
   const step = NEXT_STEP[order.estado];
   const phone = extractBuyerPhone(order.nota_cliente);
   const note = order.nota_cliente?.replace(/Tel:\s*[+\d][\d\s().-]{5,}\s*(·\s*)?/i, "").trim();
@@ -53,6 +58,27 @@ export function SellerOrderCard({ order, busy, onAdvance, showStore }: SellerOrd
           )}
           {note && <p className="text-muted">Nota: {note}</p>}
         </div>
+      )}
+
+      {onAssign && couriers && couriers.length > 0 && canAssignCourier(order.estado) ? (
+        <label className="block text-sm font-medium">
+          Quién lo entrega
+          <select
+            value={order.repartidor_id ?? ""}
+            disabled={busy}
+            onChange={(e) => onAssign(order, e.target.value || null)}
+            className="field mt-1"
+          >
+            <option value="">Lo entrego yo / retira el comprador</option>
+            {couriers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre} ({VEHICLE_LABEL[c.tipo_vehiculo] ?? c.tipo_vehiculo})
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        order.repartidor_nombre && <p className="text-sm text-muted">Lo entrega {order.repartidor_nombre}.</p>
       )}
 
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">

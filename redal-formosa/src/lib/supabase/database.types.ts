@@ -1560,6 +1560,14 @@ export type Database = {
           total_usuarios: number
         }[]
       }
+      admin_alta_repartidor: {
+        Args: {
+          p_email: string
+          p_vehiculo: Database["public"]["Enums"]["vehicle_type"]
+        }
+        Returns: string
+      }
+      admin_baja_repartidor: { Args: { p_id: string }; Returns: undefined }
       admin_list_users: {
         Args: never
         Returns: {
@@ -1600,6 +1608,19 @@ export type Database = {
         }[]
       }
       admin_resumen: { Args: never; Returns: Json }
+      admin_repartidores: {
+        Args: never
+        Returns: {
+          activo: boolean
+          email: string
+          entregas_activas: number
+          full_name: string
+          id: string
+          tipo_vehiculo: Database["public"]["Enums"]["vehicle_type"]
+          user_id: string
+          viajes_completados: number
+        }[]
+      }
       admin_review_product: {
         Args: { approve: boolean; product_id: string; reason?: string }
         Returns: undefined
@@ -1807,6 +1828,10 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      productor_asignar_repartidor: {
+        Args: { p_pedido_id: string; p_repartidor_id: string }
+        Returns: undefined
+      }
       productor_avanzar_pedido: {
         Args: {
           p_estado: Database["public"]["Enums"]["order_status"]
@@ -1829,6 +1854,23 @@ export type Database = {
           monto_total: number
           nota_cliente: string
           numero_pedido: string
+          repartidor_id: string
+          repartidor_nombre: string
+        }[]
+      }
+      repartidor_avanzar_pedido: {
+        Args: {
+          p_estado: Database["public"]["Enums"]["order_status"]
+          p_pedido_id: string
+        }
+        Returns: undefined
+      }
+      productor_repartidores: {
+        Args: never
+        Returns: {
+          id: string
+          nombre: string
+          tipo_vehiculo: Database["public"]["Enums"]["vehicle_type"]
         }[]
       }
       productos_mas_vendidos: {
