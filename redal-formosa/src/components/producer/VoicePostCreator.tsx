@@ -10,7 +10,7 @@ export function VoicePostCreator() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  
+
   const recorderRef = useRef<any>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -33,7 +33,7 @@ export function VoicePostCreator() {
     setIsRecording(false);
     if (!recorderRef.current) return;
     setIsProcessing(true);
-    
+
     recorderRef.current.stopRecording(async () => {
       try {
         const blob = recorderRef.current.getBlob();
@@ -68,14 +68,14 @@ export function VoicePostCreator() {
       setSuccessMsg("");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      
+
       const RecordRTCModule = await import("recordrtc");
       const RecordRTC = RecordRTCModule.default;
       const { StereoAudioRecorder } = RecordRTCModule;
 
       const recorder = new RecordRTC(stream, {
         type: "audio",
-        mimeType: "audio/wav",
+        mimeType: "audio/webm",
         recorderType: StereoAudioRecorder,
         numberOfAudioChannels: 1,
         desiredSampRate: 16000
@@ -129,30 +129,28 @@ export function VoicePostCreator() {
       <p className="text-sm text-muted mb-4">
         Usá tu voz para contarle a tus clientes qué tenés fresco hoy.
       </p>
-      
+
       <div className="relative">
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder={isRecording ? "Escuchando... hablá ahora" : isProcessing ? "Procesando voz a texto..." : "¿Qué querés contar hoy?"}
           disabled={isProcessing || isPublishing}
-          className={`w-full min-h-[100px] resize-none rounded-lg bg-surface-muted p-4 pr-14 text-sm outline-none transition-all focus:ring-2 focus:ring-action/20 ${
-            isRecording ? "border-action ring-2 ring-action/30" : "border border-border"
-          } ${isProcessing || isPublishing ? "opacity-70 cursor-not-allowed" : ""}`}
+          className={`w-full min-h-[100px] resize-none rounded-lg bg-surface-muted p-4 pr-14 text-sm outline-none transition-all focus:ring-2 focus:ring-action/20 ${isRecording ? "border-action ring-2 ring-action/30" : "border border-border"
+            } ${isProcessing || isPublishing ? "opacity-70 cursor-not-allowed" : ""}`}
         />
-        
+
         <button
           type="button"
           onClick={toggleRecording}
           disabled={isProcessing || isPublishing}
           title={isRecording ? "Detener grabación" : "Dictar por voz"}
-          className={`absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-full transition-all ${
-            isRecording 
-              ? "bg-action text-on-action animate-pulse shadow-md scale-110" 
+          className={`absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-full transition-all ${isRecording
+              ? "bg-action text-on-action animate-pulse shadow-md scale-110"
               : isProcessing
                 ? "bg-surface-muted text-muted cursor-not-allowed"
                 : "bg-surface text-muted hover:bg-action hover:text-on-action shadow-sm border border-border hover:border-transparent"
-          }`}
+            }`}
         >
           <MicIcon size={20} />
         </button>

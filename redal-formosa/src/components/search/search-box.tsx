@@ -12,7 +12,7 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  
+
   const recorderRef = useRef<any>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -46,11 +46,11 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
 
   const stopVoiceSearch = async () => {
     setIsRecording(false);
-    
+
     if (!recorderRef.current) return;
 
     setIsProcessing(true);
-    
+
     recorderRef.current.stopRecording(async () => {
       try {
         const blob = recorderRef.current.getBlob();
@@ -65,14 +65,14 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
           body: formData,
         });
 
-        const data = await res.json().catch(() => ({}));
-
-        // Un fallo esperable (sin clave, sin saldo, audio vacío) se muestra en pantalla, sin romper la página.
         if (!res.ok) {
-          setErrorMsg(typeof data.error === "string" ? data.error : "Error al procesar el audio");
-          return;
+          const errData = await res.json().catch(() => null);
+          const detail = errData?.details || errData?.error || res.statusText;
+          throw new Error(`Error del servidor (${res.status}): ${detail}`);
         }
-        
+
+        const data = await res.json();
+
         if (data.text) {
           setQuery(data.text);
           // Auto submit con el resultado
@@ -93,14 +93,14 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
       setErrorMsg("");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      
+
       const RecordRTCModule = await import("recordrtc");
       const RecordRTC = RecordRTCModule.default;
       const { StereoAudioRecorder } = RecordRTCModule;
 
       const recorder = new RecordRTC(stream, {
         type: "audio",
-        mimeType: "audio/wav",
+        mimeType: "audio/webm;codecs=opus",
         recorderType: StereoAudioRecorder,
         numberOfAudioChannels: 1,
         desiredSampRate: 16000
@@ -139,22 +139,20 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
         onChange={(e) => setQuery(e.target.value)}
         placeholder={isRecording ? "Hablá y volvé a hacer clic..." : isProcessing ? "Procesando..." : placeholder}
         disabled={isProcessing}
-        className={`field !rounded-full !bg-surface-muted !py-2 !pl-10 !pr-10 text-sm transition-all ${
-          isRecording ? "!border-action/50 !ring-2 !ring-action/20" : ""
-        } ${isProcessing ? "opacity-70 cursor-not-allowed" : ""}`}
+        className={`field !rounded-full !bg-surface-muted !py-2 !pl-10 !pr-10 text-sm transition-all ${isRecording ? "!border-action/50 !ring-2 !ring-action/20" : ""
+          } ${isProcessing ? "opacity-70 cursor-not-allowed" : ""}`}
       />
       <button
         type="button"
         onClick={toggleVoiceSearch}
         disabled={isProcessing}
         title={isRecording ? "Detener grabación" : "Búsqueda por voz"}
-        className={`absolute right-2 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-          isRecording 
-            ? "bg-action text-on-action animate-pulse shadow-sm" 
+        className={`absolute right-2 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full transition-colors ${isRecording
+            ? "bg-action text-on-action animate-pulse shadow-sm"
             : isProcessing
               ? "text-muted/50 cursor-not-allowed"
               : "text-muted hover:bg-surface hover:text-foreground"
-        }`}
+          }`}
       >
         <MicIcon size={16} />
       </button>
