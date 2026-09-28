@@ -57,6 +57,7 @@ function fakeGateway(payment: Partial<PaymentInfo> = {}, authentic = true): Paym
     createCheckout: vi.fn(),
     getPayment: vi.fn(async () => ({ id: "pay-1", orderId: "order-1", outcome: "approved" as const, amount: 3150, ...payment })),
     verifyWebhook: vi.fn(() => authentic),
+    refund: vi.fn(),
   };
 }
 
