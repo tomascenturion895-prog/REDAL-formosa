@@ -10,6 +10,7 @@ import { producerRepository } from "@/lib/producer/producer-repository";
 import { VoicePostCreator } from "@/components/producer/VoicePostCreator";
 import { ProductForm } from "@/components/productor/product-form";
 import { ProductList } from "@/components/productor/product-list";
+import { ProductorForm } from "@/components/productor/productor-form";
 import { SucursalesForm } from "@/components/productor/sucursales-form";
 import { TodayPanel, type ChecklistItem } from "@/components/productor/today-panel";
 import { VoiceQuickAdd } from "@/components/productor/voice-quick-add";
@@ -142,6 +143,12 @@ export default function ProductorDashboard() {
               <dd className="font-medium">{selected.direccion || "Sin cargar"}</dd>
             </div>
           </dl>
+          <details className="rounded-control border border-border">
+            <summary className="cursor-pointer px-3 py-2 font-medium">Editar nombre y contacto</summary>
+            <div className="border-t border-border p-3">
+              <ProductorForm key={selected.id} userId={user!.id} emprendimiento={selected} onSuccess={reload} />
+            </div>
+          </details>
           <details id="ubicacion" className="rounded-control border border-border" open={selected.latitud == null}>
             <summary className="cursor-pointer px-3 py-2 font-medium">
               {selected.latitud != null && selected.longitud != null ? "Editar ubicación y horarios" : "Ubicar en el mapa"}
