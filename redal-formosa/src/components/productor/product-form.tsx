@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
+import { editSendsToReview } from "@/lib/domain/product-edit";
 import { stockNote, type VoiceProductDraft } from "@/lib/domain/voice-product";
-import { producerRepository } from "@/lib/producer/producer-repository";
+import { producerRepository, type Product } from "@/lib/producer/producer-repository";
 import { VoiceToProduct } from "./voice-to-product";
 import { Alert } from "@/components/ui/alert";
 import { Field } from "@/components/ui/field";
@@ -12,6 +13,9 @@ import { ProductImage } from "@/components/ui/product-image";
 interface ProductFormProps {
   emprendimientoId: string;
   onSuccess?: () => void;
+  /** Si se pasa, el formulario edita ese producto en vez de crear uno nuevo. */
+  product?: Product;
+  onCancel?: () => void;
 }
 
 const UNITS = [
@@ -24,9 +28,14 @@ const UNITS = [
 
 const EMPTY = { nombre: "", descripcion: "", precio: "", unidad: "unidad" };
 
-export function ProductForm({ emprendimientoId, onSuccess }: ProductFormProps) {
-  const [form, setForm] = useState(EMPTY);
-  const [imageUrl, setImageUrl] = useState("");
+export function ProductForm({ emprendimientoId, onSuccess, product, onCancel }: ProductFormProps) {
+  const uid = useId();
+  const [form, setForm] = useState(
+    product
+      ? { nombre: product.nombre, descripcion: product.descripcion ?? "", precio: String(product.precio), unidad: product.unidad }
+      : EMPTY,
+  );
+  const [imageUrl, setImageUrl] = useState(product?.imagen_url ?? "");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,56 +74,80 @@ export function ProductForm({ emprendimientoId, onSuccess }: ProductFormProps) {
     setError(null);
     setSaving(true);
     try {
-      await producerRepository.createProduct({
-        emprendimientoId,
-        nombre: form.nombre.trim(),
-        descripcion: form.descripcion.trim(),
-        precio: parseFloat(form.precio),
-        unidad: form.unidad,
-        imagenUrl: imageUrl,
-      });
-      setForm(EMPTY);
-      setImageUrl("");
+      if (product) {
+        await producerRepository.updateProduct(product.id, {
+          nombre: form.nombre.trim(),
+          descripcion: form.descripcion.trim(),
+          precio: parseFloat(form.precio),
+          unidad: form.unidad,
+          imagenUrl: imageUrl || null,
+        });
+      } else {
+        await producerRepository.createProduct({
+          emprendimientoId,
+          nombre: form.nombre.trim(),
+          descripcion: form.descripcion.trim(),
+          precio: parseFloat(form.precio),
+          unidad: form.unidad,
+          imagenUrl: imageUrl,
+        });
+        setForm(EMPTY);
+        setImageUrl("");
+      }
       onSuccess?.();
     } catch {
-      setError("No pudimos crear el producto. Revisá los datos e intentá de nuevo.");
+      setError(product ? "No pudimos guardar los cambios. Revisá los datos e intentá de nuevo." : "No pudimos crear el producto. Revisá los datos e intentá de nuevo.");
     } finally {
       setSaving(false);
     }
   };
 
+  // Solo avisa cuando el producto ya estaba aprobado o rechazado: uno nuevo siempre pasa por revisión.
+  const willReview =
+    Boolean(product) &&
+    editSendsToReview(
+      { nombre: product!.nombre, descripcion: product!.descripcion, imagen_url: product!.imagen_url },
+      { nombre: form.nombre, descripcion: form.descripcion, imagen_url: imageUrl || null },
+    );
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && <Alert tone="error">{error}</Alert>}
 
-      <VoiceToProduct onDraft={applyDraft} />
+      {!product && <VoiceToProduct onDraft={applyDraft} />}
+      {product && willReview && (
+        <Alert tone="warning">
+          Cambiaste el nombre, la descripción o la foto: el producto vuelve a revisión y se muestra de nuevo cuando un administrador lo apruebe.
+        </Alert>
+      )}
 
-      <Field id="nombre" label="Nombre del producto">
-        <input id="nombre" required value={form.nombre} onChange={update("nombre")} placeholder="Ej: Miel pura de abeja" className="field" />
+      <Field id={`${uid}-nombre`} label="Nombre del producto">
+        <input id={`${uid}-nombre`} required value={form.nombre} onChange={update("nombre")} placeholder="Ej: Miel pura de abeja" className="field" />
       </Field>
 
-      <Field id="descripcion" label="Descripción" optional>
-        <textarea id="descripcion" rows={3} value={form.descripcion} onChange={update("descripcion")} placeholder="Contá cómo es y cómo se produce" className="field" />
+      <Field id={`${uid}-descripcion`} label="Descripción" optional>
+        <textarea id={`${uid}-descripcion`} rows={3} value={form.descripcion} onChange={update("descripcion")} placeholder="Contá cómo es y cómo se produce" className="field" />
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Field id="precio" label="Precio ($)">
-          <input id="precio" type="number" required step="0.01" min="0" value={form.precio} onChange={update("precio")} placeholder="0" className="field" />
+        <Field id={`${uid}-precio`} label="Precio ($)">
+          <input id={`${uid}-precio`} type="number" required step="0.01" min="0" value={form.precio} onChange={update("precio")} placeholder="0" className="field" />
         </Field>
 
-        <Field id="unidad" label="Se vende por">
-          <select id="unidad" value={form.unidad} onChange={update("unidad")} className="field">
+        <Field id={`${uid}-unidad`} label="Se vende por">
+          <select id={`${uid}-unidad`} value={form.unidad} onChange={update("unidad")} className="field">
             {UNITS.map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
             ))}
+            {!UNITS.some(([value]) => value === form.unidad) && <option value={form.unidad}>{form.unidad}</option>}
           </select>
         </Field>
 
-        <Field id="imagen" label="Foto" optional hint="JPG, PNG o WebP, hasta 5 MB.">
+        <Field id={`${uid}-imagen`} label="Foto" optional hint="JPG, PNG o WebP, hasta 5 MB.">
           <input
-            id="imagen"
+            id={`${uid}-imagen`}
             type="file"
             accept="image/jpeg,image/png,image/webp"
             disabled={uploading}
@@ -131,8 +164,13 @@ export function ProductForm({ emprendimientoId, onSuccess }: ProductFormProps) {
       )}
 
       <button type="submit" disabled={saving || uploading} aria-busy={saving || uploading} className="btn btn-primary w-full !py-3">
-        {saving ? "Guardando…" : uploading ? "Subiendo foto…" : "Agregar producto"}
+        {saving ? "Guardando…" : uploading ? "Subiendo foto…" : product ? "Guardar cambios" : "Agregar producto"}
       </button>
+      {product && onCancel && (
+        <button type="button" onClick={onCancel} className="btn btn-secondary w-full">
+          Cancelar
+        </button>
+      )}
     </form>
   );
 }
