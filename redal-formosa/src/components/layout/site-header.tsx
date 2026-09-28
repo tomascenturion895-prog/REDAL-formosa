@@ -12,12 +12,12 @@ export function SiteHeader() {
       <div className="page-container flex h-[4.5rem] items-center gap-2 sm:gap-4 lg:gap-6">
         <Logo />
 
-        <div className="ml-2 hidden md:block">
+        <div className="ml-2 hidden xl:block">
           <NavLinks />
         </div>
 
-        <div className="ml-auto flex items-center gap-1 sm:gap-3">
-          <div className="hidden w-56 xl:block">
+        <div className="ml-auto flex min-w-0 items-center gap-1 sm:gap-3">
+          <div className="hidden w-56 min-w-36 shrink xl:block">
             <Suspense fallback={null}>
               <SearchBox />
             </Suspense>
