@@ -1,80 +1,48 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 
-type Post = {
-  id: number;
-  content: string;
-  author: string;
-  date: string;
-};
+import { useAsync } from "@/lib/hooks/use-async";
+import { novedadesRepository } from "@/lib/novedades/novedades-repository";
 
+const dateFormat = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+/** Últimas novedades publicadas por los emprendimientos. Si no hay ninguna (o falla la carga), no ocupa lugar. */
 export function ProducerFeed() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/posts")
-      .then((res) => res.json())
-      .then((data) => {
-        setPosts(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
+  const { data: novedades, loading } = useAsync(() => novedadesRepository.latest(6), []);
 
   if (loading) {
     return (
-      <div className="w-full space-y-4 animate-pulse">
-        <div className="h-24 rounded-xl bg-surface-muted"></div>
-        <div className="h-24 rounded-xl bg-surface-muted"></div>
+      <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
+        <div className="card h-28 animate-pulse bg-surface-muted" />
+        <div className="card hidden h-28 animate-pulse bg-surface-muted md:block" />
+        <div className="card hidden h-28 animate-pulse bg-surface-muted lg:block" />
       </div>
     );
   }
 
-  if (posts.length === 0) {
-    return null; // No mostrar si no hay posts
-  }
+  if (!novedades || novedades.length === 0) return null;
 
   return (
-    <div className="w-full mb-12">
-      <div className="flex items-center gap-3 mb-6">
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">
-          Novedades de Productores
-        </h2>
-        <span className="flex h-6 items-center rounded-full bg-emerald-100 px-3 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-          En vivo
-        </span>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {posts.slice(0, 6).map((post) => (
-          <div 
-            key={post.id} 
-            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md"
-          >
-            <div className="absolute right-0 top-0 h-24 w-24 -translate-y-8 translate-x-8 rounded-full bg-emerald-500/10 blur-2xl transition-all group-hover:bg-emerald-500/20" />
-            
-            <div className="relative">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold">
-                  {post.author.charAt(0)}
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground">{post.author}</h4>
-                  <p className="text-xs text-muted">
-                    {new Date(post.date).toLocaleDateString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-              </div>
-              
-              <p className="text-sm leading-relaxed text-foreground/90 font-medium">
-                "{post.content}"
-              </p>
+    <section aria-labelledby="novedades-title" className="space-y-5">
+      <h2 id="novedades-title" className="text-heading">
+        Novedades de los emprendimientos
+      </h2>
+      <ul className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        {novedades.map((novedad) => (
+          <li key={novedad.id} className="card flex flex-col justify-between gap-4 p-5">
+            <p className="text-sm leading-relaxed">«{novedad.contenido}»</p>
+            <div className="flex items-center justify-between gap-3 text-xs text-muted">
+              <Link href={`/emprendimientos/${novedad.emprendimientoId}`} className="truncate font-semibold text-action hover:underline">
+                {novedad.emprendimientoNombre}
+              </Link>
+              <time dateTime={novedad.createdAt} className="shrink-0">
+                {dateFormat.format(new Date(novedad.createdAt))}
+              </time>
             </div>
-          </div>
+          </li>
         ))}
-      </div>
-    </div>
+      </ul>
+    </section>
   );
 }
