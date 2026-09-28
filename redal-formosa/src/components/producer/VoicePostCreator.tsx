@@ -75,7 +75,7 @@ export function VoicePostCreator() {
 
       const recorder = new RecordRTC(stream, {
         type: "audio",
-        mimeType: "audio/webm;codecs=opus",
+        mimeType: "audio/webm",
         recorderType: StereoAudioRecorder,
         numberOfAudioChannels: 1,
         desiredSampRate: 16000
