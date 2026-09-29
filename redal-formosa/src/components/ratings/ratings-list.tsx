@@ -7,6 +7,7 @@ import { useAsync } from "@/lib/hooks/use-async";
 import { ratingsRepository } from "@/lib/ratings/ratings-repository";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StarRating } from "./star-rating";
+import { PageLoading } from "@/components/ui/skeleton";
 
 interface RatingsListProps {
   productoId: string;
@@ -35,7 +36,7 @@ export function RatingsList({ productoId, limit = 10 }: RatingsListProps) {
     }
   };
 
-  if (loading && !ratings) return <div aria-busy="true" className="h-16" />;
+  if (loading && !ratings) return <PageLoading compact />;
 
   if (error) {
     return <p className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">No pudimos cargar las calificaciones.</p>;

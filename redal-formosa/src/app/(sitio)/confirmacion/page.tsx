@@ -15,8 +15,10 @@ import { MercadoPagoBadge } from "@/components/payment/mercadopago-badge";
 import { OrderProgress } from "@/components/payment/order-progress";
 import { RedirectOverlay } from "@/components/payment/redirect-overlay";
 import { Alert } from "@/components/ui/alert";
+import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckIcon, PackageIcon, WalletIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 const POLL_MS = 4000;
 const MAX_POLLS = 8;
@@ -27,7 +29,7 @@ function ConfirmacionContent() {
   const returnStatus = params.get("status") || params.get("collection_status");
   const { user, pending } = useRequireAuth();
 
-  const { data: pedido, loading, reload } = useAsync(() => ordersRepository.getConfirmation(pedidoId!), [pedidoId], {
+  const { data: pedido, error, loading, reload } = useAsync(() => ordersRepository.getConfirmation(pedidoId!), [pedidoId], {
     enabled: Boolean(user && pedidoId),
   });
 
@@ -35,60 +37,20 @@ function ConfirmacionContent() {
   const [redirecting, setRedirecting] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
 
-  // Detección automática al volver de Mercado Pago (back_urls)
-  useEffect(() => {
-    const estadoPago = params.get("pago") || params.get("status") || params.get("collection_status");
-    const ordenId = params.get("orden_id") || params.get("pedido") || params.get("external_reference");
-    const paymentId = params.get("payment_id") || params.get("collection_id");
-
-    if (ordenId) {
-      if (estadoPago === "aprobado" || estadoPago === "approved") {
-        fetch("/api/pagos/confirmar-retorno", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orden_id: ordenId, payment_id: paymentId }),
-        })
-          .then(() => reload())
-          .catch((err) => console.error("Error confirmando retorno:", err));
-      }
-
-      fetch(`/api/pagos/verificar-pago/${ordenId}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.confirmado) reload();
-        })
-        .catch(() => {});
-    }
-  }, [params, reload]);
-
   // Al volver de Mercado Pago el webhook puede tardar unos segundos en confirmar el pago.
   const waitingForWebhook =
     pedido?.estado === "pendiente_pago" &&
-    (returnStatus === "approved" ||
-      params.get("pago") === "aprobado" ||
-      params.get("collection_status") === "approved");
+    (returnStatus === "approved" || params.get("collection_status") === "approved");
 
   useEffect(() => {
     if (!waitingForWebhook) return;
-    const ordenId = params.get("orden_id") || params.get("pedido") || params.get("external_reference");
     let polls = 0;
     const timer = setInterval(() => {
-      if (++polls > MAX_POLLS) {
-        clearInterval(timer);
-      } else {
-        if (ordenId) {
-          fetch(`/api/pagos/verificar-pago/${ordenId}`)
-            .then((r) => r.json())
-            .then((d) => {
-              if (d.confirmado) reload();
-            })
-            .catch(() => {});
-        }
-        reload();
-      }
+      if (++polls > MAX_POLLS) clearInterval(timer);
+      else reload();
     }, POLL_MS);
     return () => clearInterval(timer);
-  }, [waitingForWebhook, reload, params]);
+  }, [waitingForWebhook, reload]);
 
   const retryPayment = async () => {
     if (!pedido) return;
@@ -104,7 +66,16 @@ function ConfirmacionContent() {
     }
   };
 
-  if (pending || loading) return <div className="page-container py-section" aria-busy="true" />;
+  // Con `loading && !pedido` la pantalla no se vacía en cada recarga del sondeo.
+  if (pending || (loading && !pedido)) return <PageLoading />;
+
+  if (error && !pedido) {
+    return (
+      <div className="page-container py-section">
+        <LoadError title="No pudimos cargar tu pedido" description="Tu pedido no se perdió: lo ves en Mis pedidos." onRetry={reload} />
+      </div>
+    );
+  }
 
   if (!pedido) {
     return (

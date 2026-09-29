@@ -1,3 +1,5 @@
+import { logError } from "../logger";
+
 type Handler<T> = (payload: T) => Promise<void> | void;
 
 /**
@@ -20,7 +22,7 @@ export class EventBus<Events extends object> {
     // async envuelve también las excepciones síncronas del handler en una promesa rechazada.
     const results = await Promise.allSettled((this.handlers[event] ?? []).map(async (h) => h(payload)));
     for (const r of results) {
-      if (r.status === "rejected") console.error(`Handler de "${String(event)}" falló:`, r.reason);
+      if (r.status === "rejected") logError(`Handler de "${String(event)}" falló`, r.reason);
     }
   }
 }

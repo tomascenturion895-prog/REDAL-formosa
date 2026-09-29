@@ -2,6 +2,7 @@ import { DEFAULT_PREFERENCES } from "@/lib/domain/notification-preferences";
 import type { Db } from "@/lib/supabase/types";
 import type { NotificationChannel, NotificationMessage } from "./channel";
 import { orderPaidEmail, orderPaidSms, type OrderPaidData } from "./templates";
+import { logError } from "@/server/logger";
 
 /**
  * Avisa a la persona compradora según sus preferencias. Depende de canales abstractos
@@ -57,7 +58,7 @@ export class OrderNotifier {
       await channel.send(to, message);
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
-      console.error(`Falló el envío por ${channel.kind}:`, error);
+      logError(`Falló el envío por ${channel.kind}`, error);
     }
 
     await this.db.from("notificaciones").insert({

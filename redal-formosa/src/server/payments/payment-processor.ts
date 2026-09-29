@@ -2,6 +2,7 @@ import type { Db } from "@/lib/supabase/types";
 import type { OrderEventBus } from "@/server/events/order-events";
 import { ServiceError } from "@/server/errors";
 import type { PaymentGateway, PaymentOutcome } from "./payment-gateway";
+import { logError } from "@/server/logger";
 
 export interface PaymentNotification {
   type?: string;
@@ -19,6 +20,14 @@ const ROW_STATE: Record<PaymentOutcome, PaymentRowState> = {
   pending: "pendiente",
   failed: "fallido",
   refunded: "reembolsado",
+};
+
+// Estados del pago que una notificación con el resultado indicado no puede sobrescribir.
+const PROTECTED_FROM: Record<PaymentRowState, PaymentRowState[]> = {
+  aprobado: ["reembolsado"],
+  pendiente: ["aprobado", "reembolsado"],
+  fallido: ["aprobado", "reembolsado"],
+  reembolsado: [],
 };
 
 // Estados en los que el pedido todavía no salió: si se devuelve el dinero, hay que frenarlo.
@@ -60,16 +69,32 @@ export class PaymentProcessor {
     if (!order) throw new ServiceError("not_found", "Pedido inexistente");
 
     let rowState = ROW_STATE[payment.outcome];
+
+    // Otro pago del mismo pedido cuando ya hay uno aprobado (pagó desde dos enlaces): el primero es el que
+    // vale. Si el nuevo también está aprobado se devuelve entero; cualquier otro estado suyo (rechazo,
+    // reembolso del duplicado) no debe tocar ni cancelar el pedido.
+    const { data: current } = await this.db.from("pagos").select("estado, transaccion_id").eq("pedido_id", order.id).maybeSingle();
+    if (current?.estado === "aprobado" && current.transaccion_id && current.transaccion_id !== payment.id) {
+      if (rowState === "aprobado") return await this.refundDuplicate(payment.id, current.transaccion_id, order.id);
+      return { status: "processed", orderId: order.id, paid: false, cancelled: false };
+    }
+    if (rowState === "aprobado" && payment.currency && payment.currency.toUpperCase() !== "ARS") {
+      logError(`Pago ${payment.id} del pedido ${order.id} en ${payment.currency}, no en ARS`);
+      rowState = "fallido";
+    }
     // Un pago aprobado por menos de lo que vale el pedido no lo confirma.
     if (rowState === "aprobado" && payment.amount + AMOUNT_EPSILON < Number(order.monto_total)) {
-      console.error(`Monto insuficiente en el pago ${payment.id} del pedido ${order.id}`);
+      logError(`Monto insuficiente en el pago ${payment.id} del pedido ${order.id}`);
       rowState = "fallido";
     }
 
+    // El estado del pago solo avanza: una notificación tardía (fallido/pendiente) no pisa un pago ya
+    // aprobado o reembolsado, y un reembolsado no vuelve a aprobarse.
     const { error: paymentError } = await this.db
       .from("pagos")
       .update({ estado: rowState, transaccion_id: payment.id })
-      .eq("pedido_id", order.id);
+      .eq("pedido_id", order.id)
+      .not("estado", "in", `(${PROTECTED_FROM[rowState].join(",")})`);
     if (paymentError) throw new Error(`No se pudo actualizar el pago: ${paymentError.message}`);
 
     let paid = false;
@@ -102,9 +127,19 @@ export class PaymentProcessor {
         .select("id");
       if (error) throw new Error(`No se pudo cancelar el pedido reembolsado: ${error.message}`);
       cancelled = (stopped?.length ?? 0) > 0;
-      if (!cancelled) console.error(`Pago ${payment.id} reembolsado con el pedido ${order.id} ya despachado o cerrado`);
+      if (!cancelled) logError(`Pago ${payment.id} reembolsado con el pedido ${order.id} ya despachado o cerrado`);
     }
 
     return { status: "processed", orderId: order.id, paid, cancelled };
+  }
+
+  private async refundDuplicate(duplicateId: string, keptId: string, orderId: string): Promise<ProcessResult> {
+    try {
+      await this.gateway.refund(duplicateId);
+      logError(`Pago duplicado ${duplicateId} del pedido ${orderId} reembolsado (vale el ${keptId})`);
+    } catch (error) {
+      logError(`ALERTA: pago duplicado ${duplicateId} del pedido ${orderId} sin reembolsar (vale el ${keptId})`, error);
+    }
+    return { status: "processed", orderId, paid: false, cancelled: false };
   }
 }

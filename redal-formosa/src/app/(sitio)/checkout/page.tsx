@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { loginHref } from "@/lib/auth/login-href";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useCart } from "@/lib/cart/cart-context";
 import { formatPrice } from "@/lib/format";
@@ -14,6 +15,7 @@ import { CheckoutMercadoPago } from "@/components/payment/checkout-mercadopago";
 import { ProductImage } from "@/components/ui/product-image";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CartIcon, UserIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 function CheckoutContent() {
   const router = useRouter();
@@ -21,6 +23,7 @@ function CheckoutContent() {
   const { ready, groups, clearStore } = useCart();
   const searchParams = useSearchParams();
   const cesta = searchParams.get("cesta");
+  const returnTo = cesta ? `/checkout?cesta=${cesta}` : "/checkout";
 
   const [activeOrder, setActiveOrder] = useState<{
     id: string;
@@ -31,7 +34,7 @@ function CheckoutContent() {
   // Con una sola cesta no hace falta elegir; con varias, se paga la indicada en la URL.
   const group = groups.find((g) => g.emprendimientoId === cesta) ?? (groups.length === 1 ? groups[0] : undefined);
 
-  if (loading || !ready) return <div className="page-container py-section" aria-busy="true" />;
+  if (loading || !ready) return <PageLoading />;
 
   // 1. Si el pedido ya fue creado y estamos en proceso de pago con Mercado Pago:
   if (activeOrder) {
@@ -42,12 +45,11 @@ function CheckoutContent() {
 
         <div className="mx-auto max-w-xl space-y-6">
           <CheckoutMercadoPago
-            ordenId={activeOrder.id}
-            monto={activeOrder.monto}
-            tituloItem="Pedido en REDAL Formosa"
-            onPagoAprobado={() => {
+            orderId={activeOrder.id}
+            amount={activeOrder.monto}
+            onPaid={() => {
               clearStore(activeOrder.emprendimientoId);
-              router.push(`/confirmacion?pedido=${activeOrder.id}&pago=aprobado`);
+              router.push(`/confirmacion?pedido=${activeOrder.id}&status=approved`);
             }}
           />
 
@@ -115,10 +117,10 @@ function CheckoutContent() {
           description="Tu carrito queda guardado. Iniciá sesión o creá una cuenta para hacer el pedido."
           action={
             <div className="flex gap-3">
-              <Link href="/login" className="btn btn-primary">
+              <Link href={loginHref(returnTo)} className="btn btn-primary">
                 Ingresar
               </Link>
-              <Link href="/register" className="btn btn-secondary">
+              <Link href={`/register?next=${encodeURIComponent(returnTo)}`} className="btn btn-secondary">
                 Crear cuenta
               </Link>
             </div>
@@ -182,7 +184,7 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={<div className="page-container py-section" aria-busy="true" />}>
+    <Suspense fallback={<PageLoading />}>
       <CheckoutContent />
     </Suspense>
   );

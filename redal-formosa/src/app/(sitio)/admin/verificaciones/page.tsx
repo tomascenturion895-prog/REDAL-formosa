@@ -5,8 +5,10 @@ import { useState } from "react";
 import { adminRepository, type PendingVerification } from "@/lib/admin/admin-repository";
 import { useAsync } from "@/lib/hooks/use-async";
 import { Alert } from "@/components/ui/alert";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckIcon, ShieldIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 const DOCUMENTS = [
   { key: "dni_frente_url", label: "DNI, frente" },
@@ -43,6 +45,7 @@ export default function VerificacionesPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [approving, setApproving] = useState<PendingVerification | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const decide = async (item: PendingVerification, approve: boolean) => {
@@ -61,7 +64,7 @@ export default function VerificacionesPage() {
   };
 
   if (loadError) return <Alert tone="error">No pudimos cargar las verificaciones pendientes.</Alert>;
-  if (!pending) return <div aria-busy="true" className="h-40" />;
+  if (!pending) return <PageLoading compact />;
 
   if (pending.length === 0) {
     return (
@@ -127,7 +130,7 @@ export default function VerificacionesPage() {
               </div>
             ) : (
               <div className="flex flex-col gap-2 sm:flex-row">
-                <button type="button" disabled={busy === item.id} aria-busy={busy === item.id} onClick={() => decide(item, true)} className="btn btn-primary btn-sm">
+                <button type="button" disabled={busy === item.id} aria-busy={busy === item.id} onClick={() => setApproving(item)} className="btn btn-primary btn-sm">
                   Aprobar identidad
                 </button>
                 <button type="button" disabled={busy === item.id} onClick={() => setRejecting(item.id)} className="btn btn-secondary btn-sm">
@@ -138,6 +141,21 @@ export default function VerificacionesPage() {
           </li>
         ))}
       </ul>
+
+      <ConfirmDialog
+        isOpen={approving !== null}
+        onClose={() => setApproving(null)}
+        onConfirm={async () => {
+          if (approving) await decide(approving, true);
+          setApproving(null);
+        }}
+        isLoading={busy !== null}
+        isDestructive={false}
+        title="¿Aprobar esta identidad?"
+        description={`Confirmás que el DNI y la selfie de ${approving?.full_name ?? "esta persona"} coinciden. Va a poder vender y cobrar.`}
+        confirmText="Aprobar identidad"
+        cancelText="Volver"
+      />
     </div>
   );
 }

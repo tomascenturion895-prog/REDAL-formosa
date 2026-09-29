@@ -475,6 +475,18 @@ export type Database = {
         Update: never
         Relationships: []
       }
+      pedido_pin: {
+        Row: {
+          bloqueado_hasta: string | null
+          created_at: string
+          intentos: number
+          pedido_id: string
+          pin: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       pagos: {
         Row: {
           actualizado_en: string | null
@@ -1999,8 +2011,9 @@ export type Database = {
         Args: {
           p_estado: Database["public"]["Enums"]["order_status"]
           p_pedido_id: string
+          p_pin?: string
         }
-        Returns: undefined
+        Returns: string
       }
       productor_pedidos: {
         Args: never
@@ -2025,8 +2038,9 @@ export type Database = {
         Args: {
           p_estado: Database["public"]["Enums"]["order_status"]
           p_pedido_id: string
+          p_pin?: string
         }
-        Returns: undefined
+        Returns: string
       }
       productor_repartidores: {
         Args: never

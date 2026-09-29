@@ -31,5 +31,5 @@ docker compose up -d --build   # reconstruir tras cambiar código o variables NE
 ## Base de datos
 
 Las migraciones están en `supabase/migrations/`. Para aplicar las pendientes en un proyecto de
-Supabase existente, pegá `supabase/pending-migrations.sql` en el SQL Editor (una sola vez), o vinculá el
-proyecto con la CLI (`npx supabase login`, `npx supabase link`, `npx supabase db push`).
+Supabase existente, vinculá el proyecto con la CLI (`npx supabase login`, `npx supabase link`,
+`npx supabase db push`).

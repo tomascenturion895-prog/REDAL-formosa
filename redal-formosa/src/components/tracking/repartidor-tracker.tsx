@@ -33,6 +33,14 @@ export function RepartidorTracker({ repartidorId, destino, isRepartidor = false 
     return watchPosition(
       (position) => {
         setSpeed(position.speed ?? 0);
+        // El repartidor también ve el mapa: su propio punto, el destino y la ruta.
+        setLocation({
+          repartidor_id: repartidorId,
+          latitud: position.latitude,
+          longitud: position.longitude,
+          velocidad: position.speed ?? null,
+          actualizado_en: new Date().toISOString(),
+        });
         trackingService
           .publish(repartidorId, position)
           .then(() => setError(null))

@@ -10,6 +10,7 @@ import {
   type PaymentOutcome,
   type WebhookProof,
 } from "./payment-gateway";
+import { logWarn } from "@/server/logger";
 
 const API_BASE = "https://api.mercadopago.com";
 
@@ -30,6 +31,13 @@ interface MercadoPagoConfig {
 }
 
 /** Adaptador de MercadoPago al puerto PaymentGateway. */
+let warnedMissingSecret = false;
+function warnMissingWebhookSecret(): void {
+  if (warnedMissingSecret || process.env.NODE_ENV !== "production") return;
+  warnedMissingSecret = true;
+  logWarn("MERCADOPAGO_WEBHOOK_SECRET no está configurado: los webhooks no se verifican por firma.");
+}
+
 export class MercadoPagoGateway implements PaymentGateway {
   private http: AxiosInstance | null = null;
 
@@ -61,7 +69,7 @@ export class MercadoPagoGateway implements PaymentGateway {
       ...(request.notificationUrl ? { notification_url: request.notificationUrl } : {}),
     });
     // Con credenciales de prueba MercadoPago entrega sandbox_init_point.
-    return { url: data.init_point ?? data.sandbox_init_point };
+    return { url: data.init_point ?? data.sandbox_init_point, id: data.id ? String(data.id) : undefined };
   }
 
   async getPayment(paymentId: string): Promise<PaymentInfo> {
@@ -71,6 +79,7 @@ export class MercadoPagoGateway implements PaymentGateway {
       orderId: data.external_reference ?? null,
       outcome: OUTCOME[data.status] ?? "pending",
       amount: Number(data.transaction_amount),
+      currency: typeof data.currency_id === "string" ? data.currency_id : undefined,
     };
   }
 
@@ -86,7 +95,11 @@ export class MercadoPagoGateway implements PaymentGateway {
   // manifest = "id:<data.id>;request-id:<x-request-id>;ts:<ts>;" firmado con HMAC-SHA256.
   verifyWebhook({ dataId, signature, requestId }: WebhookProof): boolean {
     const secret = this.config.webhookSecret;
-    if (!secret) return true; // sin secreto, la autenticidad la garantiza getPayment()
+    if (!secret) {
+      // Sin secreto, la autenticidad la garantiza getPayment() (se consulta a Mercado Pago por id).
+      warnMissingWebhookSecret();
+      return true;
+    }
     if (!signature || !requestId) return false;
 
     const parts = Object.fromEntries(signature.split(",").map((p) => p.trim().split("=") as [string, string]));

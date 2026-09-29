@@ -8,20 +8,21 @@ import { useAsync } from "@/lib/hooks/use-async";
 import { wishlistRepository } from "@/lib/wishlist/wishlist-repository";
 import { PageHeader } from "@/components/layout/page-header";
 import { ProductGrid } from "@/components/catalog/product-grid";
-import { Alert } from "@/components/ui/alert";
+import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { HeartIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 export default function FavoritosPage() {
   const { user, pending } = useRequireAuth();
-  const { data, error, loading } = useAsync(() => wishlistRepository.listProducts(user!.id), [user?.id], {
+  const { data, error, loading, reload } = useAsync(() => wishlistRepository.listProducts(user!.id), [user?.id], {
     enabled: Boolean(user),
     scope: user?.id,
   });
   // Los que la persona quita en esta pantalla desaparecen de la lista sin recargar.
   const [removed, setRemoved] = useUserScopedState<Set<string>>(() => new Set());
 
-  if (pending || loading) return <div className="page-container py-section" aria-busy="true" />;
+  if (pending || (loading && !data)) return <PageLoading />;
 
   const products = (data ?? []).filter((p) => !removed.has(p.id));
 
@@ -33,7 +34,7 @@ export default function FavoritosPage() {
       />
 
       {error ? (
-        <Alert tone="error">No pudimos cargar tus favoritos.</Alert>
+        <LoadError title="No pudimos cargar tus favoritos" onRetry={reload} />
       ) : products.length === 0 ? (
         <EmptyState
           icon={<HeartIcon size={36} />}

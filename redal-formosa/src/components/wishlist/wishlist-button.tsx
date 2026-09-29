@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
+import { loginHref } from "@/lib/auth/login-href";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useUserScopedState } from "@/lib/auth/use-user-scoped-state";
 import { useAsync } from "@/lib/hooks/use-async";
@@ -19,6 +20,7 @@ interface WishlistButtonProps {
 
 export function WishlistButton({ productId, favorite, onToggle, variant = "icon" }: WishlistButtonProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuth();
   const [own, setOwn] = useUserScopedState<boolean | null>(() => null);
   const [busy, setBusy] = useState(false);
@@ -34,7 +36,7 @@ export function WishlistButton({ productId, favorite, onToggle, variant = "icon"
     e.preventDefault();
     e.stopPropagation();
     if (!user) {
-      router.push("/login");
+      router.push(loginHref(pathname));
       return;
     }
     const next = !isFavorite;
@@ -70,7 +72,7 @@ export function WishlistButton({ productId, favorite, onToggle, variant = "icon"
       aria-pressed={isFavorite}
       aria-label={label}
       title={label}
-      className="flex h-9 w-9 items-center justify-center rounded-full bg-surface/95 text-foreground shadow-card transition-colors hover:bg-surface disabled:opacity-60"
+      className="flex h-10 w-10 items-center justify-center rounded-full bg-surface/95 text-foreground shadow-card transition-colors hover:bg-surface disabled:opacity-60"
     >
       <HeartIcon size={18} filled={isFavorite} className={isFavorite ? "text-danger" : ""} />
     </button>

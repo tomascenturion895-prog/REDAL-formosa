@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { isValidCbu } from "./cbu";
-import { distanceKm, FORMOSA_CENTER } from "./geo";
+import { directionsUrl, distanceKm, FORMOSA_CENTER } from "./geo";
 import { isPaid, PAID_STATUSES } from "./order-status";
 import { estimarEnvio, subtotal } from "./pricing";
 
@@ -65,5 +65,22 @@ describe("distanceKm", () => {
     const a = { lat: -26.18, lng: -58.18 };
     const b = { lat: -25.27, lng: -57.63 };
     expect(distanceKm(a, b)).toBeCloseTo(distanceKm(b, a), 10);
+  });
+});
+
+describe("directionsUrl", () => {
+  it("con coordenadas exactas va al punto", () => {
+    const url = directionsUrl({ lat: -26.18, lng: -58.17 }, "Calle 1");
+    expect(url).toBe("https://www.google.com/maps/dir/?api=1&destination=-26.18%2C-58.17");
+  });
+
+  it("sin coordenadas busca la dirección dentro de Formosa", () => {
+    const url = directionsUrl(null, "  Belgrano 123 ");
+    expect(decodeURIComponent(url!)).toContain("Belgrano 123, Formosa, Argentina");
+  });
+
+  it("sin nada no hay enlace", () => {
+    expect(directionsUrl(null, "  ")).toBeNull();
+    expect(directionsUrl(null, null)).toBeNull();
   });
 });

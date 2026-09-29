@@ -46,3 +46,17 @@ export function MapSkeleton() {
     </div>
   );
 }
+
+/**
+ * Estado de carga de una pantalla: anuncia «Cargando» a lectores de pantalla y evita el salto de
+ * layout que produce una página en blanco. `compact` es para secciones dentro de una página.
+ */
+export function PageLoading({ compact = false }: { compact?: boolean }) {
+  return (
+    <div role="status" aria-busy="true" aria-label="Cargando" className={compact ? "space-y-3" : "page-container space-y-6 py-section"}>
+      {!compact && <PageHeaderSkeleton />}
+      <Skeleton className={compact ? "h-24 rounded-card" : "h-48 rounded-card"} />
+      {!compact && <Skeleton className="h-32 rounded-card" />}
+    </div>
+  );
+}

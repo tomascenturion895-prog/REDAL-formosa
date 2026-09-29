@@ -5,13 +5,16 @@ import { useState } from "react";
 import { useRequireAuth } from "@/lib/auth/use-require-auth";
 import { deliveryRepository } from "@/lib/delivery/delivery-repository";
 import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/domain/order-status";
-import { FORMOSA_CENTER } from "@/lib/domain/geo";
+import { directionsUrl, FORMOSA_CENTER } from "@/lib/domain/geo";
 import { useAsync } from "@/lib/hooks/use-async";
 import { PageHeader } from "@/components/layout/page-header";
 import { RepartidorTracker } from "@/components/tracking/repartidor-tracker";
 import { Alert } from "@/components/ui/alert";
+import { isCompletePin, PIN_LENGTH, PIN_MESSAGE, sanitizePin } from "@/lib/domain/delivery-pin";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TruckIcon } from "@/components/ui/icons";
+import { LoadError } from "@/components/ui/load-error";
+import { MapPinIcon, PhoneIcon, TruckIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 async function loadAssignments(userId: string) {
   const courier = await deliveryRepository.findByUser(userId);
@@ -21,16 +24,22 @@ async function loadAssignments(userId: string) {
 
 export default function RepartidorTrackingPage() {
   const { user, pending } = useRequireAuth();
-  const { data, loading, reload } = useAsync(() => loadAssignments(user!.id), [user?.id], { enabled: Boolean(user), scope: user?.id });
+  const { data, error, loading, reload } = useAsync(() => loadAssignments(user!.id), [user?.id], { enabled: Boolean(user), scope: user?.id });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pin, setPin] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const advance = async (orderId: string, estado: "en_camino" | "entregado") => {
+  const advance = async (orderId: string, estado: "en_camino" | "entregado", pin?: string) => {
     setBusy(true);
     setActionError(null);
     try {
-      await deliveryRepository.advance(orderId, estado);
+      const result = await deliveryRepository.advance(orderId, estado, pin);
+      if (result !== "ok") {
+        setActionError(PIN_MESSAGE[result]);
+        return;
+      }
+      setPin("");
       reload();
     } catch {
       setActionError("No pudimos actualizar la entrega. Recargá la pantalla e intentá de nuevo.");
@@ -39,7 +48,9 @@ export default function RepartidorTrackingPage() {
     }
   };
 
-  if (pending || loading) return <div className="h-40" aria-busy="true" />;
+  if (pending || (loading && !data)) return <PageLoading compact />;
+
+  if (error && !data) return <LoadError title="No pudimos cargar tus entregas" onRetry={reload} />;
 
   if (!data?.courier) {
     return (
@@ -85,6 +96,31 @@ export default function RepartidorTrackingPage() {
             ))}
           </ul>
 
+          <section aria-label="Datos de la entrega" className="card space-y-3 p-4">
+            <p className="flex items-start gap-2 text-sm">
+              <MapPinIcon size={18} className="mt-0.5 shrink-0 text-muted" />
+              <span>{selected.direccion_entrega ?? "Sin dirección"}</span>
+            </p>
+            {selected.nota && <p className="text-sm text-muted">Indicaciones: {selected.nota}</p>}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              {directionsUrl(selected.entrega, selected.direccion_entrega) && (
+                <a
+                  href={directionsUrl(selected.entrega, selected.direccion_entrega)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary flex-1"
+                >
+                  <MapPinIcon size={18} /> Cómo llegar
+                </a>
+              )}
+              {selected.telefono_comprador && (
+                <a href={`tel:${selected.telefono_comprador.replace(/[^\d+]/g, "")}`} className="btn btn-secondary flex-1">
+                  <PhoneIcon size={18} /> Llamar al comprador
+                </a>
+              )}
+            </div>
+          </section>
+
           {actionError && <Alert tone="error">{actionError}</Alert>}
           {selected.estado === "listo" && (
             <button type="button" className="btn btn-primary w-full" disabled={busy} onClick={() => advance(selected.id, "en_camino")}>
@@ -92,9 +128,34 @@ export default function RepartidorTrackingPage() {
             </button>
           )}
           {selected.estado === "en_camino" && (
-            <button type="button" className="btn btn-primary w-full" disabled={busy} onClick={() => advance(selected.id, "entregado")}>
-              Entregué el pedido
-            </button>
+            <form
+              className="card space-y-3 p-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (isCompletePin(pin)) advance(selected.id, "entregado", pin);
+              }}
+            >
+              <label htmlFor="pin-entrega" className="block text-sm font-medium">
+                Código de entrega del comprador
+              </label>
+              <input
+                id="pin-entrega"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={PIN_LENGTH}
+                value={pin}
+                onChange={(e) => setPin(sanitizePin(e.target.value))}
+                placeholder="0000"
+                className="field text-center font-display text-2xl tracking-[0.4em] tabular-nums"
+                aria-describedby="pin-ayuda"
+              />
+              <p id="pin-ayuda" className="text-xs text-muted">
+                El comprador lo ve en su pedido. Pedíselo cuando le entregues.
+              </p>
+              <button type="submit" className="btn btn-primary w-full" disabled={busy || !isCompletePin(pin)} aria-busy={busy}>
+                Entregué el pedido
+              </button>
+            </form>
           )}
 
           <RepartidorTracker repartidorId={courier.id} destino={selected.entrega ?? FORMOSA_CENTER} isRepartidor />

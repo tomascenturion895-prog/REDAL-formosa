@@ -10,6 +10,7 @@ import { ContactActions, ContactBar } from "@/components/contact/contact-actions
 import { RecipesDialog } from "@/components/recipes/recipes-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MapPinIcon, PackageIcon, StoreIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 async function loadStore(id: string) {
   const [emprendimiento, productos] = await Promise.all([
@@ -24,7 +25,7 @@ export default function EmprendimientoPage() {
   const { id } = useParams<{ id: string }>();
   const { data, loading } = useAsync(() => loadStore(id), [id]);
 
-  if (loading) return <div className="page-container py-section" aria-busy="true" />;
+  if (loading && !data) return <PageLoading />;
 
   const emprendimiento = data?.emprendimiento;
   if (!emprendimiento) {

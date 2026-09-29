@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 
 import { catalogRepository } from "@/lib/catalog/catalog-repository";
@@ -10,24 +11,28 @@ import { CheckoutStepper } from "@/components/payment/checkout-stepper";
 import { RecipesDialog } from "@/components/recipes/recipes-dialog";
 import { PaymentTrust } from "@/components/payment/payment-methods";
 import { Alert } from "@/components/ui/alert";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CartIcon, MinusIcon, PlusIcon, StoreIcon, TrashIcon } from "@/components/ui/icons";
 import { ProductImage } from "@/components/ui/product-image";
+import { PageLoading } from "@/components/ui/skeleton";
 
 export default function CarritoPage() {
   const { ready, groups, removeItem, updateQuantity, clearCart, clearStore } = useCart();
+  const [confirmingClear, setConfirmingClear] = useState(false);
   const storeIds = groups.map((g) => g.emprendimientoId);
   const { data: names } = useAsync(() => catalogRepository.getEmprendimientoNames(storeIds), [storeIds.join(",")], {
     enabled: storeIds.length > 0,
   });
 
-  if (!ready) return <div className="page-container py-section" aria-busy="true" />;
+  if (!ready) return <PageLoading />;
 
   if (groups.length === 0) {
     return (
       <div className="page-container py-section">
         <EmptyState
           icon={<CartIcon size={36} />}
+          as="h1"
           title="Tu carrito está vacío"
           description="Elegí productos de uno o más emprendimientos y armá tu pedido."
           action={
@@ -47,7 +52,7 @@ export default function CarritoPage() {
       <CheckoutStepper current={0} />
       <div className="flex flex-wrap items-end justify-between gap-2 pb-6">
         <h1 className="text-title">Tu carrito</h1>
-        <button type="button" onClick={clearCart} className="text-sm font-medium text-muted hover:text-danger">
+        <button type="button" onClick={() => setConfirmingClear(true)} className="text-sm font-medium text-muted hover:text-danger">
           Vaciar todo
         </button>
       </div>
@@ -85,7 +90,7 @@ export default function CarritoPage() {
                 <ul className="space-y-3">
                   {group.items.map(({ producto, cantidad }) => (
                     <li key={producto.id} className="card flex gap-4 p-4">
-                      <Link href={`/productos/${producto.id}`} className="relative h-24 w-24 shrink-0 overflow-hidden rounded-control bg-surface-muted">
+                      <Link href={`/productos/${producto.id}`} aria-label={producto.nombre} className="relative h-24 w-24 shrink-0 overflow-hidden rounded-control bg-surface-muted">
                         <ProductImage src={producto.imagen_url} sizes="96px" iconSize={28} />
                       </Link>
 
@@ -111,11 +116,11 @@ export default function CarritoPage() {
 
                         <div className="mt-auto flex items-center justify-between pt-3">
                           <div className="flex items-center gap-1" role="group" aria-label={`Cantidad de ${producto.nombre}`}>
-                            <button type="button" className="btn btn-secondary !p-1.5" onClick={() => updateQuantity(producto.id, cantidad - 1)} aria-label="Restar una unidad">
+                            <button type="button" className="btn btn-secondary !min-h-10 !min-w-10 !p-1.5" onClick={() => updateQuantity(producto.id, cantidad - 1)} aria-label="Restar una unidad">
                               <MinusIcon size={14} />
                             </button>
                             <span className="w-9 text-center font-semibold tabular-nums">{cantidad}</span>
-                            <button type="button" className="btn btn-secondary !p-1.5" onClick={() => updateQuantity(producto.id, cantidad + 1)} aria-label="Sumar una unidad">
+                            <button type="button" className="btn btn-secondary !min-h-10 !min-w-10 !p-1.5" onClick={() => updateQuantity(producto.id, cantidad + 1)} aria-label="Sumar una unidad">
                               <PlusIcon size={14} />
                             </button>
                           </div>
@@ -167,6 +172,19 @@ export default function CarritoPage() {
           Seguir comprando
         </Link>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmingClear}
+        onClose={() => setConfirmingClear(false)}
+        onConfirm={() => {
+          clearCart();
+          setConfirmingClear(false);
+        }}
+        title="¿Vaciar el carrito?"
+        description="Vas a sacar todos los productos de todas las cestas."
+        confirmText="Vaciar carrito"
+        cancelText="Volver"
+      />
     </div>
   );
 }

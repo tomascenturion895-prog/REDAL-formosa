@@ -15,14 +15,16 @@ import { ProductorForm } from "@/components/productor/productor-form";
 import { SucursalesForm } from "@/components/productor/sucursales-form";
 import { TodayPanel, type ChecklistItem } from "@/components/producer/today-panel";
 import { Alert } from "@/components/ui/alert";
+import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PlusIcon, StoreIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 export default function ProductorDashboard() {
   const router = useRouter();
   const { user, pending } = useRequireAuth();
   const { role } = useAuth();
-  const { data: emprendimientos, loading, reload } = useAsync(() => producerRepository.ownEmprendimientos(user!.id), [user?.id], {
+  const { data: emprendimientos, error, loading, reload } = useAsync(() => producerRepository.ownEmprendimientos(user!.id), [user?.id], {
     enabled: Boolean(user),
     scope: user?.id,
   });
@@ -38,18 +40,21 @@ export default function ProductorDashboard() {
 
   const selected = emprendimientos?.find((e) => e.id === selectedId) ?? emprendimientos?.[0];
 
-  const { data: products, reload: reloadProducts } = useAsync(
+  const { data: products, error: productsError, reload: reloadProducts } = useAsync(
     () => producerRepository.listProducts(selected!.id),
     [selected?.id],
     { enabled: Boolean(selected), scope: selected?.id },
   );
-  const { data: orders } = useAsync(() => sellerOrdersRepository.list(), [user?.id], { enabled: Boolean(user), scope: user?.id });
+  const { data: orders, error: ordersError, reload: reloadOrders } = useAsync(() => sellerOrdersRepository.list(), [user?.id], { enabled: Boolean(user), scope: user?.id });
   const { data: payout } = useAsync(() => producerRepository.payoutReadiness(user!.id), [user?.id], {
     enabled: Boolean(user),
     scope: user?.id,
   });
 
-  if (pending || loading) return <div aria-busy="true" className="h-40" />;
+  if (pending || (loading && !emprendimientos)) return <PageLoading compact />;
+
+  // Un fallo de carga no es «no tenés emprendimiento»: ofrecer crear otro duplicaría el existente.
+  if (error && !emprendimientos) return <LoadError title="No pudimos cargar tu emprendimiento" onRetry={reload} />;
 
   if (!emprendimientos || emprendimientos.length === 0 || !selected) {
     return (
@@ -103,6 +108,24 @@ export default function ProductorDashboard() {
         </button>
       </div>
 
+      {(productsError || ordersError) && (
+        <Alert tone="error">
+          <span className="flex flex-wrap items-center justify-between gap-3">
+            <span>No pudimos cargar {productsError && ordersError ? "tus productos y pedidos" : productsError ? "tus productos" : "tus pedidos"}. Lo que ves puede estar incompleto.</span>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                if (productsError) reloadProducts();
+                if (ordersError) reloadOrders();
+              }}
+            >
+              Reintentar
+            </button>
+          </span>
+        </Alert>
+      )}
+
       <TodayPanel
         orders={orders}
         published={list.filter((p) => p.validado && p.disponible).length}
@@ -123,7 +146,7 @@ export default function ProductorDashboard() {
         </div>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-[1fr 20rem]">
+      <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
         <section aria-labelledby="products-title" className="space-y-4">
           <h2 id="products-title" className="text-heading">
             Mis productos
