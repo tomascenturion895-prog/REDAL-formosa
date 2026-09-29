@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { useDialogFocus } from "@/lib/hooks/use-dialog-focus";
 import { CloseIcon, TrashIcon } from "./icons";
 
 export interface ConfirmDialogProps {
@@ -32,6 +33,7 @@ export function ConfirmDialog({
   isLoading = false,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, isOpen);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -106,7 +108,7 @@ export function ConfirmDialog({
             type="button"
             className={`btn ${
               isDestructive
-                ? "!bg-danger !text-white hover:!bg-danger/90 font-semibold shadow-xs"
+                ? "!bg-danger !text-on-danger hover:!bg-danger/90 font-semibold shadow-xs"
                 : "btn-primary"
             }`}
             aria-busy={isLoading}

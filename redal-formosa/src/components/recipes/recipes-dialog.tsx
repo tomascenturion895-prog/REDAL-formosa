@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useDialogFocus } from "@/lib/hooks/use-dialog-focus";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -40,6 +41,8 @@ export function RecipesDialog({ emprendimientoId, productIds, label = "¿Qué pu
   const { user } = useAuth();
   const { addItem } = useCart();
   const [open, setOpen] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, open);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RecipesResult | null>(null);
@@ -102,7 +105,7 @@ export function RecipesDialog({ emprendimientoId, productIds, label = "¿Qué pu
       </button>
 
       {open && (
-        <div role="dialog" aria-modal="true" aria-labelledby="recipes-title" className="fixed inset-0 z-[2000] flex items-end justify-center bg-ink-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-6">
+        <div role="dialog" aria-modal="true" aria-labelledby="recipes-title" ref={dialogRef} className="fixed inset-0 z-[2000] flex items-end justify-center bg-ink-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-6">
           <div className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-sheet bg-surface p-5 shadow-pop sm:rounded-sheet sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
