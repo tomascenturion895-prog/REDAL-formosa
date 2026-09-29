@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { ServiceError } from "./errors";
 import { PaymentsNotConfiguredError } from "./payments/payment-gateway";
 import type { RateLimiter } from "./security/rate-limiter";
+import { logError } from "./logger";
 
 /**
  * Envuelve un handler de ruta: los ServiceError esperables llegan como JSON con su estado;
@@ -22,14 +23,20 @@ export async function handleRoute(handler: () => Promise<NextResponse>): Promise
         { status: 503 },
       );
     }
-    console.error("Error no controlado en ruta:", error);
+    logError("Error no controlado en ruta", error);
     return NextResponse.json({ error: "Ocurrió un error. Intentá de nuevo." }, { status: 500 });
   }
 }
 
-/** Origen de la petición. Detrás de un proxy inverso confiable, viene en x-forwarded-for. */
+/**
+ * Origen de la petición. Los proxies agregan su observación al FINAL de x-forwarded-for; el primer
+ * valor lo controla el cliente y permitiría eludir el límite con un encabezado inventado.
+ */
 export function clientIp(req: { headers: Headers }): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "desconocida";
+  const real = req.headers.get("x-real-ip")?.trim();
+  if (real) return real;
+  const forwarded = req.headers.get("x-forwarded-for")?.split(",");
+  return forwarded?.[forwarded.length - 1]?.trim() || "desconocida";
 }
 
 /** Lanza ServiceError(429) si la clave superó el límite. */

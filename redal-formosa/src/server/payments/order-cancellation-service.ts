@@ -1,6 +1,7 @@
 import type { Db } from "@/lib/supabase/types";
 import { ServiceError } from "@/server/errors";
 import type { PaymentGateway } from "./payment-gateway";
+import { logError } from "@/server/logger";
 
 /** Estados en los que el pedido está pago pero todavía no salió: el único momento en que se puede cancelar y devolver el dinero. */
 const CANCELLABLE = ["pagado", "en_preparacion", "listo"] as const;
@@ -46,7 +47,7 @@ export class OrderCancellationService {
       try {
         await this.gateway.refund(payment.transaccion_id);
       } catch (error) {
-        console.error(`No se pudo reembolsar el pago ${payment.transaccion_id}`, error);
+        logError(`No se pudo reembolsar el pago ${payment.transaccion_id}`, error);
         throw new ServiceError("unavailable", "No pudimos devolver el dinero ahora. El pedido sigue igual: probá de nuevo en unos minutos.");
       }
     } else if (info.outcome !== "refunded") {
@@ -54,7 +55,7 @@ export class OrderCancellationService {
     }
 
     const { error: paymentError } = await this.adminDb.from("pagos").update({ estado: "reembolsado" }).eq("pedido_id", order.id);
-    if (paymentError) console.error(`Reembolsado ${payment.transaccion_id} pero no se pudo marcar el pago`, paymentError.message);
+    if (paymentError) logError(`Reembolsado ${payment.transaccion_id} pero no se pudo marcar el pago`, paymentError.message);
 
     const { data: cancelled, error } = await this.adminDb
       .from("pedidos")
@@ -63,7 +64,7 @@ export class OrderCancellationService {
       .in("estado", [...CANCELLABLE])
       .select("id");
     if (error || !cancelled?.length) {
-      console.error(`Reembolsado ${payment.transaccion_id} pero el pedido ${order.id} no quedó cancelado`, error?.message);
+      logError(`Reembolsado ${payment.transaccion_id} pero el pedido ${order.id} no quedó cancelado`, error?.message);
       throw new ServiceError("conflict", "Devolvimos el dinero, pero el pedido cambió de estado a la vez. Revisalo y avisanos si algo no cuadra.");
     }
   }
