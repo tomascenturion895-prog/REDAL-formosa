@@ -50,7 +50,7 @@ export function HeroSearch() {
           e.preventDefault();
           go(query);
         }}
-        className="flex gap-2 rounded-full border border-border bg-surface p-1.5 shadow-card focus-within:border-action"
+        className="flex gap-2 rounded-full border border-border bg-surface p-1.5 shadow-card focus-within:border-action focus-within:ring-2 focus-within:ring-ring"
       >
         <label htmlFor="hero-search" className="sr-only">
           {current.placeholder}

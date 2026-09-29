@@ -13,6 +13,7 @@ import { Alert } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MapPinIcon, PhoneIcon, TruckIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 async function loadAssignments(userId: string) {
   const courier = await deliveryRepository.findByUser(userId);
@@ -41,7 +42,7 @@ export default function RepartidorTrackingPage() {
     }
   };
 
-  if (pending || (loading && !data)) return <div className="h-40" aria-busy="true" />;
+  if (pending || (loading && !data)) return <PageLoading compact />;
 
   if (!data?.courier) {
     return (

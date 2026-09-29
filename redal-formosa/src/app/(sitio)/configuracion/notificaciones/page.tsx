@@ -8,11 +8,12 @@ import { NotificationPreferences } from "@/components/notifications/notification
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { UserIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 export default function NotificationsSettingsPage() {
   const { user, loading } = useAuth();
 
-  if (loading) return <div className="page-container py-section" aria-busy="true" />;
+  if (loading) return <PageLoading />;
 
   if (!user) {
     return (

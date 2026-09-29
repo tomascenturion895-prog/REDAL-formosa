@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { useAsync } from "@/lib/hooks/use-async";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ShieldIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 const links = [
   { href: "/admin", label: "Resumen", badge: null },
@@ -28,7 +29,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     scope: user?.id,
   });
 
-  if (loading) return <div className="page-container py-section" aria-busy="true" />;
+  if (loading) return <PageLoading />;
 
   // La interfaz solo oculta; cada función de la base vuelve a verificar que sea admin.
   if (role !== "admin") {
@@ -69,8 +70,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               >
                 {label}
                 {count > 0 && (
-                  <span className="ml-2 rounded-full bg-highlight px-2 py-0.5 text-xs font-bold text-on-highlight" aria-label={`${count} pendientes`}>
-                    {count}
+                  <span className="ml-2 rounded-full bg-highlight px-2 py-0.5 text-xs font-bold text-on-highlight" >
+                    {count}<span className="sr-only"> pendientes</span>
                   </span>
                 )}
               </Link>

@@ -13,6 +13,7 @@ import { RepartidorTracker } from "@/components/tracking/repartidor-tracker";
 import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PackageIcon, TruckIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 export default function TrackingPage() {
   const { pedidoId } = useParams<{ pedidoId: string }>();
@@ -21,7 +22,7 @@ export default function TrackingPage() {
     enabled: Boolean(user),
   });
 
-  if (pending || (loading && !pedido)) return <div className="page-container py-section" aria-busy="true" />;
+  if (pending || (loading && !pedido)) return <PageLoading />;
 
   if (error && !pedido) {
     return (

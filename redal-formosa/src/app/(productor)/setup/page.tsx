@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -13,6 +13,7 @@ import { SucursalesForm } from "@/components/productor/sucursales-form";
 import { BiometricVerification } from "@/components/productor/biometric-verification";
 import { BankForm } from "@/components/productor/bank-form";
 import { CheckIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 type Step = "info" | "ubicacion" | "biometric" | "bank" | "complete";
 
@@ -37,8 +38,15 @@ function ProductorSetup() {
 
   const [step, setStep] = useState<Step | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
-  if (pending || (loading && existingId === undefined) || !user) return <div aria-busy="true" className="h-40" />;
+  // Al cambiar de paso el foco pasa al título del paso nuevo: sin esto, quien usa teclado o lector de
+  // pantalla se queda en un botón que ya no existe.
+  useEffect(() => {
+    if (step) cardRef.current?.querySelector<HTMLElement>("h2")?.focus();
+  }, [step]);
+
+  if (pending || (loading && existingId === undefined) || !user) return <PageLoading compact />;
 
   // Si no pudimos saber si ya tiene emprendimiento, no se arranca de cero: se duplicaría.
   if (error) return <LoadError title="No pudimos revisar tu emprendimiento" onRetry={reload} />;
@@ -62,13 +70,13 @@ function ProductorSetup() {
         </ol>
       )}
 
-      <div className="card p-6 shadow-card">
+      <div ref={cardRef} className="card p-6 shadow-card">
         {currentStep !== "complete" && (
           <>
             <p className="text-sm text-muted">
               Paso {index + 1} de {STEPS.length}
             </p>
-            <h2 className="text-heading mt-1">{current.title}</h2>
+            <h2 tabIndex={-1} className="text-heading mt-1 outline-none">{current.title}</h2>
             <p className="mb-6 mt-1 text-sm text-muted">{current.description}</p>
           </>
         )}
@@ -111,7 +119,7 @@ function ProductorSetup() {
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-soft text-success">
               <CheckIcon size={28} />
             </span>
-            <h2 className="text-title">Tu emprendimiento está creado</h2>
+            <h2 tabIndex={-1} className="text-title outline-none">Tu emprendimiento está creado</h2>
             <p className="text-muted">
               Ya podés cargar productos. Los nuevos productos se publican cuando un administrador los aprueba, y te avisamos cuando se confirme tu verificación de identidad.
             </p>
@@ -127,7 +135,7 @@ function ProductorSetup() {
 
 export default function ProductorSetupPage() {
   return (
-    <Suspense fallback={<div aria-busy="true" className="h-40" />}>
+    <Suspense fallback={<PageLoading compact />}>
       <ProductorSetup />
     </Suspense>
   );
