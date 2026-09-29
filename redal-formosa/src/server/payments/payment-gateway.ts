@@ -15,6 +15,8 @@ export interface CheckoutRequest {
   /** Solo si la app es pública (https): los proveedores rechazan webhooks a localhost. */
   notificationUrl?: string;
   autoReturn: boolean;
+  /** Tipos de pago del proveedor que no se ofrecen (respeta el medio elegido en el checkout). */
+  excludedPaymentTypes?: string[];
 }
 
 export interface CheckoutSession {

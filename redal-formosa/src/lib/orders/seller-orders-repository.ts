@@ -1,6 +1,7 @@
 import { createClient, type Db } from "@/lib/supabase/client";
 import { RepositoryError, unwrap } from "@/lib/supabase/repository";
 import { parsePinResult, type PinResult } from "@/lib/domain/delivery-pin";
+import { DEFAULT_PAYMENT_METHOD, isPaymentMethod } from "@/lib/domain/payment-methods";
 import type { CourierOption, SellerOrder, SellerOrderItem } from "@/lib/domain/seller-orders";
 import type { OrderStatus } from "@/lib/supabase/types";
 
@@ -21,6 +22,15 @@ export class SellerOrdersRepository {
 
   async list(): Promise<SellerOrder[]> {
     const rows = await unwrap(this.db.rpc("productor_pedidos"), "cargar pedidos");
+    // El medio de pago no viene en la función: se lee de los mismos pedidos (la política deja verlos al vendedor).
+    const methods = new Map<string, string>();
+    if (rows.length > 0) {
+      const payments = await unwrap(
+        this.db.from("pedidos").select("id, metodo_pago").in("id", rows.map((r) => r.id)),
+        "cargar medios de pago",
+      );
+      payments.forEach((p) => methods.set(p.id, p.metodo_pago));
+    }
     return rows.map((r) => ({
       ...r,
       monto_total: Number(r.monto_total),
@@ -28,6 +38,7 @@ export class SellerOrdersRepository {
       items: toItems(r.items),
       repartidor_id: r.repartidor_id ?? null,
       repartidor_nombre: r.repartidor_nombre ?? null,
+      metodo_pago: isPaymentMethod(methods.get(r.id)) ? (methods.get(r.id) as never) : DEFAULT_PAYMENT_METHOD,
     }));
   }
 

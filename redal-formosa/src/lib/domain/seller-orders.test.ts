@@ -17,6 +17,7 @@ const order = (over: Partial<SellerOrder>): SellerOrder => ({
   items: [],
   repartidor_id: null,
   repartidor_nombre: null,
+  metodo_pago: "tarjeta",
   ...over,
 });
 

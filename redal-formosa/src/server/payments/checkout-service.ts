@@ -1,3 +1,4 @@
+import { excludedMercadoPagoTypes, isCash, isPaymentMethod, DEFAULT_PAYMENT_METHOD } from "@/lib/domain/payment-methods";
 import type { Db } from "@/lib/supabase/types";
 import { ServiceError } from "@/server/errors";
 import { logError } from "@/server/logger";
@@ -23,7 +24,7 @@ export class CheckoutService {
   async createSession(db: Db, userId: string, orderId: string): Promise<CheckoutSession> {
     const { data: order } = await db
       .from("pedidos")
-      .select("id, comprador_id, estado, monto_envio")
+      .select("id, comprador_id, estado, monto_envio, metodo_pago")
       .eq("id", orderId)
       .maybeSingle();
 
@@ -31,6 +32,9 @@ export class CheckoutService {
     if (order.estado !== "pendiente_pago") {
       throw new ServiceError("conflict", "Este pedido ya no está pendiente de pago");
     }
+
+    const method = isPaymentMethod(order.metodo_pago) ? order.metodo_pago : DEFAULT_PAYMENT_METHOD;
+    if (isCash(method)) throw new ServiceError("conflict", "Este pedido se paga en efectivo al recibirlo.");
 
     // Un solo enlace de pago por pedido: si ya se creó, se devuelve el mismo. Así no hay dos cobros posibles.
     const { data: existing } = await db.from("pagos").select("preferencia_mp_id, referencia_externa").eq("pedido_id", orderId).maybeSingle();
@@ -65,6 +69,7 @@ export class CheckoutService {
       },
       // Los proveedores rechazan retorno automático y webhooks hacia URLs que no son públicas (https).
       autoReturn: appUrl.startsWith("https://"),
+      excludedPaymentTypes: excludedMercadoPagoTypes(method),
       notificationUrl: appUrl.startsWith("https://") ? `${appUrl}/api/webhooks/mercadopago` : undefined,
     });
 

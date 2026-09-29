@@ -3,6 +3,7 @@ import { RepositoryError, unwrap, unwrapOptional } from "@/lib/supabase/reposito
 import { DELIVERY_ACTIVE_STATUSES } from "@/lib/domain/order-status";
 import { parsePinResult, type PinResult } from "@/lib/domain/delivery-pin";
 import type { LatLng } from "@/lib/domain/geo";
+import { DEFAULT_PAYMENT_METHOD, isPaymentMethod, type PaymentMethod } from "@/lib/domain/payment-methods";
 import { extractBuyerPhone, stripBuyerPhone } from "@/lib/domain/seller-orders";
 import type { OrderStatus } from "@/lib/supabase/types";
 
@@ -17,6 +18,9 @@ export interface AssignedOrder {
   telefono_comprador: string | null;
   /** Indicaciones del comprador (timbre, horario…), sin el teléfono. */
   nota: string | null;
+  /** Con efectivo, hay que cobrar `monto_total` en mano al entregar. */
+  metodo_pago: PaymentMethod;
+  monto_total: number;
 }
 
 export class DeliveryRepository {
@@ -34,13 +38,15 @@ export class DeliveryRepository {
     const rows = await unwrap(
       this.db
         .from("pedidos")
-        .select("id, numero_pedido, estado, direccion_entrega, entrega_lat, entrega_lng, nota_cliente")
+        .select("id, numero_pedido, estado, direccion_entrega, entrega_lat, entrega_lng, nota_cliente, metodo_pago, monto_total")
         .eq("repartidor_id", repartidorId)
         .in("estado", [...DELIVERY_ACTIVE_STATUSES]),
       "listar pedidos asignados",
     );
-    return rows.map(({ entrega_lat, entrega_lng, nota_cliente, ...order }) => ({
+    return rows.map(({ entrega_lat, entrega_lng, nota_cliente, metodo_pago, monto_total, ...order }) => ({
       ...order,
+      metodo_pago: isPaymentMethod(metodo_pago) ? metodo_pago : DEFAULT_PAYMENT_METHOD,
+      monto_total: Number(monto_total),
       entrega: entrega_lat !== null && entrega_lng !== null ? { lat: entrega_lat, lng: entrega_lng } : null,
       telefono_comprador: extractBuyerPhone(nota_cliente),
       nota: stripBuyerPhone(nota_cliente) || null,

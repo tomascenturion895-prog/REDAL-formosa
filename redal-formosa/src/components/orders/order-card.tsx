@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { formatDate, formatPrice } from "@/lib/format";
-import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/domain/order-status";
+import { ORDER_STATUS_TONE, statusLabel } from "@/lib/domain/order-status";
 import type { OrderSummary } from "@/lib/orders/orders-repository";
 
 export function OrderCard({ order }: { order: OrderSummary }) {
@@ -15,7 +15,7 @@ export function OrderCard({ order }: { order: OrderSummary }) {
           </p>
         </div>
         <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${ORDER_STATUS_TONE[order.estado]}`}>
-          {ORDER_STATUS_LABEL[order.estado]}
+          {statusLabel(order.estado, order.metodo_pago)}
         </span>
       </div>
 

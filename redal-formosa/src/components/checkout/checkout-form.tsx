@@ -5,6 +5,7 @@ import { useState } from "react";
 import { type CartGroup } from "@/lib/cart/cart-context";
 import { formatPrice } from "@/lib/format";
 import type { LatLng } from "@/lib/domain/geo";
+import { DEFAULT_PAYMENT_METHOD, isCash, type PaymentMethod } from "@/lib/domain/payment-methods";
 import { getCurrentPosition, type GeolocationFailure } from "@/lib/geolocation/geolocation";
 import { ordersRepository } from "@/lib/orders/orders-repository";
 import { Alert } from "@/components/ui/alert";
@@ -17,7 +18,7 @@ export function CheckoutForm({
   onOrderCreated,
 }: {
   group: CartGroup;
-  onOrderCreated: (order: { id: string; monto: number; emprendimientoId: string }) => void;
+  onOrderCreated: (order: { id: string; monto: number; emprendimientoId: string; metodo: PaymentMethod }) => void;
 }) {
   const { items, emprendimientoId, total } = group;
   const [loading, setLoading] = useState(false);
@@ -25,6 +26,7 @@ export function CheckoutForm({
   const [form, setForm] = useState({ telefono: "", direccion: "", notas: "" });
   const [ubicacion, setUbicacion] = useState<LatLng | null>(null);
   const [locating, setLocating] = useState(false);
+  const [metodo, setMetodo] = useState<PaymentMethod>(DEFAULT_PAYMENT_METHOD);
 
   const shareLocation = async () => {
     setLocating(true);
@@ -59,6 +61,7 @@ export function CheckoutForm({
         direccion: form.direccion,
         nota: notaCompleta,
         ubicacion: ubicacion ?? undefined,
+        metodo,
       });
 
       // El padre muestra el paso de pago del pedido ya creado.
@@ -66,6 +69,7 @@ export function CheckoutForm({
         id: order.pedidoId,
         monto: total,
         emprendimientoId,
+        metodo,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No pudimos procesar el pedido");
@@ -128,11 +132,13 @@ export function CheckoutForm({
         />
       </Field>
 
-      <PaymentMethods />
+      <PaymentMethods value={metodo} onChange={setMetodo} />
 
       <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-4 !text-base">
         {loading ? (
           "Creando tu pedido…"
+        ) : isCash(metodo) ? (
+          <>Confirmar pedido · pagás {formatPrice(total)} al recibir</>
         ) : (
           <>
             <LockIcon size={18} />
@@ -142,7 +148,9 @@ export function CheckoutForm({
       </button>
 
       <p className="text-center text-xs text-muted">
-        Primero creamos tu pedido y en el siguiente paso pagás con Mercado Pago. Si preferís hacerlo después, queda guardado en Mis pedidos.
+        {isCash(metodo)
+          ? "Tu pedido se confirma al instante y el emprendimiento empieza a prepararlo. Pagás cuando lo recibís."
+          : "Primero creamos tu pedido y en el siguiente paso pagás con Mercado Pago. Si preferís hacerlo después, queda guardado en Mis pedidos."}
       </p>
     </form>
   );

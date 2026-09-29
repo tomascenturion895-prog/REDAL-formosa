@@ -1,4 +1,5 @@
 import type { OrderStatus } from "@/lib/supabase/types";
+import { isCash, type PaymentMethod } from "./payment-methods";
 
 export type { OrderStatus };
 
@@ -30,3 +31,8 @@ export const PAID_STATUSES: readonly OrderStatus[] = ["pagado", "en_preparacion"
 export const DELIVERY_ACTIVE_STATUSES: readonly OrderStatus[] = ["listo", "en_camino"];
 
 export const isPaid = (status: OrderStatus) => PAID_STATUSES.includes(status);
+
+/** Etiqueta del estado. Un pedido en efectivo «pagado» todavía no se cobró: se dice «Confirmado». */
+export function statusLabel(estado: OrderStatus, metodo?: PaymentMethod | null): string {
+  return estado === "pagado" && isCash(metodo) ? "Confirmado" : ORDER_STATUS_LABEL[estado];
+}

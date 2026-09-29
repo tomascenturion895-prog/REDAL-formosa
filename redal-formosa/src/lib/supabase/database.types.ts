@@ -655,6 +655,7 @@ export type Database = {
           estado: Database["public"]["Enums"]["order_status"]
           id: string
           monto_envio: number | null
+          metodo_pago: string
           monto_total: number
           nota_cliente: string | null
           numero_pedido: string
@@ -677,6 +678,7 @@ export type Database = {
           estado?: Database["public"]["Enums"]["order_status"]
           id?: string
           monto_envio?: number | null
+          metodo_pago?: string
           monto_total: number
           nota_cliente?: string | null
           numero_pedido: string
@@ -699,6 +701,7 @@ export type Database = {
           estado?: Database["public"]["Enums"]["order_status"]
           id?: string
           monto_envio?: number | null
+          metodo_pago?: string
           monto_total?: number
           nota_cliente?: string | null
           numero_pedido?: string
@@ -1521,6 +1524,7 @@ export type Database = {
           tipo_entrega: string | null
           total_unidades: number | null
           updated_at: string | null
+          metodo_pago: string | null
         }
         Relationships: [
           {
@@ -1812,6 +1816,7 @@ export type Database = {
           p_lat?: number
           p_lng?: number
           p_nota?: string
+          p_metodo?: string
         }
         Returns: {
           out_monto: number

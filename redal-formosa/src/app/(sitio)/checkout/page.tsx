@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { loginHref } from "@/lib/auth/login-href";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useCart } from "@/lib/cart/cart-context";
+import { isCash, type PaymentMethod } from "@/lib/domain/payment-methods";
 import { formatPrice } from "@/lib/format";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { CheckoutStepper } from "@/components/payment/checkout-stepper";
@@ -29,6 +30,7 @@ function CheckoutContent() {
     id: string;
     monto: number;
     emprendimientoId: string;
+    metodo: PaymentMethod;
   } | null>(null);
 
   // Con una sola cesta no hace falta elegir; con varias, se paga la indicada en la URL.
@@ -136,7 +138,18 @@ function CheckoutContent() {
       <h1 className="text-title pb-8">Finalizar pedido</h1>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
-        <CheckoutForm group={group} onOrderCreated={setActiveOrder} />
+        <CheckoutForm
+          group={group}
+          onOrderCreated={(order) => {
+            // En efectivo no hay cobro online: el pedido ya quedó confirmado.
+            if (isCash(order.metodo)) {
+              clearStore(order.emprendimientoId);
+              router.push(`/confirmacion?pedido=${order.id}`);
+              return;
+            }
+            setActiveOrder(order);
+          }}
+        />
 
         <aside className="card h-fit space-y-4 p-6 lg:sticky lg:top-24">
           <h2 className="text-heading">Tu pedido</h2>

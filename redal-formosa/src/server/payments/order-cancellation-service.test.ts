@@ -72,6 +72,26 @@ describe("OrderCancellationService", () => {
     expect(tables.pagos[0].estado).toBe("reembolsado");
   });
 
+  it("un pedido en efectivo se cancela sin devolver dinero (no se cobró nada)", async () => {
+    tables.pedidos[0].metodo_pago = "efectivo";
+    tables.pagos[0].estado = "pendiente";
+    tables.pagos[0].transaccion_id = null;
+    const gateway = gatewayWith();
+
+    await run(gateway);
+
+    expect(gateway.refund).not.toHaveBeenCalled();
+    expect(gateway.getPayment).not.toHaveBeenCalled();
+    expect(tables.pedidos[0].estado).toBe("cancelado");
+    expect(tables.pagos[0].estado).toBe("fallido");
+  });
+
+  it("un pedido en efectivo que ya salió no se cancela desde acá", async () => {
+    tables.pedidos[0].metodo_pago = "efectivo";
+    tables.pedidos[0].estado = "en_camino";
+    await expect(run(gatewayWith())).rejects.toMatchObject({ code: "conflict" });
+  });
+
   it("no toca pedidos de otro vendedor", async () => {
     const gateway = gatewayWith();
     await expect(run(gateway, "otro")).rejects.toMatchObject({ code: "not_found" });
