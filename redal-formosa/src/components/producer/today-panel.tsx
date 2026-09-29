@@ -18,7 +18,7 @@ export function TodayPanel({ orders, published, inReview, checklist }: TodayPane
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div className="card p-4">
         <p className="text-muted text-sm">Pedidos pendientes</p>
-        <p className="text-title text-2xl font-bold">{orders.length}</p>
+        <p className="text-title text-2xl font-bold">{orders?.length ?? 0}</p>
       </div>
       <div className="card p-4">
         <p className="text-muted text-sm">Productos publicados</p>
