@@ -31,9 +31,16 @@ const paymentGateway = lazy(
     }),
 );
 
-export const getCheckoutService = lazy(
-  () => new CheckoutService(paymentGateway(), { appUrl: (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "") }),
-);
+export const getCheckoutService = lazy(() => {
+  // El acceso administrativo solo sirve para reutilizar el enlace de pago: si no está configurado, el cobro igual funciona.
+  let admin: ReturnType<typeof createAdminClient> | undefined;
+  try {
+    admin = createAdminClient();
+  } catch {
+    admin = undefined;
+  }
+  return new CheckoutService(paymentGateway(), { appUrl: (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "") }, admin);
+});
 
 export const getPaymentProcessor = lazy(() => {
   const db = createAdminClient();
