@@ -18,5 +18,6 @@ export function authErrorMessage(error: unknown): string {
 
 // Solo rutas internas: evita que ?next= redirija a un sitio externo.
 export function safeNextPath(next: string | null): string {
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  // La barra invertida cuenta: los navegadores tratan "/\\sitio.com" como "//sitio.com".
+  return next && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : "/";
 }

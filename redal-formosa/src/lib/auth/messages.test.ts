@@ -12,6 +12,7 @@ describe("safeNextPath", () => {
     expect(safeNextPath("https://evil.com")).toBe("/");
     expect(safeNextPath("//evil.com")).toBe("/");
     expect(safeNextPath("javascript:alert(1)")).toBe("/");
+    expect(safeNextPath("/\\evil.com")).toBe("/");
   });
 
   it("usa la portada cuando no hay destino", () => {
