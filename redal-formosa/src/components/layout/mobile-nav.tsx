@@ -8,7 +8,7 @@ import { mainNav } from "@/lib/navigation";
 import { SearchBox } from "@/components/search/search-box";
 import { CloseIcon, MenuIcon } from "@/components/ui/icons";
 
-/** Menú hamburguesa para pantallas menores a `md`. Se cierra al navegar, con Escape o al tocar afuera. */
+/** Menú hamburguesa para pantallas menores a `xl`. Se cierra al navegar, con Escape o al tocar afuera. */
 export function MobileNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -27,7 +27,7 @@ export function MobileNav() {
   }, [open]);
 
   return (
-    <div className="md:hidden">
+    <div className="xl:hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

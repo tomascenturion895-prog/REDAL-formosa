@@ -9,6 +9,7 @@ import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/domain/order-status
 import { formatPrice } from "@/lib/format";
 import { useAsync } from "@/lib/hooks/use-async";
 import { ordersRepository } from "@/lib/orders/orders-repository";
+import { requestPaymentUrl } from "@/lib/payments/start-payment";
 import { CheckoutStepper } from "@/components/payment/checkout-stepper";
 import { MercadoPagoBadge } from "@/components/payment/mercadopago-badge";
 import { OrderProgress } from "@/components/payment/order-progress";
@@ -94,13 +95,7 @@ function ConfirmacionContent() {
     setRetrying(true);
     setRetryError(null);
     try {
-      const response = await fetch("/api/checkout/create-preference", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pedidoId: pedido.id }),
-      });
-      if (!response.ok) throw new Error("preference");
-      const { url } = (await response.json()) as { url: string };
+      const url = await requestPaymentUrl(pedido.id);
       setRedirecting(true);
       window.location.href = url;
     } catch {

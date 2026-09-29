@@ -41,7 +41,7 @@ export async function GET(
     });
 
     const pagoAprobado = searchRes.results?.find(
-      (p: any) =>
+      (p) =>
         p.status === "approved" ||
         p.status_detail === "accredited" ||
         p.status === "refunded"
@@ -58,10 +58,11 @@ export async function GET(
     }
 
     return NextResponse.json({ confirmado: false });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error al verificar pago:", error);
+    const message = error instanceof Error ? error.message : "Error al verificar pago";
     return NextResponse.json(
-      { error: error?.message || "Error al verificar pago" },
+      { error: message },
       { status: 500 }
     );
   }

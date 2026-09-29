@@ -18,8 +18,26 @@ const EXTENSIONS: Record<string, string> = {
   "audio/mpeg": "mp3",
 };
 
-/** Sin clave de AssemblyAI, la búsqueda por voz usa el mismo Whisper que "Voz a Catálogo" (OPENAI_API_KEY). */
-async function transcribeWithWhisper(req: Request) {
+async function transcribeWithAssemblyAi(apiKey: string, audio: Blob): Promise<string> {
+  const client = new AssemblyAI({ apiKey });
+  // En cuentas gratuitas el token de streaming suele dar 404, así que se transcribe por REST estándar.
+  const transcript = await client.transcripts.transcribe({
+    audio: Buffer.from(await audio.arrayBuffer()),
+    language_code: "es",
+  });
+  if (transcript.status === "error") {
+    console.error("Error en transcripción AssemblyAI:", transcript.error);
+    throw new ServiceError("unavailable", "No pudimos transcribir el audio. Probá de nuevo en un momento.");
+  }
+  return transcript.text ?? "";
+}
+
+/**
+ * Búsqueda por voz del encabezado. Es pública (cualquiera puede buscar sin cuenta), pero cada
+ * transcripción cuesta dinero: por eso se limita por IP y por tamaño, con cualquiera de los dos
+ * proveedores. Con ASSEMBLYAI_API_KEY usa AssemblyAI; sin ella, el mismo Whisper que "Voz a Catálogo".
+ */
+export async function POST(req: Request) {
   return handleRoute(async () => {
     enforceRateLimit(limiters.voiceSearch, clientIp(req));
 
@@ -28,59 +46,10 @@ async function transcribeWithWhisper(req: Request) {
     if (!(audio instanceof Blob)) throw new ServiceError("bad_request", "No se proporcionó audio");
     if (audio.size > MAX_AUDIO_BYTES) throw new ServiceError("bad_request", "El audio es demasiado largo.");
 
+    const apiKey = process.env.ASSEMBLYAI_API_KEY;
+    if (apiKey) return NextResponse.json({ text: await transcribeWithAssemblyAi(apiKey, audio) });
+
     const extension = EXTENSIONS[audio.type.split(";")[0].trim().toLowerCase()] ?? "wav";
-    const text = await getSpeechToText().transcribe(audio, `audio.${extension}`);
-    return NextResponse.json({ text });
+    return NextResponse.json({ text: await getSpeechToText().transcribe(audio, `audio.${extension}`) });
   });
-}
-
-export async function POST(req: Request) {
-  const apiKey = process.env.ASSEMBLYAI_API_KEY;
-
-  if (!apiKey) {
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        {
-          error:
-            "No se encontró ASSEMBLYAI_API_KEY ni OPENAI_API_KEY en las variables de entorno. Configurá alguna de ellas en el archivo .env.",
-        },
-        { status: 503 }
-      );
-    }
-    return transcribeWithWhisper(req);
-  }
-
-  try {
-    const formData = await req.formData();
-    const audioFile = formData.get("audio") as Blob | null;
-
-    if (!audioFile) {
-      return NextResponse.json({ error: "No se proporcionó audio" }, { status: 400 });
-    }
-
-    // Convert Blob to ArrayBuffer
-    const arrayBuffer = await audioFile.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const client = new AssemblyAI({ apiKey });
-
-    // En cuentas gratuitas el token de streaming suele dar 404, así que hacemos
-    // la transcripción por REST estándar que funciona para todos.
-    const transcript = await client.transcripts.transcribe({
-      audio: buffer,
-      language_code: "es", // Español
-    });
-
-    if (transcript.status === "error") {
-      throw new Error(transcript.error);
-    }
-
-    return NextResponse.json({ text: transcript.text });
-  } catch (error: any) {
-    console.error("Error en transcripción AssemblyAI:", error);
-    return NextResponse.json(
-      { error: "Error al procesar el audio", details: error.message || error },
-      { status: 500 }
-    );
-  }
 }

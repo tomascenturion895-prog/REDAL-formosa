@@ -6,4 +6,5 @@ export const mainNav = [
   { href: "/productos", label: "Productos" },
   { href: "/emprendimientos", label: "Emprendimientos" },
   { href: "/mapa", label: "Mapa" },
+  { href: "/b2b", label: "Mayoristas" },
 ] as const;

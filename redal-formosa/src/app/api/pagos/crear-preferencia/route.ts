@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     const preference = new Preference(mpClient);
 
-    const preferenceBody: any = {
+    const preferenceBody: Parameters<typeof preference.create>[0]["body"] = {
       items: [
         {
           id: String(orden_id),
@@ -78,10 +78,11 @@ export async function POST(req: NextRequest) {
       sandbox_init_point: prefResponse.sandbox_init_point,
       checkout_url: checkoutUrl, // URL para abrir o generar el QR
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error al crear preferencia de Mercado Pago:", error);
+    const message = error instanceof Error ? error.message : "Error al crear preferencia";
     return NextResponse.json(
-      { error: error?.message || "Error al crear preferencia" },
+      { error: message },
       { status: 500 }
     );
   }

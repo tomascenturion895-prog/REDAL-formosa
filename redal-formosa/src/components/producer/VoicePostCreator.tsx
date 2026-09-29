@@ -1,254 +1,150 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { MicIcon } from "@/components/ui/icons";
+import { useState } from "react";
 
-export function VoicePostCreator() {
-  const [content, setContent] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
+import { useVoiceRecorder } from "@/lib/audio/use-voice-recorder";
+import { useAsync } from "@/lib/hooks/use-async";
+import { cleanNovedad, NOVEDAD_MAX_CHARS } from "@/lib/domain/novedad";
+import { novedadesRepository } from "@/lib/novedades/novedades-repository";
+import { Alert } from "@/components/ui/alert";
+import { MicIcon, StopIcon, TrashIcon } from "@/components/ui/icons";
 
-  const recorderRef = useRef<any>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const recognitionRef = useRef<any>(null);
+const dateFormat = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short" });
 
-  useEffect(() => {
-    return () => cleanupAudio();
-  }, []);
+interface VoicePostCreatorProps {
+  emprendimientoId: string;
+}
 
-  const cleanupAudio = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch {}
-      recognitionRef.current = null;
-    }
-    if (recorderRef.current) {
-      recorderRef.current.stopRecording();
-      recorderRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
-      streamRef.current = null;
+/** El vendedor publica una novedad escribiendo o hablando, y ve y borra las que ya publicó. */
+export function VoicePostCreator({ emprendimientoId }: VoicePostCreatorProps) {
+  const [text, setText] = useState("");
+  const [processing, setProcessing] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: own, reload } = useAsync(() => novedadesRepository.listFor(emprendimientoId, 5), [emprendimientoId], {
+    scope: emprendimientoId,
+  });
+
+  const transcribe = async (audio: Blob) => {
+    setProcessing(true);
+    try {
+      const body = new FormData();
+      body.append("audio", audio);
+      const response = await fetch("/api/assemblyai/transcribe", { method: "POST", body });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || typeof data.text !== "string") {
+        setError(typeof data.error === "string" ? data.error : "No pudimos procesar el audio. Intentá de nuevo.");
+        return;
+      }
+      setText((prev) => `${prev ? `${prev} ` : ""}${data.text}`.trim().slice(0, NOVEDAD_MAX_CHARS));
+    } catch {
+      setError("No pudimos conectarnos. Revisá tu conexión e intentá de nuevo.");
+    } finally {
+      setProcessing(false);
     }
   };
 
-  const stopVoiceSearch = async () => {
-    setIsRecording(false);
+  const { status, seconds, maxSeconds, start, stop } = useVoiceRecorder({ onRecorded: transcribe, onError: setError });
+  const recording = status === "recording";
 
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {}
-      recognitionRef.current = null;
+  const toggle = () => {
+    setError(null);
+    if (recording) stop();
+    else void start();
+  };
+
+  const publish = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    let contenido: string;
+    try {
+      contenido = cleanNovedad(text);
+    } catch (err) {
+      setError((err as Error).message);
       return;
     }
-
-    if (!recorderRef.current) return;
-    setIsProcessing(true);
-
-    recorderRef.current.stopRecording(async () => {
-      try {
-        const blob = recorderRef.current.getBlob();
-        cleanupAudio();
-
-        const formData = new FormData();
-        formData.append("audio", blob, "audio.wav");
-
-        const res = await fetch("/api/assemblyai/transcribe", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => null);
-          const detail = errData?.error || errData?.details || res.statusText;
-          throw new Error(detail || `Error del servidor (${res.status})`);
-        }
-
-        const data = await res.json();
-        if (data.text) {
-          setContent((prev) => (prev ? prev + " " + data.text : data.text));
-        }
-      } catch (err: any) {
-        console.error(err);
-        setErrorMsg(err?.message || "Error al procesar el audio");
-      } finally {
-        setIsProcessing(false);
-      }
-    });
-  };
-
-  const startRecordingFallback = async () => {
+    setPublishing(true);
     try {
-      setErrorMsg("");
-      setSuccessMsg("");
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-
-      const RecordRTCModule = await import("recordrtc");
-      const RecordRTC = RecordRTCModule.default;
-      const { StereoAudioRecorder } = RecordRTCModule;
-
-      const recorder = new RecordRTC(stream, {
-        type: "audio",
-        mimeType: "audio/wav",
-        recorderType: StereoAudioRecorder,
-        numberOfAudioChannels: 1,
-        desiredSampRate: 16000,
-      });
-
-      recorder.startRecording();
-      recorderRef.current = recorder;
-      setIsRecording(true);
-    } catch (err) {
-      console.error(err);
-      setIsRecording(false);
-      setErrorMsg("Permiso denegado o error de micrófono");
-      cleanupAudio();
-    }
-  };
-
-  const startVoiceSearch = async () => {
-    setErrorMsg("");
-    setSuccessMsg("");
-
-    const SpeechRecognition =
-      typeof window !== "undefined" &&
-      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
-
-    if (SpeechRecognition) {
-      try {
-        const recognition = new SpeechRecognition();
-        recognition.lang = "es-AR";
-        recognition.continuous = false;
-        recognition.interimResults = true;
-        recognitionRef.current = recognition;
-
-        recognition.onstart = () => {
-          setIsRecording(true);
-        };
-
-        recognition.onresult = (event: any) => {
-          let finalTranscript = "";
-
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript;
-            }
-          }
-
-          if (finalTranscript) {
-            setContent((prev) => (prev ? prev + " " + finalTranscript : finalTranscript));
-          }
-        };
-
-        recognition.onerror = (event: any) => {
-          console.warn("SpeechRecognition error:", event.error);
-          setIsRecording(false);
-          recognitionRef.current = null;
-          if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-            setErrorMsg("Permiso denegado para el micrófono");
-          } else if (event.error !== "no-speech") {
-            void startRecordingFallback();
-          }
-        };
-
-        recognition.onend = () => {
-          setIsRecording(false);
-          recognitionRef.current = null;
-        };
-
-        recognition.start();
-        return;
-      } catch (e) {
-        console.warn("SpeechRecognition falló al iniciar:", e);
-      }
-    }
-
-    await startRecordingFallback();
-  };
-
-  const toggleRecording = () => {
-    if (isRecording) stopVoiceSearch();
-    else startVoiceSearch();
-  };
-
-  const publishPost = async () => {
-    if (!content.trim()) return;
-    setIsPublishing(true);
-    setErrorMsg("");
-    setSuccessMsg("");
-
-    try {
-      const res = await fetch("/api/posts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: content.trim(), author: "Productor / Vendedor" })
-      });
-
-      if (!res.ok) throw new Error("Error al publicar");
-      setContent("");
-      setSuccessMsg("¡Publicación creada con éxito! Ya aparece en el feed principal.");
-      setTimeout(() => setSuccessMsg(""), 4000);
-    } catch (err) {
-      setErrorMsg("Ocurrió un error al intentar publicar.");
+      await novedadesRepository.publish(emprendimientoId, contenido);
+      setText("");
+      reload();
+    } catch {
+      setError("No pudimos publicar la novedad. Intentá de nuevo.");
     } finally {
-      setIsPublishing(false);
+      setPublishing(false);
+    }
+  };
+
+  const remove = async (id: string) => {
+    setError(null);
+    try {
+      await novedadesRepository.remove(id);
+      reload();
+    } catch {
+      setError("No pudimos borrar la novedad. Intentá de nuevo.");
     }
   };
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-5 shadow-sm mb-6">
-      <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-        Crear Novedad Rápida
-      </h3>
-      <p className="text-sm text-muted mb-4">
-        Usá tu voz para contarle a tus clientes qué tenés fresco hoy.
-      </p>
-
-      <div className="relative">
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={isRecording ? "Escuchando... hablá ahora" : isProcessing ? "Procesando voz a texto..." : "¿Qué querés contar hoy?"}
-          disabled={isProcessing || isPublishing}
-          className={`w-full min-h-[100px] resize-none rounded-lg bg-surface-muted p-4 pr-14 text-sm outline-none transition-all focus:ring-2 focus:ring-action/20 ${isRecording ? "border-action ring-2 ring-action/30" : "border border-border"
-            } ${isProcessing || isPublishing ? "opacity-70 cursor-not-allowed" : ""}`}
-        />
-
-        <button
-          type="button"
-          onClick={toggleRecording}
-          disabled={isProcessing || isPublishing}
-          title={isRecording ? "Detener grabación" : "Dictar por voz"}
-          className={`absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-full transition-all ${isRecording
-              ? "bg-action text-on-action animate-pulse shadow-md scale-110"
-              : isProcessing
-                ? "bg-surface-muted text-muted cursor-not-allowed"
-                : "bg-surface text-muted hover:bg-action hover:text-on-action shadow-sm border border-border hover:border-transparent"
-            }`}
-        >
-          <MicIcon size={20} />
-        </button>
+    <section aria-labelledby="novedades-vendedor-title" className="card space-y-4 p-5 sm:p-6">
+      <div>
+        <h2 id="novedades-vendedor-title" className="text-heading">
+          Novedades para tus compradores
+        </h2>
+        <p className="mt-1 text-sm text-muted">Avisá qué cosechaste hoy o si cambia tu horario. Se ve en el inicio de REDAL.</p>
       </div>
 
-      <div className="mt-4 flex items-center justify-between">
-        <div>
-          {errorMsg && <span className="text-sm font-medium text-destructive">{errorMsg}</span>}
-          {successMsg && <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{successMsg}</span>}
+      {error && <Alert tone="error">{error}</Alert>}
+
+      <form onSubmit={publish} className="space-y-3">
+        <label className="block text-sm font-medium">
+          Tu novedad
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={NOVEDAD_MAX_CHARS}
+            rows={3}
+            placeholder="Ej: Hoy llegó zapallo fresco de la quinta."
+            className="field mt-1"
+          />
+        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={toggle}
+            disabled={processing}
+            aria-busy={processing}
+            aria-pressed={recording}
+            className={`btn btn-secondary ${recording ? "btn-danger" : ""}`}
+          >
+            {recording ? <StopIcon size={18} /> : !processing && <MicIcon size={18} />}
+            {processing ? "Procesando…" : recording ? `Terminar (${seconds}s / ${maxSeconds}s)` : "Dictar"}
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={publishing || processing || recording || !text.trim()}>
+            {publishing ? "Publicando…" : "Publicar"}
+          </button>
+          <span className="ml-auto text-xs tabular-nums text-muted">
+            {text.length}/{NOVEDAD_MAX_CHARS}
+          </span>
         </div>
-        <button
-          onClick={publishPost}
-          disabled={!content.trim() || isPublishing || isProcessing || isRecording}
-          className="btn btn-primary px-6 py-2 shadow-sm disabled:opacity-50"
-        >
-          {isPublishing ? "Publicando..." : "Publicar Novedad"}
-        </button>
-      </div>
-    </div>
+      </form>
+
+      {own && own.length > 0 && (
+        <ul className="divide-y divide-border border-t border-border text-sm">
+          {own.map((novedad) => (
+            <li key={novedad.id} className="flex items-start gap-3 py-3">
+              <p className="min-w-0 flex-1">
+                «{novedad.contenido}»
+                <span className="ml-2 text-xs text-muted">{dateFormat.format(new Date(novedad.createdAt))}</span>
+              </p>
+              <button type="button" onClick={() => remove(novedad.id)} aria-label="Borrar novedad" className="btn btn-ghost btn-sm shrink-0">
+                <TrashIcon size={16} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

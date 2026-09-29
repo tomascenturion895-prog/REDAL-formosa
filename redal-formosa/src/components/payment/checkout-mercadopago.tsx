@@ -28,7 +28,7 @@ export function CheckoutMercadoPago({
   const [pagoAprobado, setPagoAprobado] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const pollingRef = useRef<any>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 1. Obtener la URL de pago de Mercado Pago
   useEffect(() => {
@@ -64,9 +64,9 @@ export function CheckoutMercadoPago({
         } else {
           throw new Error("No se recibió la URL de checkout");
         }
-      } catch (err: any) {
+      } catch (err) {
         if (mounted) {
-          setError(err.message || "Error al conectar con Mercado Pago");
+          setError(err instanceof Error ? err.message : "Error al conectar con Mercado Pago");
         }
       } finally {
         if (mounted) setLoading(false);

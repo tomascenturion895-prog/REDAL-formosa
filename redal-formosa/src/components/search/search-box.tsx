@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import type RecordRTCRecorder from "recordrtc";
 
 import { SearchIcon, MicIcon } from "@/components/ui/icons";
 
@@ -13,16 +14,22 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const recorderRef = useRef<any>(null);
+  const recorderRef = useRef<RecordRTCRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const recognitionRef = useRef<any>(null);
+
+  const cleanupAudio = useCallback(() => {
+    if (recorderRef.current) {
+      recorderRef.current.stopRecording();
+      recorderRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+      streamRef.current = null;
+    }
+  }, []);
 
   // Limpiar recursos si el componente se desmonta
-  useEffect(() => {
-    return () => {
-      cleanupAudio();
-    };
-  }, []);
+  useEffect(() => cleanupAudio, [cleanupAudio]);
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -34,46 +41,22 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
     }
   };
 
-  const cleanupAudio = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch {}
-      recognitionRef.current = null;
-    }
-    if (recorderRef.current) {
-      recorderRef.current.stopRecording();
-      recorderRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
-      streamRef.current = null;
-    }
-  };
-
   const stopVoiceSearch = async () => {
     setIsRecording(false);
 
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {}
-      recognitionRef.current = null;
-      return;
-    }
-
-    if (!recorderRef.current) return;
+    const recorder = recorderRef.current;
+    if (!recorder) return;
 
     setIsProcessing(true);
 
-    recorderRef.current.stopRecording(async () => {
+    recorder.stopRecording(async () => {
       try {
-        const blob = recorderRef.current.getBlob();
+        const blob = recorder.getBlob();
         cleanupAudio();
 
-        // Enviar al servidor para procesar con AssemblyAI / Whisper
+        // Enviar al servidor para procesar con AssemblyAI
         const formData = new FormData();
-        formData.append("audio", blob, "audio.wav");
+        formData.append("audio", blob, "audio.webm");
 
         const res = await fetch("/api/assemblyai/transcribe", {
           method: "POST",
@@ -82,8 +65,8 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
 
         if (!res.ok) {
           const errData = await res.json().catch(() => null);
-          const detail = errData?.error || errData?.details || res.statusText;
-          throw new Error(detail || `Error del servidor (${res.status})`);
+          const detail = errData?.details || errData?.error || res.statusText;
+          throw new Error(`Error del servidor (${res.status}): ${detail}`);
         }
 
         const data = await res.json();
@@ -94,16 +77,16 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
           const q = data.text.trim();
           router.push(q ? `/productos?q=${encodeURIComponent(q)}` : "/productos");
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error(err);
-        setErrorMsg(err?.message || "Error al procesar el audio");
+        setErrorMsg("Error al procesar el audio");
       } finally {
         setIsProcessing(false);
       }
     });
   };
 
-  const startRecordingFallback = async () => {
+  const startVoiceSearch = async () => {
     try {
       setErrorMsg("");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -115,98 +98,22 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
 
       const recorder = new RecordRTC(stream, {
         type: "audio",
-        mimeType: "audio/wav",
+        mimeType: "audio/webm",
         recorderType: StereoAudioRecorder,
         numberOfAudioChannels: 1,
-        desiredSampRate: 16000,
+        desiredSampRate: 16000
       });
 
       recorder.startRecording();
       recorderRef.current = recorder;
       setIsRecording(true);
-      setQuery("");
+      setQuery(""); // Clear the input for the voice transcription
     } catch (err) {
       console.error(err);
       setIsRecording(false);
       setErrorMsg("Permiso denegado o error de micrófono");
       cleanupAudio();
     }
-  };
-
-  const startVoiceSearch = async () => {
-    setErrorMsg("");
-
-    const SpeechRecognition =
-      typeof window !== "undefined" &&
-      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
-
-    if (SpeechRecognition) {
-      try {
-        const recognition = new SpeechRecognition();
-        recognition.lang = "es-AR";
-        recognition.continuous = false;
-        recognition.interimResults = true;
-        recognition.maxAlternatives = 1;
-        recognitionRef.current = recognition;
-
-        recognition.onstart = () => {
-          setIsRecording(true);
-          setErrorMsg("");
-          setQuery("");
-        };
-
-        recognition.onresult = (event: any) => {
-          let interimTranscript = "";
-          let finalTranscript = "";
-
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            const transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-              finalTranscript += transcript;
-            } else {
-              interimTranscript += transcript;
-            }
-          }
-
-          const current = finalTranscript || interimTranscript;
-          if (current) {
-            setQuery(current);
-          }
-
-          if (finalTranscript) {
-            setIsRecording(false);
-            recognitionRef.current = null;
-            const q = finalTranscript.trim();
-            if (q) {
-              router.push(`/productos?q=${encodeURIComponent(q)}`);
-            }
-          }
-        };
-
-        recognition.onerror = (event: any) => {
-          console.warn("SpeechRecognition error:", event.error);
-          setIsRecording(false);
-          recognitionRef.current = null;
-          if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-            setErrorMsg("Permiso denegado para el micrófono");
-          } else if (event.error !== "no-speech") {
-            void startRecordingFallback();
-          }
-        };
-
-        recognition.onend = () => {
-          setIsRecording(false);
-          recognitionRef.current = null;
-        };
-
-        recognition.start();
-        return;
-      } catch (e) {
-        console.warn("SpeechRecognition falló al iniciar, usando fallback de grabación:", e);
-      }
-    }
-
-    await startRecordingFallback();
   };
 
   const toggleVoiceSearch = () => {

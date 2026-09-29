@@ -30,6 +30,8 @@ export function DashboardTabs() {
   const tabs = [
     { href: "/dashboard", label: "Hoy", badge: 0 },
     { href: "/dashboard/pedidos", label: "Pedidos", badge: waiting },
+    { href: "/dashboard/cobros", label: "Mis cobros", badge: 0 },
+    { href: "/dashboard/mayoristas", label: "Mayoristas", badge: 0 },
   ];
 
   return (

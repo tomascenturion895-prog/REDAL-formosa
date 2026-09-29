@@ -9,6 +9,7 @@ import { FORMOSA_CENTER } from "@/lib/domain/geo";
 import { useAsync } from "@/lib/hooks/use-async";
 import { PageHeader } from "@/components/layout/page-header";
 import { RepartidorTracker } from "@/components/tracking/repartidor-tracker";
+import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TruckIcon } from "@/components/ui/icons";
 
@@ -20,8 +21,23 @@ async function loadAssignments(userId: string) {
 
 export default function RepartidorTrackingPage() {
   const { user, pending } = useRequireAuth();
-  const { data, loading } = useAsync(() => loadAssignments(user!.id), [user?.id], { enabled: Boolean(user), scope: user?.id });
+  const { data, loading, reload } = useAsync(() => loadAssignments(user!.id), [user?.id], { enabled: Boolean(user), scope: user?.id });
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const advance = async (orderId: string, estado: "en_camino" | "entregado") => {
+    setBusy(true);
+    setActionError(null);
+    try {
+      await deliveryRepository.advance(orderId, estado);
+      reload();
+    } catch {
+      setActionError("No pudimos actualizar la entrega. Recargá la pantalla e intentá de nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   if (pending || loading) return <div className="h-40" aria-busy="true" />;
 
@@ -68,6 +84,18 @@ export default function RepartidorTrackingPage() {
               </li>
             ))}
           </ul>
+
+          {actionError && <Alert tone="error">{actionError}</Alert>}
+          {selected.estado === "listo" && (
+            <button type="button" className="btn btn-primary w-full" disabled={busy} onClick={() => advance(selected.id, "en_camino")}>
+              Retiré el pedido y salgo a entregar
+            </button>
+          )}
+          {selected.estado === "en_camino" && (
+            <button type="button" className="btn btn-primary w-full" disabled={busy} onClick={() => advance(selected.id, "entregado")}>
+              Entregué el pedido
+            </button>
+          )}
 
           <RepartidorTracker repartidorId={courier.id} destino={selected.entrega ?? FORMOSA_CENTER} isRepartidor />
           {!selected.entrega && (

@@ -74,6 +74,15 @@ export class MercadoPagoGateway implements PaymentGateway {
     };
   }
 
+  async refund(paymentId: string): Promise<void> {
+    // Sin monto, MercadoPago devuelve el total. La clave de idempotencia evita devolver dos veces si se reintenta.
+    await this.client().post(
+      `/v1/payments/${encodeURIComponent(paymentId)}/refunds`,
+      {},
+      { headers: { "X-Idempotency-Key": `refund-${paymentId}` } },
+    );
+  }
+
   // manifest = "id:<data.id>;request-id:<x-request-id>;ts:<ts>;" firmado con HMAC-SHA256.
   verifyWebhook({ dataId, signature, requestId }: WebhookProof): boolean {
     const secret = this.config.webhookSecret;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buyerMessage, extractBuyerPhone, groupOrders, NEXT_STEP, timeAgo, type SellerOrder } from "./seller-orders";
+import { buyerMessage, canAssignCourier, canCancelAndRefund, extractBuyerPhone, groupOrders, NEXT_STEP, timeAgo, type SellerOrder } from "./seller-orders";
 
 const order = (over: Partial<SellerOrder>): SellerOrder => ({
   id: "1",
@@ -15,6 +15,8 @@ const order = (over: Partial<SellerOrder>): SellerOrder => ({
   emprendimiento_id: "e1",
   emprendimiento_nombre: "Chacra El Sol",
   items: [],
+  repartidor_id: null,
+  repartidor_nombre: null,
   ...over,
 });
 
@@ -48,11 +50,17 @@ describe("groupOrders", () => {
 });
 
 describe("NEXT_STEP", () => {
-  it("solo permite empezar a preparar y marcar listo", () => {
+  it("cubre todo el ciclo hasta la entrega, en orden", () => {
     expect(NEXT_STEP.pagado?.estado).toBe("en_preparacion");
     expect(NEXT_STEP.en_preparacion?.estado).toBe("listo");
-    expect(NEXT_STEP.listo).toBeUndefined();
+    expect(NEXT_STEP.listo?.estado).toBe("en_camino");
+    expect(NEXT_STEP.en_camino?.estado).toBe("entregado");
+  });
+
+  it("no ofrece pasos sobre pedidos sin pagar, entregados o cancelados", () => {
+    expect(NEXT_STEP.pendiente_pago).toBeUndefined();
     expect(NEXT_STEP.entregado).toBeUndefined();
+    expect(NEXT_STEP.cancelado).toBeUndefined();
   });
 });
 
@@ -86,5 +94,28 @@ describe("buyerMessage", () => {
     expect(text).toContain("Chacra El Sol");
     expect(text).toContain("RED-0001");
     expect(text).toContain("ya está listo");
+  });
+
+  it("avisa que el pedido va en camino", () => {
+    expect(buyerMessage(order({ estado: "en_camino" }))).toContain("ya está en camino");
+  });
+});
+
+describe("canAssignCourier", () => {
+  it("permite elegir repartidor hasta que el pedido sale", () => {
+    expect(canAssignCourier("pagado")).toBe(true);
+    expect(canAssignCourier("en_preparacion")).toBe(true);
+    expect(canAssignCourier("listo")).toBe(true);
+    expect(canAssignCourier("en_camino")).toBe(false);
+    expect(canAssignCourier("entregado")).toBe(false);
+    expect(canAssignCourier("cancelado")).toBe(false);
+    expect(canAssignCourier("pendiente_pago")).toBe(false);
+  });
+});
+
+describe("canCancelAndRefund", () => {
+  it("solo mientras el pedido está pago y no salió", () => {
+    expect(["pagado", "en_preparacion", "listo"].every((e) => canCancelAndRefund(e as never))).toBe(true);
+    expect(["pendiente_pago", "en_camino", "entregado", "cancelado"].some((e) => canCancelAndRefund(e as never))).toBe(false);
   });
 });

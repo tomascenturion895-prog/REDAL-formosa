@@ -9,6 +9,7 @@ import { formatDate, formatPrice } from "@/lib/format";
 import { useAsync } from "@/lib/hooks/use-async";
 import { ordersRepository } from "@/lib/orders/orders-repository";
 import { OrderItem } from "@/components/orders/order-item";
+import { UnpaidOrderActions } from "@/components/orders/unpaid-order-actions";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PackageIcon, TruckIcon } from "@/components/ui/icons";
 
@@ -21,7 +22,7 @@ export default function PedidoDetallePage() {
   const { id: orderId } = useParams<{ id: string }>();
   const { user, pending } = useRequireAuth();
 
-  const { data, loading } = useAsync(() => loadOrder(orderId, user!.id), [orderId, user?.id], { enabled: Boolean(user), scope: user?.id });
+  const { data, loading, reload } = useAsync(() => loadOrder(orderId, user!.id), [orderId, user?.id], { enabled: Boolean(user), scope: user?.id });
 
   if (pending || loading) return <div className="page-container py-section" aria-busy="true" />;
 
@@ -71,6 +72,7 @@ export default function PedidoDetallePage() {
         </section>
 
         <aside className="space-y-4">
+          {order.estado === "pendiente_pago" && <UnpaidOrderActions orderId={order.id} onCancelled={reload} />}
           <div className="card space-y-4 p-6">
             <h2 className="text-heading">Resumen</h2>
             <dl className="space-y-2 text-sm">

@@ -12,6 +12,7 @@ import { SendGridEmailChannel } from "./notifications/sendgrid-email-channel";
 import { TwilioSmsChannel } from "./notifications/twilio-sms-channel";
 import { CheckoutService } from "./payments/checkout-service";
 import { MercadoPagoGateway } from "./payments/mercadopago-gateway";
+import { OrderCancellationService } from "./payments/order-cancellation-service";
 import { PaymentProcessor } from "./payments/payment-processor";
 import { BankAccountService } from "./producer/bank-account-service";
 import { ServiceError } from "./errors";
@@ -55,6 +56,8 @@ export const getPaymentProcessor = lazy(() => {
   return new PaymentProcessor(paymentGateway(), db, events);
 });
 
+export const getOrderCancellationService = lazy(() => new OrderCancellationService(paymentGateway(), createAdminClient()));
+
 export const getBankAccountService = lazy(() => {
   // Rotación: BANK_ENCRYPTION_KEYRING = {"currentId":"v2","keys":{"v1":"...","v2":"..."}}.
   // Sin anillo, BANK_ENCRYPTION_KEY es la única clave (id "v1").
@@ -89,6 +92,7 @@ export const getGeocoder = lazy(
 // Límites por clave (usuario o IP). Frenan abusos sin molestar el uso normal.
 export const limiters = {
   checkout: new InMemoryRateLimiter({ limit: 10, windowMs: 60_000 }),
+  cancelOrder: new InMemoryRateLimiter({ limit: 10, windowMs: 60_000 }),
   bankAccount: new InMemoryRateLimiter({ limit: 5, windowMs: 60_000 }),
   voiceCatalog: new InMemoryRateLimiter({ limit: 10, windowMs: 60_000 }),
   recipes: new InMemoryRateLimiter({ limit: 6, windowMs: 60_000 }),

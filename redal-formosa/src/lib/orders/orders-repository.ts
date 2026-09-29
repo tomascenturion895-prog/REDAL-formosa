@@ -152,6 +152,18 @@ export class OrdersRepository {
   }
 
   /**
+   * Cancela un pedido propio que todavía no se pagó. El filtro por estado es la garantía: si el pago se
+   * acreditó mientras tanto, no se cancela nada y se avisa.
+   */
+  async cancelUnpaid(orderId: string): Promise<void> {
+    const rows = await unwrap(
+      this.db.from("pedidos").update({ estado: "cancelado" }).eq("id", orderId).eq("estado", "pendiente_pago").select("id"),
+      "cancelar pedido",
+    );
+    if (rows.length === 0) throw new RepositoryError("El pedido ya no está pendiente de pago");
+  }
+
+  /**
    * Crea el pedido en la base. El servidor valida disponibilidad y calcula precios y envío:
    * el cliente solo dice qué productos y cuántos.
    */

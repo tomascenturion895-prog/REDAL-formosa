@@ -20,6 +20,7 @@ export default function PedidosDelVendedorPage() {
     enabled: Boolean(user),
     scope: user?.id,
   });
+  const { data: couriers } = useAsync(() => sellerOrdersRepository.couriers(), [user?.id], { enabled: Boolean(user), scope: user?.id });
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -42,6 +43,32 @@ export default function PedidosDelVendedorPage() {
       setActionError("No pudimos actualizar el pedido. Puede que ya haya cambiado: recargá la lista.");
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const assign = async (order: SellerOrder, courierId: string | null) => {
+    setBusyId(order.id);
+    setActionError(null);
+    try {
+      await sellerOrdersRepository.assignCourier(order.id, courierId);
+      reload();
+    } catch {
+      setActionError("No pudimos asignar el repartidor. Puede que el pedido ya haya salido: recargá la lista.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const cancel = async (order: SellerOrder) => {
+    setBusyId(order.id);
+    setActionError(null);
+    try {
+      await sellerOrdersRepository.cancelAndRefund(order.id);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "No pudimos cancelar el pedido.");
+    } finally {
+      setBusyId(null);
+      reload();
     }
   };
 
@@ -95,6 +122,9 @@ export default function PedidosDelVendedorPage() {
                   busy={busyId === order.id}
                   showStore={stores.size > 1}
                   onAdvance={advance}
+                  couriers={couriers}
+                  onAssign={assign}
+                  onCancel={cancel}
                 />
               ))}
             </div>

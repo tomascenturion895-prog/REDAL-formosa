@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     await marcarPagado(orden_id, payment_id);
 
     return NextResponse.json({ ok: true, orden_id, payment_id });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Error confirmando retorno:", err);
     return NextResponse.json({ error: "Error confirmando retorno" }, { status: 500 });
   }

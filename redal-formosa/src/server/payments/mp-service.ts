@@ -1,4 +1,4 @@
-import { MercadoPagoConfig, Payment } from "mercadopago";
+import { MercadoPagoConfig } from "mercadopago";
 import { createClient } from "@supabase/supabase-js";
 
 import type { Database, Db } from "@/lib/supabase/types";
@@ -76,7 +76,7 @@ export async function marcarPagado(ordenId: string, paymentId?: string | number)
   const txId = paymentId ? String(paymentId) : undefined;
 
   // 1. Transición garantizada de la orden a 'pagado'
-  const { data: transitioned, error: pedError } = await db
+  const { error: pedError } = await db
     .from("pedidos")
     .update({ estado: "pagado" })
     .eq("id", ordenId)
