@@ -69,7 +69,7 @@ export class MercadoPagoGateway implements PaymentGateway {
       ...(request.notificationUrl ? { notification_url: request.notificationUrl } : {}),
     });
     // Con credenciales de prueba MercadoPago entrega sandbox_init_point.
-    return { url: data.init_point ?? data.sandbox_init_point };
+    return { url: data.init_point ?? data.sandbox_init_point, id: data.id ? String(data.id) : undefined };
   }
 
   async getPayment(paymentId: string): Promise<PaymentInfo> {
@@ -79,6 +79,7 @@ export class MercadoPagoGateway implements PaymentGateway {
       orderId: data.external_reference ?? null,
       outcome: OUTCOME[data.status] ?? "pending",
       amount: Number(data.transaction_amount),
+      currency: typeof data.currency_id === "string" ? data.currency_id : undefined,
     };
   }
 

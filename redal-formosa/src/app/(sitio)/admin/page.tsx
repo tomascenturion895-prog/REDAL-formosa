@@ -8,6 +8,7 @@ import { formatPrice } from "@/lib/format";
 import { useAsync } from "@/lib/hooks/use-async";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 function TrendBadge({ value }: { value: Trend }) {
   if (value.percent === null) {
@@ -33,19 +34,31 @@ function Kpi({ label, value, children }: { label: string; value: string; childre
 }
 
 export default function AdminDashboard() {
-  const { data: stats, error } = useAsync(() => adminRepository.stats(), []);
-  const { data: summary } = useAsync(() => adminRepository.summary(), []);
+  const { data: stats, error: statsError, reload: reloadStats } = useAsync(() => adminRepository.stats(), []);
+  const { data: summary, error: summaryError, reload: reloadSummary } = useAsync(() => adminRepository.summary(), []);
 
-  if (error) {
+  if (statsError || summaryError) {
     return (
       <EmptyState
         illustration="error"
         title="No pudimos cargar las métricas"
         description="Verificá que las migraciones de administración estén aplicadas en la base."
+        action={
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              reloadStats();
+              reloadSummary();
+            }}
+          >
+            Reintentar
+          </button>
+        }
       />
     );
   }
-  if (!stats || !summary) return <div aria-busy="true" className="h-40" />;
+  if (!stats || !summary) return <PageLoading compact />;
 
   const attention = [
     { label: "Productos por aprobar", value: summary.productos_pendientes, href: "/admin/productos", cta: "Revisar" },

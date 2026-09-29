@@ -69,6 +69,19 @@ export class PaymentProcessor {
     if (!order) throw new ServiceError("not_found", "Pedido inexistente");
 
     let rowState = ROW_STATE[payment.outcome];
+
+    // Otro pago del mismo pedido cuando ya hay uno aprobado (pagó desde dos enlaces): el primero es el que
+    // vale. Si el nuevo también está aprobado se devuelve entero; cualquier otro estado suyo (rechazo,
+    // reembolso del duplicado) no debe tocar ni cancelar el pedido.
+    const { data: current } = await this.db.from("pagos").select("estado, transaccion_id").eq("pedido_id", order.id).maybeSingle();
+    if (current?.estado === "aprobado" && current.transaccion_id && current.transaccion_id !== payment.id) {
+      if (rowState === "aprobado") return await this.refundDuplicate(payment.id, current.transaccion_id, order.id);
+      return { status: "processed", orderId: order.id, paid: false, cancelled: false };
+    }
+    if (rowState === "aprobado" && payment.currency && payment.currency.toUpperCase() !== "ARS") {
+      logError(`Pago ${payment.id} del pedido ${order.id} en ${payment.currency}, no en ARS`);
+      rowState = "fallido";
+    }
     // Un pago aprobado por menos de lo que vale el pedido no lo confirma.
     if (rowState === "aprobado" && payment.amount + AMOUNT_EPSILON < Number(order.monto_total)) {
       logError(`Monto insuficiente en el pago ${payment.id} del pedido ${order.id}`);
@@ -118,5 +131,15 @@ export class PaymentProcessor {
     }
 
     return { status: "processed", orderId: order.id, paid, cancelled };
+  }
+
+  private async refundDuplicate(duplicateId: string, keptId: string, orderId: string): Promise<ProcessResult> {
+    try {
+      await this.gateway.refund(duplicateId);
+      logError(`Pago duplicado ${duplicateId} del pedido ${orderId} reembolsado (vale el ${keptId})`);
+    } catch (error) {
+      logError(`ALERTA: pago duplicado ${duplicateId} del pedido ${orderId} sin reembolsar (vale el ${keptId})`, error);
+    }
+    return { status: "processed", orderId, paid: false, cancelled: false };
   }
 }

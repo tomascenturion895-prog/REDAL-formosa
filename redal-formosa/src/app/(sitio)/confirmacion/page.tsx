@@ -18,6 +18,7 @@ import { Alert } from "@/components/ui/alert";
 import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckIcon, PackageIcon, WalletIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 const POLL_MS = 4000;
 const MAX_POLLS = 8;
@@ -66,7 +67,7 @@ function ConfirmacionContent() {
   };
 
   // Con `loading && !pedido` la pantalla no se vacía en cada recarga del sondeo.
-  if (pending || (loading && !pedido)) return <div className="page-container py-section" aria-busy="true" />;
+  if (pending || (loading && !pedido)) return <PageLoading />;
 
   if (error && !pedido) {
     return (

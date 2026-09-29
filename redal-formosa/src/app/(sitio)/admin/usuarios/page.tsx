@@ -9,6 +9,7 @@ import { useAsync } from "@/lib/hooks/use-async";
 import type { UserRole } from "@/lib/supabase/types";
 import { Alert } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { PageLoading } from "@/components/ui/skeleton";
 
 const ROLE_LABEL: Record<UserRole, string> = {
   comprador: "Comprador",
@@ -40,7 +41,7 @@ export default function AdminUsuariosPage() {
   };
 
   if (loadError) return <Alert tone="error">No pudimos cargar los usuarios.</Alert>;
-  if (!users) return <div aria-busy="true" className="h-40" />;
+  if (!users) return <PageLoading compact />;
 
   const actionText = roleChangeTarget?.nextRole === "admin"
     ? "dar permisos de administrador a"

@@ -14,6 +14,7 @@ import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PackageIcon, TruckIcon } from "@/components/ui/icons";
 import { DeliveryPinCard } from "@/components/orders/delivery-pin-card";
+import { PageLoading } from "@/components/ui/skeleton";
 
 async function loadOrder(orderId: string, userId: string) {
   const [order, items] = await Promise.all([ordersRepository.get(orderId, userId), ordersRepository.details(orderId, userId)]);
@@ -26,7 +27,7 @@ export default function PedidoDetallePage() {
 
   const { data, error, loading, reload } = useAsync(() => loadOrder(orderId, user!.id), [orderId, user?.id], { enabled: Boolean(user), scope: user?.id });
 
-  if (pending || (loading && !data)) return <div className="page-container py-section" aria-busy="true" />;
+  if (pending || (loading && !data)) return <PageLoading />;
 
   if (error && !data) {
     return (

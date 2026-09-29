@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckIcon, ShieldIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 const DOCUMENTS = [
   { key: "dni_frente_url", label: "DNI, frente" },
@@ -63,7 +64,7 @@ export default function VerificacionesPage() {
   };
 
   if (loadError) return <Alert tone="error">No pudimos cargar las verificaciones pendientes.</Alert>;
-  if (!pending) return <div aria-busy="true" className="h-40" />;
+  if (!pending) return <PageLoading compact />;
 
   if (pending.length === 0) {
     return (
