@@ -1,5 +1,6 @@
 import { createClient, type Db } from "@/lib/supabase/client";
 import { RepositoryError, unwrap } from "@/lib/supabase/repository";
+import { parsePinResult, type PinResult } from "@/lib/domain/delivery-pin";
 import type { CourierOption, SellerOrder, SellerOrderItem } from "@/lib/domain/seller-orders";
 import type { OrderStatus } from "@/lib/supabase/types";
 
@@ -45,9 +46,10 @@ export class SellerOrdersRepository {
   }
 
   /** Solo el ciclo pagado → en preparación → listo → en camino → entregado; la base rechaza cualquier otro cambio. */
-  async advance(orderId: string, estado: OrderStatus): Promise<void> {
-    const { error } = await this.db.rpc("productor_avanzar_pedido", { p_pedido_id: orderId, p_estado: estado });
+  async advance(orderId: string, estado: OrderStatus, pin?: string): Promise<PinResult> {
+    const { data, error } = await this.db.rpc("productor_avanzar_pedido", { p_pedido_id: orderId, p_estado: estado, p_pin: pin });
     if (error) throw new RepositoryError(`actualizar pedido: ${error.message}`, error);
+    return parsePinResult(data);
   }
 
   /**

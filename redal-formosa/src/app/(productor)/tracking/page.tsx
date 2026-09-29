@@ -10,9 +10,11 @@ import { useAsync } from "@/lib/hooks/use-async";
 import { PageHeader } from "@/components/layout/page-header";
 import { RepartidorTracker } from "@/components/tracking/repartidor-tracker";
 import { Alert } from "@/components/ui/alert";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { isCompletePin, PIN_LENGTH, PIN_MESSAGE, sanitizePin } from "@/lib/domain/delivery-pin";
 import { EmptyState } from "@/components/ui/empty-state";
+import { LoadError } from "@/components/ui/load-error";
 import { MapPinIcon, PhoneIcon, TruckIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 async function loadAssignments(userId: string) {
   const courier = await deliveryRepository.findByUser(userId);
@@ -22,17 +24,22 @@ async function loadAssignments(userId: string) {
 
 export default function RepartidorTrackingPage() {
   const { user, pending } = useRequireAuth();
-  const { data, loading, reload } = useAsync(() => loadAssignments(user!.id), [user?.id], { enabled: Boolean(user), scope: user?.id });
+  const { data, error, loading, reload } = useAsync(() => loadAssignments(user!.id), [user?.id], { enabled: Boolean(user), scope: user?.id });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [confirmingDelivery, setConfirmingDelivery] = useState(false);
+  const [pin, setPin] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const advance = async (orderId: string, estado: "en_camino" | "entregado") => {
+  const advance = async (orderId: string, estado: "en_camino" | "entregado", pin?: string) => {
     setBusy(true);
     setActionError(null);
     try {
-      await deliveryRepository.advance(orderId, estado);
+      const result = await deliveryRepository.advance(orderId, estado, pin);
+      if (result !== "ok") {
+        setActionError(PIN_MESSAGE[result]);
+        return;
+      }
+      setPin("");
       reload();
     } catch {
       setActionError("No pudimos actualizar la entrega. Recargá la pantalla e intentá de nuevo.");
@@ -41,7 +48,9 @@ export default function RepartidorTrackingPage() {
     }
   };
 
-  if (pending || (loading && !data)) return <div className="h-40" aria-busy="true" />;
+  if (pending || (loading && !data)) return <PageLoading compact />;
+
+  if (error && !data) return <LoadError title="No pudimos cargar tus entregas" onRetry={reload} />;
 
   if (!data?.courier) {
     return (
@@ -119,25 +128,35 @@ export default function RepartidorTrackingPage() {
             </button>
           )}
           {selected.estado === "en_camino" && (
-            <button type="button" className="btn btn-primary w-full" disabled={busy} onClick={() => setConfirmingDelivery(true)}>
-              Entregué el pedido
-            </button>
+            <form
+              className="card space-y-3 p-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (isCompletePin(pin)) advance(selected.id, "entregado", pin);
+              }}
+            >
+              <label htmlFor="pin-entrega" className="block text-sm font-medium">
+                Código de entrega del comprador
+              </label>
+              <input
+                id="pin-entrega"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={PIN_LENGTH}
+                value={pin}
+                onChange={(e) => setPin(sanitizePin(e.target.value))}
+                placeholder="0000"
+                className="field text-center font-display text-2xl tracking-[0.4em] tabular-nums"
+                aria-describedby="pin-ayuda"
+              />
+              <p id="pin-ayuda" className="text-xs text-muted">
+                El comprador lo ve en su pedido. Pedíselo cuando le entregues.
+              </p>
+              <button type="submit" className="btn btn-primary w-full" disabled={busy || !isCompletePin(pin)} aria-busy={busy}>
+                Entregué el pedido
+              </button>
+            </form>
           )}
-
-          <ConfirmDialog
-            isOpen={confirmingDelivery}
-            onClose={() => setConfirmingDelivery(false)}
-            onConfirm={async () => {
-              await advance(selected.id, "entregado");
-              setConfirmingDelivery(false);
-            }}
-            isLoading={busy}
-            isDestructive={false}
-            title="¿Entregaste el pedido?"
-            description="Se marca como entregado y no se puede deshacer."
-            confirmText="Sí, lo entregué"
-            cancelText="Todavía no"
-          />
 
           <RepartidorTracker repartidorId={courier.id} destino={selected.entrega ?? FORMOSA_CENTER} isRepartidor />
           {!selected.entrega && (

@@ -157,6 +157,54 @@ describe("PaymentProcessor", () => {
     expect(tables.pagos[0].estado).toBe("reembolsado");
   });
 
+  describe("pagos repetidos del mismo pedido", () => {
+    const paidTwice = () => {
+      tables.pagos[0].estado = "aprobado";
+      tables.pagos[0].transaccion_id = "pay-0";
+      tables.pedidos[0].estado = "pagado";
+    };
+
+    it("devuelve el segundo pago aprobado y deja el primero", async () => {
+      paidTwice();
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const gateway = fakeGateway({ id: "pay-2" });
+
+      const result = await processor(gateway).handle(notification);
+
+      expect(gateway.refund).toHaveBeenCalledExactlyOnceWith("pay-2");
+      expect(result).toMatchObject({ paid: false, cancelled: false });
+      expect(tables.pagos[0]).toMatchObject({ estado: "aprobado", transaccion_id: "pay-0" });
+    });
+
+    it("el reembolso del pago duplicado no cancela el pedido pagado", async () => {
+      paidTwice();
+      const result = await processor(fakeGateway({ id: "pay-2", outcome: "refunded" })).handle(notification);
+
+      expect(result).toMatchObject({ cancelled: false });
+      expect(tables.pedidos[0].estado).toBe("pagado");
+      expect(tables.pagos[0].estado).toBe("aprobado");
+    });
+
+    it("si no se puede devolver el duplicado, no rompe el webhook (queda registrado)", async () => {
+      paidTwice();
+      const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const gateway = fakeGateway({ id: "pay-2" });
+      vi.mocked(gateway.refund).mockRejectedValueOnce(new Error("MP caído"));
+
+      await expect(processor(gateway).handle(notification)).resolves.toMatchObject({ paid: false });
+      expect(spy.mock.calls.some((c) => String(c[0]).includes("ALERTA"))).toBe(true);
+    });
+  });
+
+  it("un pago aprobado en otra moneda no confirma el pedido", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const result = await processor(fakeGateway({ currency: "USD" })).handle(notification);
+
+    expect(result).toMatchObject({ paid: false });
+    expect(tables.pedidos[0].estado).toBe("pendiente_pago");
+    expect(tables.pagos[0].estado).toBe("fallido");
+  });
+
   it("un pago pendiente no confirma nada", async () => {
     await processor(fakeGateway({ outcome: "pending" })).handle(notification);
     expect(tables.pagos[0].estado).toBe("pendiente");

@@ -13,6 +13,7 @@ import { OrderCard } from "@/components/orders/order-card";
 import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PackageIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 async function loadHistory(userId: string) {
   const [orders, stats] = await Promise.all([ordersRepository.list(userId), ordersRepository.stats(userId)]);
@@ -25,7 +26,7 @@ export default function MisPedidosPage() {
 
   const { data, error, loading, reload } = useAsync(() => loadHistory(user!.id), [user?.id], { enabled: Boolean(user), scope: user?.id });
 
-  if (pending || (loading && !data)) return <div className="page-container py-section" aria-busy="true" />;
+  if (pending || (loading && !data)) return <PageLoading />;
 
   const orders = data?.orders ?? [];
   const stats = data?.stats;

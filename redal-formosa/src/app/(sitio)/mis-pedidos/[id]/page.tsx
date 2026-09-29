@@ -13,6 +13,8 @@ import { UnpaidOrderActions } from "@/components/orders/unpaid-order-actions";
 import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PackageIcon, TruckIcon } from "@/components/ui/icons";
+import { DeliveryPinCard } from "@/components/orders/delivery-pin-card";
+import { PageLoading } from "@/components/ui/skeleton";
 
 async function loadOrder(orderId: string, userId: string) {
   const [order, items] = await Promise.all([ordersRepository.get(orderId, userId), ordersRepository.details(orderId, userId)]);
@@ -25,7 +27,7 @@ export default function PedidoDetallePage() {
 
   const { data, error, loading, reload } = useAsync(() => loadOrder(orderId, user!.id), [orderId, user?.id], { enabled: Boolean(user), scope: user?.id });
 
-  if (pending || (loading && !data)) return <div className="page-container py-section" aria-busy="true" />;
+  if (pending || (loading && !data)) return <PageLoading />;
 
   if (error && !data) {
     return (
@@ -82,6 +84,7 @@ export default function PedidoDetallePage() {
 
         <aside className="space-y-4">
           {order.estado === "pendiente_pago" && <UnpaidOrderActions orderId={order.id} onCancelled={reload} />}
+          {["pagado", "en_preparacion", "listo", "en_camino"].includes(order.estado) && <DeliveryPinCard orderId={order.id} />}
           <div className="card space-y-4 p-6">
             <h2 className="text-heading">Resumen</h2>
             <dl className="space-y-2 text-sm">

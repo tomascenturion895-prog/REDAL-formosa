@@ -9,6 +9,7 @@ import { authErrorMessage, safeNextPath } from "@/lib/auth/messages";
 import { SocialButtons } from "@/components/auth/social-buttons";
 import { CheckIcon } from "@/components/ui/icons";
 import { PasswordInput } from "@/components/ui/password-input";
+import { Alert } from "@/components/ui/alert";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -88,9 +89,9 @@ export function RegisterForm() {
       </p>
 
       {error && (
-        <div role="alert" className="mb-4 rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
+        <Alert tone="error" className="mb-4">
           {error}
-        </div>
+        </Alert>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">

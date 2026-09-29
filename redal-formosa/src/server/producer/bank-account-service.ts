@@ -18,11 +18,14 @@ export class BankAccountService {
   async save(userId: string, input: unknown): Promise<void> {
     const account = this.validate(input);
 
-    const { error } = await this.db
+    const { data, error } = await this.db
       .from("profiles")
       .update({ bank_account: this.cipher.encrypt(JSON.stringify(account)) })
-      .eq("id", userId);
+      .eq("id", userId)
+      .select("id");
     if (error) throw new Error(`No se pudo guardar la cuenta bancaria: ${error.message}`);
+    // Sin fila afectada no se guardó nada: no se le puede decir al vendedor que quedó todo bien.
+    if (!data || data.length === 0) throw new Error("No se pudo guardar la cuenta bancaria: no se encontró el perfil");
   }
 
   /** Uso interno (por ejemplo, liquidaciones): devuelve la cuenta descifrada. */

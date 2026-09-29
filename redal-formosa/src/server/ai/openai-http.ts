@@ -35,7 +35,7 @@ export async function openAiJson<T>(
 
   if (!response.ok) {
     const detail = await response.text().catch(() => "");
-    logError(`El servicio de IA respondió ${response.status}`, detail);
+    logError(`El servicio de IA respondió ${response.status}`, detail.slice(0, 300));
     if (response.status === 429 && /insufficient_quota|no credits|billing/i.test(detail)) {
       throw new ServiceError("unavailable", "La cuenta del servicio de IA no tiene saldo. Avisale al administrador.");
     }

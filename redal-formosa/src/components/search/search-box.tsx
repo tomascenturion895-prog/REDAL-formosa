@@ -145,7 +145,9 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
         onClick={toggleVoiceSearch}
         disabled={isProcessing}
         title={isRecording ? "Detener grabación" : "Búsqueda por voz"}
-        className={`absolute right-2 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full transition-colors ${isRecording
+        aria-label={isRecording ? "Detener grabación" : "Buscar por voz"}
+        aria-pressed={isRecording}
+        className={`absolute right-1 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full transition-colors ${isRecording
             ? "bg-action text-on-action animate-pulse shadow-sm"
             : isProcessing
               ? "text-muted/50 cursor-not-allowed"
@@ -155,7 +157,7 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
         <MicIcon size={16} />
       </button>
       {errorMsg && (
-        <span className="absolute -bottom-6 left-2 text-xs font-medium text-destructive">
+        <span role="alert" className="absolute -bottom-6 left-2 text-xs font-medium text-danger">
           {errorMsg}
         </span>
       )}

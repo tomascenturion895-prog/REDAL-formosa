@@ -9,6 +9,7 @@ import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckIcon } from "@/components/ui/icons";
 import { ProductImage } from "@/components/ui/product-image";
+import { PageLoading } from "@/components/ui/skeleton";
 
 export default function AdminProductosPage() {
   const { data: products, error: loadError, reload } = useAsync(() => adminRepository.pendingProducts(), []);
@@ -33,7 +34,7 @@ export default function AdminProductosPage() {
   };
 
   if (loadError) return <Alert tone="error">No pudimos cargar los productos pendientes.</Alert>;
-  if (!products) return <div aria-busy="true" className="h-40" />;
+  if (!products) return <PageLoading compact />;
 
   if (products.length === 0) {
     return (

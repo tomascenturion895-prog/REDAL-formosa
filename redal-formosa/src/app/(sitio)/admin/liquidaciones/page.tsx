@@ -7,8 +7,9 @@ import { fetchPayoutAccount } from "@/lib/admin/payout-account-client";
 import { BANKS, type BankAccount } from "@/lib/domain/banks";
 import { formatPrice } from "@/lib/format";
 import { useAsync } from "@/lib/hooks/use-async";
-import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
+import { LoadError } from "@/components/ui/load-error";
+import { PageLoading } from "@/components/ui/skeleton";
 
 const bankName = (code: string) => BANKS.find(([c]) => c === code)?.[1] ?? code;
 
@@ -138,10 +139,12 @@ function PayoutCard({ payout, onSettled }: { payout: PendingPayout; onSettled: (
 
 export default function AdminLiquidacionesPage() {
   const { data: payouts, error, reload } = useAsync(() => adminRepository.pendingPayouts(), []);
-  const { data: commission, reload: reloadCommission } = useAsync(() => adminRepository.commission(), []);
+  const { data: commission, error: commissionError, reload: reloadCommission } = useAsync(() => adminRepository.commission(), []);
 
-  if (error) return <Alert tone="error">No pudimos cargar las liquidaciones.</Alert>;
-  if (!payouts || commission === undefined) return <div aria-busy="true" className="h-40" />;
+  if (error || commissionError) {
+    return <LoadError title="No pudimos cargar las liquidaciones" onRetry={() => { reload(); reloadCommission(); }} />;
+  }
+  if (!payouts || commission === undefined) return <PageLoading compact />;
 
   return (
     <div className="space-y-8">
