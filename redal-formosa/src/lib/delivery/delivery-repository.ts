@@ -1,6 +1,7 @@
 import { createClient, type Db } from "@/lib/supabase/client";
 import { RepositoryError, unwrap, unwrapOptional } from "@/lib/supabase/repository";
 import { DELIVERY_ACTIVE_STATUSES } from "@/lib/domain/order-status";
+import { parsePinResult, type PinResult } from "@/lib/domain/delivery-pin";
 import type { LatLng } from "@/lib/domain/geo";
 import { extractBuyerPhone, stripBuyerPhone } from "@/lib/domain/seller-orders";
 import type { OrderStatus } from "@/lib/supabase/types";
@@ -46,10 +47,11 @@ export class DeliveryRepository {
     }));
   }
 
-  /** El repartidor marca que salió (listo → en camino) o que entregó (en camino → entregado). */
-  async advance(orderId: string, estado: OrderStatus): Promise<void> {
-    const { error } = await this.db.rpc("repartidor_avanzar_pedido", { p_pedido_id: orderId, p_estado: estado });
+  /** El repartidor marca que salió (listo → en camino) o que entregó (en camino → entregado, con el código del comprador). */
+  async advance(orderId: string, estado: OrderStatus, pin?: string): Promise<PinResult> {
+    const { data, error } = await this.db.rpc("repartidor_avanzar_pedido", { p_pedido_id: orderId, p_estado: estado, p_pin: pin });
     if (error) throw new RepositoryError(`actualizar entrega: ${error.message}`, error);
+    return parsePinResult(data);
   }
 }
 

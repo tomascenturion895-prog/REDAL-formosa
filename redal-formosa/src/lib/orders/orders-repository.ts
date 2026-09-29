@@ -133,6 +133,15 @@ export class OrdersRepository {
   }
 
   /** Datos mínimos de un pedido propio (pantallas de confirmación y seguimiento). */
+  /** Código de entrega del pedido: solo lo puede leer el comprador (la base no se lo muestra a nadie más). */
+  async getDeliveryPin(orderId: string): Promise<string | null> {
+    const row = await unwrapOptional(
+      this.db.from("pedido_pin").select("pin").eq("pedido_id", orderId).maybeSingle(),
+      "cargar el código de entrega",
+    );
+    return row?.pin ?? null;
+  }
+
   async getConfirmation(orderId: string): Promise<OrderConfirmation | null> {
     const row = await unwrapOptional(
       this.db

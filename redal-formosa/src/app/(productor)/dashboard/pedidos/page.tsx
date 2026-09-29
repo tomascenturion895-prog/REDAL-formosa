@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { useRequireAuth } from "@/lib/auth/use-require-auth";
+import type { PinResult } from "@/lib/domain/delivery-pin";
 import { groupOrders, NEXT_STEP, ORDER_GROUPS, type SellerOrder } from "@/lib/domain/seller-orders";
 import { useAsync } from "@/lib/hooks/use-async";
 import { sellerOrdersRepository } from "@/lib/orders/seller-orders-repository";
@@ -31,16 +32,18 @@ export default function PedidosDelVendedorPage() {
     return () => clearInterval(timer);
   }, [user, reload]);
 
-  const advance = async (order: SellerOrder) => {
+  const advance = async (order: SellerOrder, pin?: string): Promise<PinResult | "error"> => {
     const step = NEXT_STEP[order.estado];
-    if (!step) return;
+    if (!step) return "error";
     setBusyId(order.id);
     setActionError(null);
     try {
-      await sellerOrdersRepository.advance(order.id, step.estado);
-      reload();
+      const result = await sellerOrdersRepository.advance(order.id, step.estado, pin);
+      if (result === "ok") reload();
+      return result;
     } catch {
       setActionError("No pudimos actualizar el pedido. Puede que ya haya cambiado: recargá la lista.");
+      return "error";
     } finally {
       setBusyId(null);
     }
