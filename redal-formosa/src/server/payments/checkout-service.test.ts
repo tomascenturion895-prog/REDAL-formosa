@@ -11,14 +11,22 @@ function fakeDb(tables: Record<string, Row[]>): Db {
   const from = (table: string) => {
     const filters: [string, unknown][] = [];
     const rows = () => (tables[table] ?? []).filter((r) => filters.every(([c, v]) => r[c] === v));
+    let patch: Row | null = null;
     const builder = {
       select: () => builder,
+      update: (values: Row) => {
+        patch = values;
+        return builder;
+      },
       eq: (col: string, val: unknown) => {
         filters.push([col, val]);
         return builder;
       },
       maybeSingle: () => Promise.resolve({ data: rows()[0] ?? null, error: null }),
-      then: (resolve: (v: unknown) => unknown) => Promise.resolve({ data: rows(), error: null }).then(resolve),
+      then: (resolve: (v: unknown) => unknown) => {
+        if (patch) rows().forEach((r) => Object.assign(r, patch));
+        return Promise.resolve({ data: patch ? null : rows(), error: null }).then(resolve);
+      },
     };
     return builder;
   };
@@ -27,14 +35,15 @@ function fakeDb(tables: Record<string, Row[]>): Db {
 
 function fakeGateway(): PaymentGateway {
   return {
-    createCheckout: vi.fn(async () => ({ url: "https://mp.test/checkout" })),
+    createCheckout: vi.fn(async () => ({ url: "https://mp.test/checkout", id: "pref-1" })),
     getPayment: vi.fn(),
     verifyWebhook: vi.fn(),
     refund: vi.fn(),
   };
 }
 
-const tablesFor = (order: Row = {}) => ({
+const tablesFor = (order: Row = {}, pago: Row = {}) => ({
+  pagos: [{ pedido_id: "o1", preferencia_mp_id: null, referencia_externa: null, ...pago }],
   pedidos: [{ id: "o1", comprador_id: "u1", estado: "pendiente_pago", monto_envio: 500, ...order }],
   pedido_items: [
     { pedido_id: "o1", producto_id: "p1", cantidad: 2, precio_unitario: "1000", producto: { nombre: "Miel" } },
@@ -91,5 +100,26 @@ describe("CheckoutService", () => {
     const service = new CheckoutService(fakeGateway(), { appUrl: "https://redal.test" });
     const tables = { ...tablesFor(), pedido_items: [] };
     await expect(service.createSession(fakeDb(tables), "u1", "o1")).rejects.toMatchObject({ code: "conflict" });
+  });
+
+  it("guarda la preferencia y la reutiliza en el siguiente intento, sin crear otra", async () => {
+    const gateway = fakeGateway();
+    const tables = tablesFor();
+    const service = new CheckoutService(gateway, { appUrl: "https://redal.test" }, fakeDb(tables));
+
+    const first = await service.createSession(fakeDb(tables), "u1", "o1");
+    const second = await service.createSession(fakeDb(tables), "u1", "o1");
+
+    expect(gateway.createCheckout).toHaveBeenCalledTimes(1);
+    expect(tables.pagos[0]).toMatchObject({ preferencia_mp_id: "pref-1", referencia_externa: "https://mp.test/checkout" });
+    expect(second.url).toBe(first.url);
+  });
+
+  it("sin acceso administrativo igual cobra (no reutiliza)", async () => {
+    const gateway = fakeGateway();
+    const service = new CheckoutService(gateway, { appUrl: "https://redal.test" });
+    await service.createSession(fakeDb(tablesFor()), "u1", "o1");
+    await service.createSession(fakeDb(tablesFor()), "u1", "o1");
+    expect(gateway.createCheckout).toHaveBeenCalledTimes(2);
   });
 });

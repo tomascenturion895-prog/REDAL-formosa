@@ -19,6 +19,8 @@ export interface CheckoutRequest {
 
 export interface CheckoutSession {
   url: string;
+  /** Identificador de la preferencia en el proveedor, para reutilizarla en vez de crear otra. */
+  id?: string;
 }
 
 export type PaymentOutcome = "approved" | "pending" | "failed" | "refunded";
@@ -28,6 +30,8 @@ export interface PaymentInfo {
   orderId: string | null;
   outcome: PaymentOutcome;
   amount: number;
+  /** Moneda del cobro (ISO 4217). Si el proveedor no la informa, no se valida. */
+  currency?: string;
 }
 
 export interface WebhookProof {

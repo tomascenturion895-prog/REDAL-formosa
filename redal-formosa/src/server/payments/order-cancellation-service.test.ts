@@ -119,4 +119,22 @@ describe("OrderCancellationService", () => {
     await run(gateway);
     expect(gateway.refund).not.toHaveBeenCalled();
   });
+
+  it("completa una cancelación que quedó a medias (pago reembolsado, pedido sin cerrar) sin devolver otra vez", async () => {
+    tables.pagos[0].estado = "reembolsado";
+    const gateway = gatewayWith({ outcome: "refunded" });
+    await run(gateway);
+
+    expect(gateway.refund).not.toHaveBeenCalled();
+    expect(tables.pedidos[0].estado).toBe("cancelado");
+  });
+
+  it("si el pedido salió a reparto mientras se devolvía el dinero, igual lo cierra", async () => {
+    const gateway = gatewayWith();
+    vi.mocked(gateway.refund).mockImplementationOnce(async () => {
+      tables.pedidos[0].estado = "en_camino";
+    });
+    await run(gateway);
+    expect(tables.pedidos[0].estado).toBe("cancelado");
+  });
 });
