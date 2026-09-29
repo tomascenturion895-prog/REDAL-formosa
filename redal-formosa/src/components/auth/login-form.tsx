@@ -102,44 +102,6 @@ export function LoginForm() {
 
       <SocialButtons onError={(msg) => setError(msg)} next={next} />
 
-      <div className="mt-6 rounded-card border border-border/80 bg-surface-muted/40 p-4">
-        <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-muted text-center sm:text-left">
-          Acceso rápido para pruebas
-        </p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <button
-            type="button"
-            onClick={() => {
-              setEmail("admin@seed.redal.test");
-              setPassword("Redal-Demo-2026");
-            }}
-            className="rounded-control border border-border bg-surface px-2.5 py-2 text-xs font-medium hover:border-action hover:bg-surface-muted text-center transition-colors"
-          >
-            🛡️ Admin Demo
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEmail("productor.chacraelsol@seed.redal.test");
-              setPassword("Redal-Demo-2026");
-            }}
-            className="rounded-control border border-border bg-surface px-2.5 py-2 text-xs font-medium hover:border-action hover:bg-surface-muted text-center transition-colors"
-          >
-            🌾 Vendedor Demo
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEmail("cliente.lucia@seed.redal.test");
-              setPassword("Redal-Demo-2026");
-            }}
-            className="rounded-control border border-border bg-surface px-2.5 py-2 text-xs font-medium hover:border-action hover:bg-surface-muted text-center transition-colors"
-          >
-            🛒 Comprador Demo
-          </button>
-        </div>
-      </div>
-
       <p className="mt-6 text-center text-sm text-muted">
         ¿No tenés cuenta todavía?{" "}
         <Link
