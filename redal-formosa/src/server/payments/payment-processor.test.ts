@@ -14,10 +14,11 @@ function fakeDb(tables: Record<string, Row[]>): Db {
   const from = (table: string) => {
     const filters: [string, unknown][] = [];
     const inFilters: [string, unknown[]][] = [];
+    const notInFilters: [string, unknown[]][] = [];
     let patch: Row | null = null;
     let returning = false;
 
-    const matching = () => (tables[table] ?? []).filter((row) => filters.every(([col, val]) => row[col] === val) && inFilters.every(([col, vals]) => vals.includes(row[col])));
+    const matching = () => (tables[table] ?? []).filter((row) => filters.every(([col, val]) => row[col] === val) && inFilters.every(([col, vals]) => vals.includes(row[col])) && notInFilters.every(([col, vals]) => !vals.includes(row[col])));
     const run = () => {
       if (patch) {
         const rows = matching();
@@ -42,6 +43,10 @@ function fakeDb(tables: Record<string, Row[]>): Db {
       },
       in: (col: string, vals: unknown[]) => {
         inFilters.push([col, vals]);
+        return builder;
+      },
+      not: (col: string, _op: string, list: string) => {
+        notInFilters.push([col, list.replace(/[()]/g, "").split(",").filter(Boolean)]);
         return builder;
       },
       maybeSingle: () => Promise.resolve({ data: matching()[0] ?? null, error: null }),
@@ -138,6 +143,18 @@ describe("PaymentProcessor", () => {
     expect(result).toMatchObject({ paid: false });
     expect(tables.pagos[0].estado).toBe("fallido");
     expect(tables.pedidos[0].estado).toBe("pendiente_pago");
+  });
+
+  it.each(["failed", "pending"] as const)("una notificación tardía %s no pisa un pago aprobado", async (outcome) => {
+    tables.pagos[0].estado = "aprobado";
+    await processor(fakeGateway({ outcome })).handle(notification);
+    expect(tables.pagos[0].estado).toBe("aprobado");
+  });
+
+  it("un pago reembolsado no vuelve a aprobarse", async () => {
+    tables.pagos[0].estado = "reembolsado";
+    await processor(fakeGateway({ outcome: "approved" })).handle(notification);
+    expect(tables.pagos[0].estado).toBe("reembolsado");
   });
 
   it("un pago pendiente no confirma nada", async () => {

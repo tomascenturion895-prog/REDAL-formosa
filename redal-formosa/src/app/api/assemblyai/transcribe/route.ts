@@ -4,6 +4,7 @@ import { AssemblyAI } from "assemblyai";
 import { getSpeechToText, limiters } from "@/server/container";
 import { ServiceError } from "@/server/errors";
 import { clientIp, enforceRateLimit, handleRoute } from "@/server/http";
+import { logError } from "@/server/logger";
 
 const MAX_AUDIO_BYTES = 2 * 1024 * 1024;
 
@@ -26,7 +27,7 @@ async function transcribeWithAssemblyAi(apiKey: string, audio: Blob): Promise<st
     language_code: "es",
   });
   if (transcript.status === "error") {
-    console.error("Error en transcripción AssemblyAI:", transcript.error);
+    logError("Error en transcripción AssemblyAI", transcript.error);
     throw new ServiceError("unavailable", "No pudimos transcribir el audio. Probá de nuevo en un momento.");
   }
   return transcript.text ?? "";

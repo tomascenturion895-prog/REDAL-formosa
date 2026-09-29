@@ -5,7 +5,7 @@ export interface RateLimitResult {
   retryAfterSeconds: number;
 }
 
-/** Puerto de limitación de frecuencia. Hoy en memoria; para varias instancias se cambia por Redis sin tocar las rutas. */
+/** Puerto de limitación de frecuencia. Hoy en memoria: el conteo es POR INSTANCIA, así que con varias réplicas el límite efectivo se multiplica. Para un límite global se cambia por Redis sin tocar las rutas. */
 export interface RateLimiter {
   check(key: string): RateLimitResult;
 }

@@ -1,4 +1,5 @@
 import { ServiceError } from "../errors";
+import { logError } from "@/server/logger";
 
 export interface GeocodeResult {
   lat: number;
@@ -68,7 +69,7 @@ export class NominatimGeocoder implements Geocoder {
       throw new ServiceError("unavailable", "No pudimos buscar la dirección. Probá de nuevo en un momento.");
     }
     if (!response.ok) {
-      console.error("Nominatim respondió", response.status);
+      logError(`Nominatim respondió ${response.status}`);
       throw new ServiceError("unavailable", "El buscador de direcciones no está disponible ahora. Probá más tarde.");
     }
 

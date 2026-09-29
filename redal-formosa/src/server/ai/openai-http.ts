@@ -1,4 +1,5 @@
 import { ServiceError } from "../errors";
+import { logError } from "@/server/logger";
 
 // Por defecto habla con OpenAI. Con OPENAI_BASE_URL sirve cualquier proveedor con API compatible
 // (por ejemplo Groq: https://api.groq.com/openai/v1, con capa gratuita).
@@ -34,7 +35,7 @@ export async function openAiJson<T>(
 
   if (!response.ok) {
     const detail = await response.text().catch(() => "");
-    console.error("El servicio de IA respondió", response.status, detail);
+    logError(`El servicio de IA respondió ${response.status}`, detail);
     if (response.status === 429 && /insufficient_quota|no credits|billing/i.test(detail)) {
       throw new ServiceError("unavailable", "La cuenta del servicio de IA no tiene saldo. Avisale al administrador.");
     }
