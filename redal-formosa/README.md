@@ -23,9 +23,8 @@ Con Docker: `docker compose up -d --build` (ver [DOCKER_SETUP.md](DOCKER_SETUP.m
 
 ## Base de datos
 
-Las migraciones están en `supabase/migrations/`. Para aplicarlas a un proyecto existente, pegá
-`supabase/pending-migrations.sql` en el SQL Editor de Supabase, o usá la CLI
-(`npx supabase login`, `link`, `db push`).
+Las migraciones están en `supabase/migrations/` y se aplican en orden con la CLI de Supabase
+(`npx supabase login`, `link`, `db push`). Nunca pegues archivos sueltos en el SQL Editor de un proyecto con datos.
 
 Después de cambiar el esquema, regenerá los tipos:
 
