@@ -1,190 +1,143 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
 import { formatPrice } from "@/lib/format";
+import { ordersRepository } from "@/lib/orders/orders-repository";
+import { requestPaymentUrl } from "@/lib/payments/start-payment";
 import { CheckIcon, ExternalLinkIcon, RefreshIcon } from "@/components/ui/icons";
 import { Alert } from "@/components/ui/alert";
 
+const POLL_MS = 4000;
+const MAX_POLLS = 60; // ~4 minutos; después queda el enlace a «Ver estado del pedido»
+
 interface CheckoutMercadoPagoProps {
-  ordenId: string;
-  monto: number;
-  tituloItem?: string;
-  clienteNombre?: string;
-  clienteEmail?: string;
-  onPagoAprobado?: (data: { payment_id?: string; monto?: number }) => void;
+  orderId: string;
+  amount: number;
+  onPaid: () => void;
 }
 
-export function CheckoutMercadoPago({
-  ordenId,
-  monto,
-  tituloItem,
-  clienteNombre,
-  clienteEmail,
-  onPagoAprobado,
-}: CheckoutMercadoPagoProps) {
-  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
-  const [pagoAprobado, setPagoAprobado] = useState(false);
+/**
+ * Pago de un pedido ya creado. La URL la genera el servidor (que lee montos y dueño de la base) y el
+ * pedido se da por pagado solo cuando el webhook firmado lo confirma: acá únicamente se observa su estado.
+ * En escritorio se ofrece un QR para pagar desde el celular sin salir de esta pantalla.
+ */
+export function CheckoutMercadoPago({ orderId, amount, onPaid }: CheckoutMercadoPagoProps) {
+  const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [paid, setPaid] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
-  // 1. Obtener la URL de pago de Mercado Pago
+  // El callback llega inline desde la página: se guarda en una ref para no reiniciar el sondeo en cada render.
+  const onPaidRef = useRef(onPaid);
   useEffect(() => {
-    let mounted = true;
+    onPaidRef.current = onPaid;
+  }, [onPaid]);
 
-    async function obtenerLink() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const res = await fetch("/api/pagos/crear-preferencia", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orden_id: ordenId,
-            monto,
-            titulo_item: tituloItem,
-            cliente_nombre: clienteNombre,
-            cliente_email: clienteEmail,
-          }),
-        });
-
-        const data = await res.json();
-
-        if (!mounted) return;
-
-        if (!res.ok) {
-          throw new Error(data.error || "No se pudo generar el pago con Mercado Pago");
-        }
-
-        if (data.checkout_url) {
-          setCheckoutUrl(data.checkout_url);
-        } else {
-          throw new Error("No se recibió la URL de checkout");
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof Error ? err.message : "Error al conectar con Mercado Pago");
-        }
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-
-    if (ordenId && monto > 0) {
-      obtenerLink();
-    }
-
+  useEffect(() => {
+    let active = true;
+    requestPaymentUrl(orderId)
+      .then((generated) => active && setUrl(generated))
+      .catch(() => active && setError("No pudimos generar el pago con Mercado Pago. Probá de nuevo en un momento."))
+      .finally(() => active && setLoading(false));
     return () => {
-      mounted = false;
+      active = false;
     };
-  }, [ordenId, monto, tituloItem, clienteNombre, clienteEmail]);
+  }, [orderId, attempt]);
 
-  // 2. Polling cada 3 segundos: Detecta si pagó escaneando el QR con el celular
+  const retry = () => {
+    setError(null);
+    setLoading(true);
+    setAttempt((n) => n + 1);
+  };
+
+  // Detecta que el pago se acreditó (por ejemplo, pagando con el QR desde el celular).
   useEffect(() => {
-    if (pagoAprobado || !ordenId) return;
-
-    pollingRef.current = setInterval(async () => {
+    if (paid) return;
+    let polls = 0;
+    const timer = setInterval(async () => {
+      if (++polls > MAX_POLLS) {
+        clearInterval(timer);
+        return;
+      }
       try {
-        const res = await fetch(`/api/pagos/verificar-pago/${encodeURIComponent(ordenId)}`);
-        const data = await res.json();
-        if (data.confirmado) {
-          setPagoAprobado(true);
-          if (pollingRef.current) clearInterval(pollingRef.current);
-          onPagoAprobado?.(data);
+        const order = await ordersRepository.getConfirmation(orderId);
+        if (order && order.estado !== "pendiente_pago" && order.estado !== "cancelado") {
+          clearInterval(timer);
+          setPaid(true);
+          onPaidRef.current();
         }
       } catch {
-        // Silencioso para no saturar la consola en cada ciclo
+        // Un fallo de red puntual no debe cortar el sondeo.
       }
-    }, 3000);
+    }, POLL_MS);
+    return () => clearInterval(timer);
+  }, [orderId, paid]);
 
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
-  }, [pagoAprobado, ordenId, onPagoAprobado]);
-
-  if (pagoAprobado) {
+  if (paid) {
     return (
-      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-50/70 p-6 text-center shadow-md dark:bg-emerald-950/20">
-        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400">
+      <div role="status" className="rounded-card border border-border bg-success-soft p-6 text-center">
+        <span className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-surface text-success">
           <CheckIcon size={28} />
-        </div>
-        <h3 className="text-xl font-bold text-foreground">
-          🎉 ¡Tu pago fue acreditado con éxito!
-        </h3>
-        <p className="mt-2 text-sm text-muted">
-          El pedido ha sido marcado como pagado. Podés continuar a los detalles del pedido o esperar la confirmación.
-        </p>
+        </span>
+        <h2 className="text-heading">¡Recibimos tu pago!</h2>
+        <p className="mt-2 text-sm text-muted">Te llevamos al detalle de tu pedido.</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
-      <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
+    <div className="card p-6">
+      <div className="mb-4 flex items-center justify-between gap-3 border-b border-border pb-3">
         <div>
-          <h3 className="text-lg font-bold text-foreground">Pagar con Mercado Pago</h3>
-          <p className="text-xs text-muted">Escaneá el QR o pagá directamente en tu navegador</p>
+          <h2 className="text-heading">Pagar con Mercado Pago</h2>
+          <p className="text-xs text-muted">Se acredita al instante y te avisamos acá.</p>
         </div>
         <div className="text-right">
-          <span className="text-xs text-muted block">Monto total</span>
-          <span className="text-xl font-extrabold text-foreground">{formatPrice(monto)}</span>
+          <span className="block text-xs text-muted">Total</span>
+          <span className="font-display text-xl font-bold tabular-nums">{formatPrice(amount)}</span>
         </div>
       </div>
 
       {error && (
         <Alert tone="error" className="mb-4">
-          {error}
+          <span className="block">{error}</span>
+          <button type="button" onClick={retry} className="mt-2 font-semibold underline">
+            Reintentar
+          </button>
         </Alert>
       )}
 
-      {loading && !checkoutUrl && (
-        <div className="flex flex-col items-center justify-center py-10 space-y-3">
+      {loading && !url && (
+        <div className="flex flex-col items-center gap-3 py-10" role="status">
           <RefreshIcon size={28} className="animate-spin text-action" />
-          <span className="text-sm font-medium text-muted">Generando código de pago...</span>
+          <span className="text-sm font-medium text-muted">Generando el pago…</span>
         </div>
       )}
 
-      {checkoutUrl && (
-        <div className="flex flex-col items-center space-y-6">
-          {/* Opción 1: QR para pagar desde el celular */}
-          <div className="flex flex-col items-center text-center">
-            <div className="rounded-2xl border-4 border-white bg-white p-3 shadow-md">
-              <QRCodeSVG
-                value={checkoutUrl}
-                size={210}
-                level="M"
-                includeMargin={true}
-              />
+      {url && (
+        <div className="space-y-5">
+          <a href={url} target="_blank" rel="noopener noreferrer" className="btn btn-primary w-full !py-3 text-base">
+            Pagar con Mercado Pago <ExternalLinkIcon size={18} />
+          </a>
+
+          {/* El QR solo tiene sentido en pantallas grandes: en un celular se paga con el botón. */}
+          <div className="hidden flex-col items-center gap-3 border-t border-border pt-5 text-center md:flex">
+            <p className="text-sm text-muted">¿Preferís pagar desde tu celular? Escaneá el código.</p>
+            <div className="rounded-card bg-white p-3 shadow-sm">
+              <QRCodeSVG value={url} size={180} level="M" marginSize={2} title="Código QR para pagar con Mercado Pago" />
             </div>
-            <p className="mt-3 text-xs text-muted max-w-[260px]">
-              Escaneá con la cámara de tu celular o desde la aplicación de Mercado Pago
-            </p>
           </div>
 
-          {/* Indicador de verificación en vivo */}
-          <div className="flex items-center gap-2 text-xs font-medium text-muted bg-surface-muted px-3 py-1.5 rounded-full">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          <p className="flex items-center justify-center gap-2 text-xs text-muted" role="status">
+            <span className="relative flex h-2 w-2" aria-hidden="true">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
             </span>
-            <span>Verificando acreditación en vivo...</span>
-          </div>
-
-          <div className="w-full border-t border-border pt-4">
-            {/* Opción 2: Botón directo para pagar en la misma PC */}
-            <a
-              href={checkoutUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-primary w-full flex items-center justify-center gap-2 py-3 text-base shadow-sm"
-            >
-              <span>Abrir Mercado Pago en esta PC</span>
-              <ExternalLinkIcon size={18} />
-            </a>
-          </div>
+            Esperando la acreditación del pago…
+          </p>
         </div>
       )}
     </div>

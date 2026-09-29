@@ -42,12 +42,11 @@ function CheckoutContent() {
 
         <div className="mx-auto max-w-xl space-y-6">
           <CheckoutMercadoPago
-            ordenId={activeOrder.id}
-            monto={activeOrder.monto}
-            tituloItem="Pedido en REDAL Formosa"
-            onPagoAprobado={() => {
+            orderId={activeOrder.id}
+            amount={activeOrder.monto}
+            onPaid={() => {
               clearStore(activeOrder.emprendimientoId);
-              router.push(`/confirmacion?pedido=${activeOrder.id}&pago=aprobado`);
+              router.push(`/confirmacion?pedido=${activeOrder.id}&status=approved`);
             }}
           />
 
