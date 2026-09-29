@@ -7,7 +7,7 @@ interface ChecklistItem {
 }
 
 interface TodayPanelProps {
-  orders: unknown[];
+  orders: unknown[] | undefined;
   published: number;
   inReview: number;
   checklist: ChecklistItem[];
