@@ -5,12 +5,14 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { useRequireAuth } from "@/lib/auth/use-require-auth";
-import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/domain/order-status";
+import { ORDER_STATUS_TONE, statusLabel } from "@/lib/domain/order-status";
+import { isCash } from "@/lib/domain/payment-methods";
 import { formatPrice } from "@/lib/format";
 import { useAsync } from "@/lib/hooks/use-async";
 import { ordersRepository } from "@/lib/orders/orders-repository";
 import { requestPaymentUrl } from "@/lib/payments/start-payment";
 import { CheckoutStepper } from "@/components/payment/checkout-stepper";
+import { DeliveryPinCard } from "@/components/orders/delivery-pin-card";
 import { MercadoPagoBadge } from "@/components/payment/mercadopago-badge";
 import { OrderProgress } from "@/components/payment/order-progress";
 import { RedirectOverlay } from "@/components/payment/redirect-overlay";
@@ -106,7 +108,10 @@ function ConfirmacionContent() {
         ? "El pago no se completó"
         : "Tu pedido está pendiente de pago";
 
-  const detail = paid
+  const cash = isCash(pedido.metodo_pago);
+  const detail = paid && cash
+    ? `El emprendimiento ya recibió tu pedido. Pagás ${formatPrice(pedido.monto_total)} en efectivo cuando lo recibas.`
+    : paid
     ? "El emprendimiento ya recibió tu pedido y lo está preparando."
     : waitingForWebhook
       ? "Mercado Pago nos avisa en unos segundos. Podés cerrar esta página: lo vas a ver en Mis pedidos."
@@ -131,7 +136,7 @@ function ConfirmacionContent() {
           </span>
           <h1 className="text-title">{heading}</h1>
           <p className="max-w-md text-muted">{detail}</p>
-          {(paid || waitingForWebhook) && <MercadoPagoBadge />}
+          {(paid || waitingForWebhook) && !cash && <MercadoPagoBadge />}
 
           {canRetry && (
             <div className="mt-2 flex w-full flex-col items-center gap-3">
@@ -153,6 +158,8 @@ function ConfirmacionContent() {
           )}
         </div>
 
+        {paid && cash && pedido.estado !== "entregado" && <DeliveryPinCard orderId={pedido.id} />}
+
         {paid && (
           <div className="card space-y-4 p-6">
             <h2 className="text-heading">Seguimiento</h2>
@@ -169,13 +176,17 @@ function ConfirmacionContent() {
             <dt className="text-sm text-muted">Estado</dt>
             <dd className="mt-1">
               <span className={`inline-block rounded-full px-3 py-1 text-sm font-medium ${ORDER_STATUS_TONE[pedido.estado]}`}>
-                {ORDER_STATUS_LABEL[pedido.estado]}
+                {statusLabel(pedido.estado, pedido.metodo_pago)}
               </span>
             </dd>
           </div>
           <div>
             <dt className="text-sm text-muted">Total</dt>
             <dd className="mt-1 font-display text-2xl font-bold">{formatPrice(pedido.monto_total)}</dd>
+          </div>
+          <div>
+            <dt className="text-sm text-muted">Medio de pago</dt>
+            <dd className="mt-1">{cash ? "Efectivo contra entrega" : "Mercado Pago"}</dd>
           </div>
           <div>
             <dt className="text-sm text-muted">Entrega en</dt>

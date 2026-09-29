@@ -73,6 +73,26 @@ describe("CheckoutService", () => {
     );
   });
 
+  it("respeta el medio elegido: con saldo no se ofrecen tarjetas y con tarjeta no se ofrece saldo", async () => {
+    const gateway = fakeGateway();
+    const service = new CheckoutService(gateway, { appUrl: "https://redal.test" });
+
+    await service.createSession(fakeDb(tablesFor({ metodo_pago: "saldo" })), "u1", "o1");
+    await service.createSession(fakeDb(tablesFor({ metodo_pago: "tarjeta" })), "u1", "o1");
+
+    const [saldo, tarjeta] = vi.mocked(gateway.createCheckout).mock.calls.map(([request]) => request.excludedPaymentTypes);
+    expect(saldo).toEqual(expect.arrayContaining(["credit_card", "debit_card"]));
+    expect(saldo).not.toContain("account_money");
+    expect(tarjeta).toContain("account_money");
+  });
+
+  it("un pedido en efectivo no genera cobro online", async () => {
+    const gateway = fakeGateway();
+    const service = new CheckoutService(gateway, { appUrl: "https://redal.test" });
+    await expect(service.createSession(fakeDb(tablesFor({ metodo_pago: "efectivo" })), "u1", "o1")).rejects.toMatchObject({ code: "conflict" });
+    expect(gateway.createCheckout).not.toHaveBeenCalled();
+  });
+
   it("no agrega envío si es cero", async () => {
     const gateway = fakeGateway();
     await new CheckoutService(gateway, { appUrl: "https://redal.test" }).createSession(fakeDb(tablesFor({ monto_envio: 0 })), "u1", "o1");

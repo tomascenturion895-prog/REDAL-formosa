@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { CheckoutStepper } from "@/components/payment/checkout-stepper";
 import { MercadoPagoBadge } from "@/components/payment/mercadopago-badge";
 import { OrderProgress } from "@/components/payment/order-progress";
-import { PaymentMethods } from "@/components/payment/payment-methods";
+import { PaymentMethodsDemo } from "@/components/payment/payment-methods";
 
 export const metadata: Metadata = { title: "Guía de estilo" };
 
@@ -151,7 +151,7 @@ export default function GuiaDeEstilo() {
         <div className="space-y-6">
           <MercadoPagoBadge />
           <CheckoutStepper current={1} />
-          <PaymentMethods />
+          <PaymentMethodsDemo />
           <div className="card p-6">
             <OrderProgress estado="en_preparacion" />
           </div>

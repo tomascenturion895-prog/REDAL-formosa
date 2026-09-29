@@ -4,7 +4,9 @@ import { useState } from "react";
 
 import { useRequireAuth } from "@/lib/auth/use-require-auth";
 import { deliveryRepository } from "@/lib/delivery/delivery-repository";
-import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/domain/order-status";
+import { ORDER_STATUS_TONE, statusLabel } from "@/lib/domain/order-status";
+import { isCash } from "@/lib/domain/payment-methods";
+import { formatPrice } from "@/lib/format";
 import { directionsUrl, FORMOSA_CENTER } from "@/lib/domain/geo";
 import { useAsync } from "@/lib/hooks/use-async";
 import { PageHeader } from "@/components/layout/page-header";
@@ -13,7 +15,7 @@ import { Alert } from "@/components/ui/alert";
 import { isCompletePin, PIN_LENGTH, PIN_MESSAGE, sanitizePin } from "@/lib/domain/delivery-pin";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadError } from "@/components/ui/load-error";
-import { MapPinIcon, PhoneIcon, TruckIcon } from "@/components/ui/icons";
+import { CashIcon, MapPinIcon, PhoneIcon, TruckIcon } from "@/components/ui/icons";
 import { PageLoading } from "@/components/ui/skeleton";
 
 async function loadAssignments(userId: string) {
@@ -88,7 +90,7 @@ export default function RepartidorTrackingPage() {
                       <p className="mt-1 text-sm text-muted">{order.direccion_entrega}</p>
                     </div>
                     <span className={`rounded-full px-3 py-1 text-xs font-medium ${ORDER_STATUS_TONE[order.estado]}`}>
-                      {ORDER_STATUS_LABEL[order.estado]}
+                      {statusLabel(order.estado, order.metodo_pago)}
                     </span>
                   </div>
                 </button>
@@ -102,6 +104,12 @@ export default function RepartidorTrackingPage() {
               <span>{selected.direccion_entrega ?? "Sin dirección"}</span>
             </p>
             {selected.nota && <p className="text-sm text-muted">Indicaciones: {selected.nota}</p>}
+            {isCash(selected.metodo_pago) && (
+              <p className="flex items-start gap-2 rounded-control bg-warning-soft p-3 text-sm font-semibold text-warning">
+                <CashIcon size={18} className="mt-0.5 shrink-0" />
+                <span>Cobrá {formatPrice(selected.monto_total)} en efectivo al entregar.</span>
+              </p>
+            )}
             <div className="flex flex-col gap-2 sm:flex-row">
               {directionsUrl(selected.entrega, selected.direccion_entrega) && (
                 <a

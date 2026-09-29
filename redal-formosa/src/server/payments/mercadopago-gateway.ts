@@ -67,6 +67,9 @@ export class MercadoPagoGateway implements PaymentGateway {
       back_urls: request.returnUrls,
       ...(request.autoReturn ? { auto_return: "approved" } : {}),
       ...(request.notificationUrl ? { notification_url: request.notificationUrl } : {}),
+      ...(request.excludedPaymentTypes?.length
+        ? { payment_methods: { excluded_payment_types: request.excludedPaymentTypes.map((id) => ({ id })) } }
+        : {}),
     });
     // Con credenciales de prueba MercadoPago entrega sandbox_init_point.
     return { url: data.init_point ?? data.sandbox_init_point, id: data.id ? String(data.id) : undefined };

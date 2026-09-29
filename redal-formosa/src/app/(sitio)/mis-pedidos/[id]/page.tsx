@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { useRequireAuth } from "@/lib/auth/use-require-auth";
-import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/domain/order-status";
+import { statusLabel, ORDER_STATUS_TONE } from "@/lib/domain/order-status";
 import { formatDate, formatPrice } from "@/lib/format";
 import { useAsync } from "@/lib/hooks/use-async";
 import { ordersRepository } from "@/lib/orders/orders-repository";
@@ -70,7 +70,7 @@ export default function PedidoDetallePage() {
           </p>
         </div>
         <span className={`rounded-full px-4 py-1.5 text-sm font-medium ${ORDER_STATUS_TONE[order.estado]}`}>
-          {ORDER_STATUS_LABEL[order.estado]}
+          {statusLabel(order.estado, order.metodo_pago)}
         </span>
       </div>
 
@@ -97,6 +97,10 @@ export default function PedidoDetallePage() {
                 <dd className="tabular-nums">{formatPrice(order.monto_envio)}</dd>
               </div>
             </dl>
+            <p className="flex justify-between text-sm">
+              <span className="text-muted">Medio de pago</span>
+              <span>{order.metodo_pago === "efectivo" ? "Efectivo contra entrega" : "Mercado Pago"}</span>
+            </p>
             <div className="flex items-baseline justify-between border-t border-border pt-4">
               <span className="font-semibold">Total</span>
               <span className="font-display text-2xl font-bold tabular-nums">{formatPrice(order.monto_total)}</span>
