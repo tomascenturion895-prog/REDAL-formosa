@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { useRequireAuth } from "@/lib/auth/use-require-auth";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -19,6 +20,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PlusIcon, StoreIcon } from "@/components/ui/icons";
 
 export default function ProductorDashboard() {
+  const router = useRouter();
   const { user, pending } = useRequireAuth();
   const { role } = useAuth();
   const { data: emprendimientos, loading, reload } = useAsync(() => producerRepository.ownEmprendimientos(user!.id), [user?.id], {
@@ -31,9 +33,9 @@ export default function ProductorDashboard() {
 
   useEffect(() => {
     if (role === "admin") {
-      window.location.href = "/admin";
+      router.push("/admin");
     }
-  }, [role]);
+  }, [role, router]);
 
   const selected = emprendimientos?.find((e) => e.id === selectedId) ?? emprendimientos?.[0];
 

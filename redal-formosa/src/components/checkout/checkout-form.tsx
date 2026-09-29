@@ -10,17 +10,22 @@ import { getCurrentPosition, type GeolocationFailure } from "@/lib/geolocation/g
 import { ordersRepository } from "@/lib/orders/orders-repository";
 import { Alert } from "@/components/ui/alert";
 import { Field } from "@/components/ui/field";
-import { LockIcon, MapPinIcon } from "@/components/ui/icons";
-import { PaymentMethods } from "@/components/payment/payment-methods";
-import { RedirectOverlay } from "@/components/payment/redirect-overlay";
+import { CashIcon, LockIcon, MapPinIcon } from "@/components/ui/icons";
+import { PaymentMethods, type PaymentMethodId } from "@/components/payment/payment-methods";
 
-export function CheckoutForm({ group }: { group: CartGroup }) {
+export function CheckoutForm({
+  group,
+  onOrderCreated,
+}: {
+  group: CartGroup;
+  onOrderCreated: (order: { id: string; monto: number; emprendimientoId: string }) => void;
+}) {
   const router = useRouter();
   const { clearStore } = useCart();
   const { items, emprendimientoId, total } = group;
   const [loading, setLoading] = useState(false);
-  const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>("mercadopago_tarjeta");
   const [form, setForm] = useState({ telefono: "", direccion: "", notas: "" });
   const [ubicacion, setUbicacion] = useState<LatLng | null>(null);
   const [locating, setLocating] = useState(false);
@@ -49,47 +54,64 @@ export function CheckoutForm({ group }: { group: CartGroup }) {
     setLoading(true);
 
     try {
-      // La base valida disponibilidad y calcula precios y envío; acá solo se indica qué y cuánto.
+      const metodoTexto =
+        paymentMethod === "efectivo"
+          ? "Pago en efectivo contra entrega"
+          : `Mercado Pago (${paymentMethod.replace("mercadopago_", "")})`;
+
+      const notaCompleta = [
+        form.telefono && `Tel: ${form.telefono}`,
+        `Medio: ${metodoTexto}`,
+        form.notas,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
       const order = await ordersRepository.create({
         emprendimientoId,
         items: items.map((i) => ({ producto_id: i.producto.id, cantidad: i.cantidad })),
         direccion: form.direccion,
-        nota: [form.telefono && `Tel: ${form.telefono}`, form.notas].filter(Boolean).join(" · "),
+        nota: notaCompleta,
         ubicacion: ubicacion ?? undefined,
       });
 
-      // El pedido ya existe: esta cesta se vacía aunque el pago todavía no esté habilitado (las demás quedan).
-      clearStore(emprendimientoId);
-
-      const response = await fetch("/api/checkout/create-preference", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pedidoId: order.pedidoId }),
-      });
-
-      if (!response.ok) {
-        router.push(`/confirmacion?pedido=${order.pedidoId}&status=unpaid`);
+      if (paymentMethod === "efectivo") {
+        clearStore(emprendimientoId);
+        router.push(`/confirmacion?pedido=${order.pedidoId}&metodo=efectivo`);
         return;
       }
 
-      const { url } = (await response.json()) as { url: string };
-      setRedirecting(true);
-      window.location.href = url;
+      // Para Mercado Pago notificamos al componente padre
+      onOrderCreated({
+        id: order.pedidoId,
+        monto: total,
+        emprendimientoId,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No pudimos procesar el pedido");
       setLoading(false);
     }
   };
 
+  const isCash = paymentMethod === "efectivo";
+
   return (
-    <form onSubmit={handleSubmit} className="card space-y-5 p-6">
-      {redirecting && <RedirectOverlay />}
+    <form onSubmit={handleSubmit} data-no-progress="true" className="card space-y-5 p-6">
       <h2 className="text-heading">Datos de entrega</h2>
 
       {error && <Alert tone="error">{error}</Alert>}
 
       <Field id="telefono" label="Teléfono de contacto">
-        <input id="telefono" type="tel" autoComplete="tel" required value={form.telefono} onChange={update("telefono")} placeholder="3704 123456" className="field" />
+        <input
+          id="telefono"
+          type="tel"
+          autoComplete="tel"
+          required
+          value={form.telefono}
+          onChange={update("telefono")}
+          placeholder="3704 123456"
+          className="field"
+        />
       </Field>
 
       <Field id="direccion" label="Dirección de entrega">
@@ -118,14 +140,26 @@ export function CheckoutForm({ group }: { group: CartGroup }) {
       </div>
 
       <Field id="notas" label="Notas para el emprendedor" optional>
-        <textarea id="notas" rows={2} value={form.notas} onChange={update("notas")} placeholder="Ej: tocar timbre, horario preferido" className="field" />
+        <textarea
+          id="notas"
+          rows={2}
+          value={form.notas}
+          onChange={update("notas")}
+          placeholder="Ej: tocar timbre, horario preferido"
+          className="field"
+        />
       </Field>
 
-      <PaymentMethods />
+      <PaymentMethods selected={paymentMethod} onSelect={setPaymentMethod} />
 
       <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-4 !text-base">
         {loading ? (
-          "Creando tu pedido…"
+          "Procesando pedido…"
+        ) : isCash ? (
+          <>
+            <CashIcon size={18} />
+            Confirmar pedido · Pagar {formatPrice(total)} en efectivo
+          </>
         ) : (
           <>
             <LockIcon size={18} />
@@ -133,8 +167,11 @@ export function CheckoutForm({ group }: { group: CartGroup }) {
           </>
         )}
       </button>
+
       <p className="text-center text-xs text-muted">
-        Al pagar aceptás que el pedido se prepare y se entregue en la dirección indicada.
+        {isCash
+          ? "Al confirmar, el productor comenzará a preparar tu pedido para entregártelo."
+          : "Al hacer clic, podrás escanear el QR desde tu celular o pagar directo en Mercado Pago."}
       </p>
     </form>
   );

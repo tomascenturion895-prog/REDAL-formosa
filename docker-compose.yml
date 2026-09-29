@@ -1,14 +1,21 @@
-services:
+﻿services:
   app:
     build:
-      context: .
-      dockerfile: Dockerfile
-    image: redal-formosa:latest
+      context: ./redal-formosa
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     container_name: redal-formosa
     restart: unless-stopped
     ports:
       - "3000:3000"
     env_file:
+      - path: ./redal-formosa/.env
+        required: false
+      - path: ./redal-formosa/.env.local
+        required: false
+      - path: .env
+        required: false
       - path: .env.local
         required: false
-
