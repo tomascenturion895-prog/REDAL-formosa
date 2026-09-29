@@ -12,6 +12,7 @@ import { RepartidorTracker } from "@/components/tracking/repartidor-tracker";
 import { Alert } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { LoadError } from "@/components/ui/load-error";
 import { MapPinIcon, PhoneIcon, TruckIcon } from "@/components/ui/icons";
 
 async function loadAssignments(userId: string) {
@@ -22,7 +23,7 @@ async function loadAssignments(userId: string) {
 
 export default function RepartidorTrackingPage() {
   const { user, pending } = useRequireAuth();
-  const { data, loading, reload } = useAsync(() => loadAssignments(user!.id), [user?.id], { enabled: Boolean(user), scope: user?.id });
+  const { data, error, loading, reload } = useAsync(() => loadAssignments(user!.id), [user?.id], { enabled: Boolean(user), scope: user?.id });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmingDelivery, setConfirmingDelivery] = useState(false);
@@ -42,6 +43,8 @@ export default function RepartidorTrackingPage() {
   };
 
   if (pending || (loading && !data)) return <div className="h-40" aria-busy="true" />;
+
+  if (error && !data) return <LoadError title="No pudimos cargar tus entregas" onRetry={reload} />;
 
   if (!data?.courier) {
     return (
