@@ -82,22 +82,27 @@ export function ProductCard({ product, emprendimientoNombre, rating, favorite, o
 
         <div className="mt-auto pt-3">
           {available ? (
-            <button
-              type="button"
-              onClick={handleAdd}
-              className={`btn btn-sm w-full ${added ? "btn-secondary" : "btn-primary"}`}
-              aria-live="polite"
-            >
-              {added ? (
-                <>
-                  <CheckIcon size={16} /> Agregado
-                </>
-              ) : (
-                <>
-                  <PlusIcon size={16} /> Agregar al carrito
-                </>
-              )}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleAdd}
+                className={`btn btn-sm w-full ${added ? "btn-secondary" : "btn-primary"}`}
+                aria-label={added ? `${product.nombre} agregado al carrito` : `Agregar ${product.nombre} al carrito`}
+              >
+                {added ? (
+                  <>
+                    <CheckIcon size={16} /> Agregado
+                  </>
+                ) : (
+                  <>
+                    <PlusIcon size={16} /> Agregar al carrito
+                  </>
+                )}
+              </button>
+              <span className="sr-only" role="status">
+                {added ? `${product.nombre} agregado al carrito` : ""}
+              </span>
+            </>
           ) : (
             <p className="rounded-control bg-surface-muted px-3 py-1.5 text-center text-sm text-muted">
               Sin stock por ahora

@@ -85,7 +85,7 @@ export default function CarritoPage() {
                 <ul className="space-y-3">
                   {group.items.map(({ producto, cantidad }) => (
                     <li key={producto.id} className="card flex gap-4 p-4">
-                      <Link href={`/productos/${producto.id}`} className="relative h-24 w-24 shrink-0 overflow-hidden rounded-control bg-surface-muted">
+                      <Link href={`/productos/${producto.id}`} aria-label={producto.nombre} className="relative h-24 w-24 shrink-0 overflow-hidden rounded-control bg-surface-muted">
                         <ProductImage src={producto.imagen_url} sizes="96px" iconSize={28} />
                       </Link>
 
