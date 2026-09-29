@@ -142,7 +142,7 @@ function CatalogContent() {
             title="Uy, no pudimos traer los productos"
             description="Puede ser tu conexión o un problema nuestro. Probá de nuevo en un momento."
             action={
-              <button className="btn btn-primary" onClick={reload}>
+              <button type="button" className="btn btn-primary" onClick={reload}>
                 Reintentar
               </button>
             }

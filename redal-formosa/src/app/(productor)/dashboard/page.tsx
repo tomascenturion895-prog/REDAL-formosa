@@ -42,12 +42,12 @@ export default function ProductorDashboard() {
 
   const selected = emprendimientos?.find((e) => e.id === selectedId) ?? emprendimientos?.[0];
 
-  const { data: products, reload: reloadProducts } = useAsync(
+  const { data: products, error: productsError, reload: reloadProducts } = useAsync(
     () => producerRepository.listProducts(selected!.id),
     [selected?.id],
     { enabled: Boolean(selected), scope: selected?.id },
   );
-  const { data: orders } = useAsync(() => sellerOrdersRepository.list(), [user?.id], { enabled: Boolean(user), scope: user?.id });
+  const { data: orders, error: ordersError, reload: reloadOrders } = useAsync(() => sellerOrdersRepository.list(), [user?.id], { enabled: Boolean(user), scope: user?.id });
   const { data: payout } = useAsync(() => producerRepository.payoutReadiness(user!.id), [user?.id], {
     enabled: Boolean(user),
     scope: user?.id,
@@ -109,6 +109,24 @@ export default function ProductorDashboard() {
           {showForm ? "Cerrar formulario" : "Nuevo producto con foto"}
         </button>
       </div>
+
+      {(productsError || ordersError) && (
+        <Alert tone="error">
+          <span className="flex flex-wrap items-center justify-between gap-3">
+            <span>No pudimos cargar {productsError && ordersError ? "tus productos y pedidos" : productsError ? "tus productos" : "tus pedidos"}. Lo que ves puede estar incompleto.</span>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                if (productsError) reloadProducts();
+                if (ordersError) reloadOrders();
+              }}
+            >
+              Reintentar
+            </button>
+          </span>
+        </Alert>
+      )}
 
       <TodayPanel
         orders={orders}
