@@ -24,7 +24,7 @@ export default function EmprendimientoPage() {
   const { id } = useParams<{ id: string }>();
   const { data, loading } = useAsync(() => loadStore(id), [id]);
 
-  if (loading) return <div className="page-container py-section" aria-busy="true" />;
+  if (loading && !data) return <div className="page-container py-section" aria-busy="true" />;
 
   const emprendimiento = data?.emprendimiento;
   if (!emprendimiento) {

@@ -10,6 +10,7 @@ import { useAsync } from "@/lib/hooks/use-async";
 import { PageHeader } from "@/components/layout/page-header";
 import { RepartidorTracker } from "@/components/tracking/repartidor-tracker";
 import { Alert } from "@/components/ui/alert";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TruckIcon } from "@/components/ui/icons";
 
@@ -24,6 +25,7 @@ export default function RepartidorTrackingPage() {
   const { data, loading, reload } = useAsync(() => loadAssignments(user!.id), [user?.id], { enabled: Boolean(user), scope: user?.id });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmingDelivery, setConfirmingDelivery] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const advance = async (orderId: string, estado: "en_camino" | "entregado") => {
@@ -39,7 +41,7 @@ export default function RepartidorTrackingPage() {
     }
   };
 
-  if (pending || loading) return <div className="h-40" aria-busy="true" />;
+  if (pending || (loading && !data)) return <div className="h-40" aria-busy="true" />;
 
   if (!data?.courier) {
     return (
@@ -92,10 +94,25 @@ export default function RepartidorTrackingPage() {
             </button>
           )}
           {selected.estado === "en_camino" && (
-            <button type="button" className="btn btn-primary w-full" disabled={busy} onClick={() => advance(selected.id, "entregado")}>
+            <button type="button" className="btn btn-primary w-full" disabled={busy} onClick={() => setConfirmingDelivery(true)}>
               Entregué el pedido
             </button>
           )}
+
+          <ConfirmDialog
+            isOpen={confirmingDelivery}
+            onClose={() => setConfirmingDelivery(false)}
+            onConfirm={async () => {
+              await advance(selected.id, "entregado");
+              setConfirmingDelivery(false);
+            }}
+            isLoading={busy}
+            isDestructive={false}
+            title="¿Entregaste el pedido?"
+            description="Se marca como entregado y no se puede deshacer."
+            confirmText="Sí, lo entregué"
+            cancelText="Todavía no"
+          />
 
           <RepartidorTracker repartidorId={courier.id} destino={selected.entrega ?? FORMOSA_CENTER} isRepartidor />
           {!selected.entrega && (

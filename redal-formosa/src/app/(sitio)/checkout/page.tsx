@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { loginHref } from "@/lib/auth/login-href";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useCart } from "@/lib/cart/cart-context";
 import { formatPrice } from "@/lib/format";
@@ -21,6 +22,7 @@ function CheckoutContent() {
   const { ready, groups, clearStore } = useCart();
   const searchParams = useSearchParams();
   const cesta = searchParams.get("cesta");
+  const returnTo = cesta ? `/checkout?cesta=${cesta}` : "/checkout";
 
   const [activeOrder, setActiveOrder] = useState<{
     id: string;
@@ -115,10 +117,10 @@ function CheckoutContent() {
           description="Tu carrito queda guardado. Iniciá sesión o creá una cuenta para hacer el pedido."
           action={
             <div className="flex gap-3">
-              <Link href="/login" className="btn btn-primary">
+              <Link href={loginHref(returnTo)} className="btn btn-primary">
                 Ingresar
               </Link>
-              <Link href="/register" className="btn btn-secondary">
+              <Link href={`/register?next=${encodeURIComponent(returnTo)}`} className="btn btn-secondary">
                 Crear cuenta
               </Link>
             </div>

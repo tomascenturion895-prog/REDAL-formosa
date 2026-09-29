@@ -17,6 +17,7 @@ import { SucursalesForm } from "@/components/productor/sucursales-form";
 import { TodayPanel, type ChecklistItem } from "@/components/producer/today-panel";
 import { VoiceQuickAdd } from "@/components/producer/voice-quick-add";
 import { Alert } from "@/components/ui/alert";
+import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MicIcon, PlusIcon, StoreIcon } from "@/components/ui/icons";
 
@@ -24,7 +25,7 @@ export default function ProductorDashboard() {
   const router = useRouter();
   const { user, pending } = useRequireAuth();
   const { role } = useAuth();
-  const { data: emprendimientos, loading, reload } = useAsync(() => producerRepository.ownEmprendimientos(user!.id), [user?.id], {
+  const { data: emprendimientos, error, loading, reload } = useAsync(() => producerRepository.ownEmprendimientos(user!.id), [user?.id], {
     enabled: Boolean(user),
     scope: user?.id,
   });
@@ -51,7 +52,10 @@ export default function ProductorDashboard() {
     scope: user?.id,
   });
 
-  if (pending || loading) return <div aria-busy="true" className="h-40" />;
+  if (pending || (loading && !emprendimientos)) return <div aria-busy="true" className="h-40" />;
+
+  // Un fallo de carga no es «no tenés emprendimiento»: ofrecer crear otro duplicaría el existente.
+  if (error && !emprendimientos) return <LoadError title="No pudimos cargar tu emprendimiento" onRetry={reload} />;
 
   if (!emprendimientos || emprendimientos.length === 0 || !selected) {
     return (
@@ -129,7 +133,7 @@ export default function ProductorDashboard() {
         </div>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-[1fr 20rem]">
+      <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
         <section aria-labelledby="products-title" className="space-y-4">
           <h2 id="products-title" className="text-heading">
             Mis productos
