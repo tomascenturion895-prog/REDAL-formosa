@@ -23,8 +23,9 @@ function fakeDb(profiles: Record<string, unknown>[]): Db {
       },
       maybeSingle: () => Promise.resolve({ data: find() ?? null, error: null }),
       then: (resolve: (v: unknown) => unknown) => {
-        if (patch) Object.assign(find() ?? {}, patch);
-        return Promise.resolve({ data: null, error: null }).then(resolve);
+        const row = find();
+        if (patch && row) Object.assign(row, patch);
+        return Promise.resolve({ data: row ? [{ id: row.id }] : [], error: null }).then(resolve);
       },
     };
     return builder;
@@ -60,6 +61,10 @@ describe("BankAccountService", () => {
 
   it("load devuelve null si no hay cuenta cargada", async () => {
     expect(await service.load("u1")).toBeNull();
+  });
+
+  it("si no existe el perfil, no dice que se guardó", async () => {
+    await expect(service.save("otro", { cbu: VALID_CBU, banco: "galicia", titular: "Ana" })).rejects.toThrow(/no se encontró el perfil/);
   });
 
   it("rechaza un CBU con dígito verificador incorrecto", async () => {

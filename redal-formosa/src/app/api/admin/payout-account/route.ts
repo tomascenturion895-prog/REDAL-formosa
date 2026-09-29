@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ServiceError } from "@/server/errors";
 import { enforceRateLimit, handleRoute } from "@/server/http";
 import { getBankAccountService, limiters } from "@/server/container";
+import { logWarn } from "@/server/logger";
 
 /** Cuenta bancaria (descifrada) de un emprendimiento, para que el administrador le transfiera. Solo admin. */
 export async function GET(req: NextRequest) {
@@ -28,6 +29,8 @@ export async function GET(req: NextRequest) {
     const account = await getBankAccountService().load(store.owner_id);
     if (!account) throw new ServiceError("not_found", "Este vendedor todavía no cargó su cuenta bancaria.");
 
+    // Rastro de quién vio una cuenta bancaria (sin el CBU).
+    logWarn(`Auditoría: el administrador ${user.id} consultó la cuenta de cobro del emprendimiento ${emprendimientoId}`);
     return NextResponse.json({ account });
   });
 }
