@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 
 # 1. Instalar solo las dependencias necesarias
 FROM base AS deps
