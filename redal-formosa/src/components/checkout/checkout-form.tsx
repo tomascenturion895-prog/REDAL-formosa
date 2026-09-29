@@ -1,17 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
-import { useCart, type CartGroup } from "@/lib/cart/cart-context";
+import { type CartGroup } from "@/lib/cart/cart-context";
 import { formatPrice } from "@/lib/format";
 import type { LatLng } from "@/lib/domain/geo";
 import { getCurrentPosition, type GeolocationFailure } from "@/lib/geolocation/geolocation";
 import { ordersRepository } from "@/lib/orders/orders-repository";
 import { Alert } from "@/components/ui/alert";
 import { Field } from "@/components/ui/field";
-import { CashIcon, LockIcon, MapPinIcon } from "@/components/ui/icons";
-import { PaymentMethods, type PaymentMethodId } from "@/components/payment/payment-methods";
+import { LockIcon, MapPinIcon } from "@/components/ui/icons";
+import { PaymentMethods } from "@/components/payment/payment-methods";
 
 export function CheckoutForm({
   group,
@@ -20,12 +19,9 @@ export function CheckoutForm({
   group: CartGroup;
   onOrderCreated: (order: { id: string; monto: number; emprendimientoId: string }) => void;
 }) {
-  const router = useRouter();
-  const { clearStore } = useCart();
   const { items, emprendimientoId, total } = group;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>("mercadopago_tarjeta");
   const [form, setForm] = useState({ telefono: "", direccion: "", notas: "" });
   const [ubicacion, setUbicacion] = useState<LatLng | null>(null);
   const [locating, setLocating] = useState(false);
@@ -54,18 +50,8 @@ export function CheckoutForm({
     setLoading(true);
 
     try {
-      const metodoTexto =
-        paymentMethod === "efectivo"
-          ? "Pago en efectivo contra entrega"
-          : `Mercado Pago (${paymentMethod.replace("mercadopago_", "")})`;
-
-      const notaCompleta = [
-        form.telefono && `Tel: ${form.telefono}`,
-        `Medio: ${metodoTexto}`,
-        form.notas,
-      ]
-        .filter(Boolean)
-        .join(" · ");
+      // El teléfono viaja en la nota: es lo que el vendedor usa para avisar al comprador.
+      const notaCompleta = [form.telefono && `Tel: ${form.telefono}`, form.notas].filter(Boolean).join(" · ");
 
       const order = await ordersRepository.create({
         emprendimientoId,
@@ -75,13 +61,7 @@ export function CheckoutForm({
         ubicacion: ubicacion ?? undefined,
       });
 
-      if (paymentMethod === "efectivo") {
-        clearStore(emprendimientoId);
-        router.push(`/confirmacion?pedido=${order.pedidoId}&metodo=efectivo`);
-        return;
-      }
-
-      // Para Mercado Pago notificamos al componente padre
+      // El padre muestra el paso de pago del pedido ya creado.
       onOrderCreated({
         id: order.pedidoId,
         monto: total,
@@ -92,8 +72,6 @@ export function CheckoutForm({
       setLoading(false);
     }
   };
-
-  const isCash = paymentMethod === "efectivo";
 
   return (
     <form onSubmit={handleSubmit} data-no-progress="true" className="card space-y-5 p-6">
@@ -150,28 +128,21 @@ export function CheckoutForm({
         />
       </Field>
 
-      <PaymentMethods selected={paymentMethod} onSelect={setPaymentMethod} />
+      <PaymentMethods />
 
       <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-primary w-full !py-4 !text-base">
         {loading ? (
-          "Procesando pedido…"
-        ) : isCash ? (
-          <>
-            <CashIcon size={18} />
-            Confirmar pedido · Pagar {formatPrice(total)} en efectivo
-          </>
+          "Creando tu pedido…"
         ) : (
           <>
             <LockIcon size={18} />
-            Pagar {formatPrice(total)} con Mercado Pago
+            Continuar al pago · {formatPrice(total)}
           </>
         )}
       </button>
 
       <p className="text-center text-xs text-muted">
-        {isCash
-          ? "Al confirmar, el productor comenzará a preparar tu pedido para entregártelo."
-          : "Al hacer clic, podrás escanear el QR desde tu celular o pagar directo en Mercado Pago."}
+        Primero creamos tu pedido y en el siguiente paso pagás con Mercado Pago. Si preferís hacerlo después, queda guardado en Mis pedidos.
       </p>
     </form>
   );
