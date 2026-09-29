@@ -15,6 +15,7 @@ import { MercadoPagoBadge } from "@/components/payment/mercadopago-badge";
 import { OrderProgress } from "@/components/payment/order-progress";
 import { RedirectOverlay } from "@/components/payment/redirect-overlay";
 import { Alert } from "@/components/ui/alert";
+import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckIcon, PackageIcon, WalletIcon } from "@/components/ui/icons";
 
@@ -23,11 +24,11 @@ const MAX_POLLS = 8;
 
 function ConfirmacionContent() {
   const params = useSearchParams();
-  const pedidoId = params.get("pedido");
-  const returnStatus = params.get("status");
+  const pedidoId = params.get("pedido") || params.get("orden_id") || params.get("external_reference");
+  const returnStatus = params.get("status") || params.get("collection_status");
   const { user, pending } = useRequireAuth();
 
-  const { data: pedido, loading, reload } = useAsync(() => ordersRepository.getConfirmation(pedidoId!), [pedidoId], {
+  const { data: pedido, error, loading, reload } = useAsync(() => ordersRepository.getConfirmation(pedidoId!), [pedidoId], {
     enabled: Boolean(user && pedidoId),
   });
 
@@ -36,7 +37,10 @@ function ConfirmacionContent() {
   const [retryError, setRetryError] = useState<string | null>(null);
 
   // Al volver de Mercado Pago el webhook puede tardar unos segundos en confirmar el pago.
-  const waitingForWebhook = pedido?.estado === "pendiente_pago" && returnStatus === "approved";
+  const waitingForWebhook =
+    pedido?.estado === "pendiente_pago" &&
+    (returnStatus === "approved" || params.get("collection_status") === "approved");
+
   useEffect(() => {
     if (!waitingForWebhook) return;
     let polls = 0;
@@ -61,7 +65,16 @@ function ConfirmacionContent() {
     }
   };
 
-  if (pending || loading) return <div className="page-container py-section" aria-busy="true" />;
+  // Con `loading && !pedido` la pantalla no se vacía en cada recarga del sondeo.
+  if (pending || (loading && !pedido)) return <div className="page-container py-section" aria-busy="true" />;
+
+  if (error && !pedido) {
+    return (
+      <div className="page-container py-section">
+        <LoadError title="No pudimos cargar tu pedido" description="Tu pedido no se perdió: lo ves en Mis pedidos." onRetry={reload} />
+      </div>
+    );
+  }
 
   if (!pedido) {
     return (

@@ -2,6 +2,7 @@ import type { Db } from "@/lib/supabase/types";
 import type { OrderEventBus } from "@/server/events/order-events";
 import { ServiceError } from "@/server/errors";
 import type { PaymentGateway, PaymentOutcome } from "./payment-gateway";
+import { logError } from "@/server/logger";
 
 export interface PaymentNotification {
   type?: string;
@@ -19,6 +20,14 @@ const ROW_STATE: Record<PaymentOutcome, PaymentRowState> = {
   pending: "pendiente",
   failed: "fallido",
   refunded: "reembolsado",
+};
+
+// Estados del pago que una notificación con el resultado indicado no puede sobrescribir.
+const PROTECTED_FROM: Record<PaymentRowState, PaymentRowState[]> = {
+  aprobado: ["reembolsado"],
+  pendiente: ["aprobado", "reembolsado"],
+  fallido: ["aprobado", "reembolsado"],
+  reembolsado: [],
 };
 
 // Estados en los que el pedido todavía no salió: si se devuelve el dinero, hay que frenarlo.
@@ -62,14 +71,17 @@ export class PaymentProcessor {
     let rowState = ROW_STATE[payment.outcome];
     // Un pago aprobado por menos de lo que vale el pedido no lo confirma.
     if (rowState === "aprobado" && payment.amount + AMOUNT_EPSILON < Number(order.monto_total)) {
-      console.error(`Monto insuficiente en el pago ${payment.id} del pedido ${order.id}`);
+      logError(`Monto insuficiente en el pago ${payment.id} del pedido ${order.id}`);
       rowState = "fallido";
     }
 
+    // El estado del pago solo avanza: una notificación tardía (fallido/pendiente) no pisa un pago ya
+    // aprobado o reembolsado, y un reembolsado no vuelve a aprobarse.
     const { error: paymentError } = await this.db
       .from("pagos")
       .update({ estado: rowState, transaccion_id: payment.id })
-      .eq("pedido_id", order.id);
+      .eq("pedido_id", order.id)
+      .not("estado", "in", `(${PROTECTED_FROM[rowState].join(",")})`);
     if (paymentError) throw new Error(`No se pudo actualizar el pago: ${paymentError.message}`);
 
     let paid = false;
@@ -102,7 +114,7 @@ export class PaymentProcessor {
         .select("id");
       if (error) throw new Error(`No se pudo cancelar el pedido reembolsado: ${error.message}`);
       cancelled = (stopped?.length ?? 0) > 0;
-      if (!cancelled) console.error(`Pago ${payment.id} reembolsado con el pedido ${order.id} ya despachado o cerrado`);
+      if (!cancelled) logError(`Pago ${payment.id} reembolsado con el pedido ${order.id} ya despachado o cerrado`);
     }
 
     return { status: "processed", orderId: order.id, paid, cancelled };

@@ -73,7 +73,11 @@ export function NavigationProgress() {
     };
 
     // Un formulario puede navegar (buscar, ingresar) o no (error de validación): tope corto.
-    const onSubmit = () => begin(3_500);
+    const onSubmit = (event: Event) => {
+      const form = (event.target as Element | null)?.closest?.("form");
+      if (form?.getAttribute("data-no-progress") === "true") return;
+      begin(3_500);
+    };
     const onPopState = () => begin(15_000);
 
     window.addEventListener("click", onClick, true);

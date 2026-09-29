@@ -137,6 +137,7 @@
   --warning: var(--color-accent-700);
   --warning-soft: var(--color-accent-50);
   --danger: #b3311f;
+  --on-danger: #ffffff;
   --danger-soft: #fbe9e5;
   --info: var(--color-sky-800);
   --info-soft: var(--color-sky-50);
@@ -168,6 +169,7 @@
   --warning: var(--color-accent-300);
   --warning-soft: #33280d;
   --danger: #f08070;
+  --on-danger: var(--color-ink-950);
   --danger-soft: #3a1c16;
   --info: var(--color-sky-300);
   --info-soft: #12303f;
@@ -200,6 +202,7 @@
     --warning: var(--color-accent-300);
     --warning-soft: #33280d;
     --danger: #f08070;
+  --on-danger: var(--color-ink-950);
     --danger-soft: #3a1c16;
     --info: var(--color-sky-300);
     --info-soft: #12303f;
@@ -234,6 +237,7 @@
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
+  --color-on-danger: var(--on-danger);
   --color-danger-soft: var(--danger-soft);
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
@@ -329,6 +333,16 @@
 @utility btn-sm {
   padding: 0.375rem 0.75rem;
   font-size: 0.8125rem;
+}
+
+/* En pantallas táctiles los botones miden al menos 44 px (40 px los compactos) para tocarlos sin errar. */
+@media (pointer: coarse) {
+  .btn {
+    min-height: 2.75rem;
+  }
+  .btn-sm {
+    min-height: 2.5rem;
+  }
 }
 
 @utility field {

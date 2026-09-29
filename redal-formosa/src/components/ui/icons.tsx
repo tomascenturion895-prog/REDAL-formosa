@@ -77,6 +77,12 @@ export const CheckIcon = (p: IconProps) => (
   </Svg>
 );
 
+export const PhoneIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z" />
+  </Svg>
+);
+
 export const MapPinIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M12 21s6.5-5.6 6.5-11a6.5 6.5 0 0 0-13 0C5.5 15.4 12 21 12 21Z" />
@@ -216,4 +222,42 @@ export const EyeOffIcon = (p: IconProps) => (
     <line x1="2" x2="22" y1="2" y2="22" />
   </Svg>
 );
+
+export const ExternalLinkIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    <polyline points="15 3 21 3 21 9" />
+    <line x1="10" y1="14" x2="21" y2="3" />
+  </Svg>
+);
+
+export const RefreshIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+    <path d="M16 21h5v-5" />
+  </Svg>
+);
+
+export const QrCodeIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3" y="3" width="7" height="7" />
+    <rect x="14" y="3" width="7" height="7" />
+    <rect x="3" y="14" width="7" height="7" />
+    <rect x="14" y="14" width="3" height="3" />
+    <path d="M14 20h3v-3" />
+    <path d="M20 17v3" />
+    <path d="M20 14v.01" />
+  </Svg>
+);
+
+export const CashIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="2" y="6" width="20" height="12" rx="2" />
+    <circle cx="12" cy="12" r="2" />
+    <path d="M6 12h.01M18 12h.01" />
+  </Svg>
+);
+
 

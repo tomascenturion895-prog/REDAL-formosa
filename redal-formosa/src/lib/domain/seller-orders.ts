@@ -86,6 +86,11 @@ export function extractBuyerPhone(note: string | null): string | null {
   return match ? match[1].trim() : null;
 }
 
+/** La nota del comprador sin el teléfono que viaja dentro de ella. */
+export function stripBuyerPhone(note: string | null): string {
+  return (note ?? "").replace(/Tel:\s*[+\d][\d\s().-]{5,}\s*(·\s*)?/i, "").trim();
+}
+
 /** Hace cuánto se hizo el pedido, en lenguaje corriente ("hace 3 h"). */
 export function timeAgo(iso: string, now: Date = new Date()): string {
   const minutes = Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 60_000));

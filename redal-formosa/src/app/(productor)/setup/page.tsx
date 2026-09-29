@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { useRequireAuth } from "@/lib/auth/use-require-auth";
+import { LoadError } from "@/components/ui/load-error";
 import { useAsync } from "@/lib/hooks/use-async";
 import { producerRepository } from "@/lib/producer/producer-repository";
 import { ProductorForm } from "@/components/productor/productor-form";
@@ -29,7 +30,7 @@ function ProductorSetup() {
   const requested = PASO_INICIAL[useSearchParams().get("paso") ?? ""];
 
   // Si ya creó su emprendimiento, el asistente sigue desde el paso siguiente (sin duplicarlo).
-  const { data: existingId, loading } = useAsync(() => producerRepository.firstEmprendimientoId(user!.id), [user?.id], {
+  const { data: existingId, error, loading, reload } = useAsync(() => producerRepository.firstEmprendimientoId(user!.id), [user?.id], {
     enabled: Boolean(user),
     scope: user?.id,
   });
@@ -37,7 +38,10 @@ function ProductorSetup() {
   const [step, setStep] = useState<Step | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
 
-  if (pending || loading || !user) return <div aria-busy="true" className="h-40" />;
+  if (pending || (loading && existingId === undefined) || !user) return <div aria-busy="true" className="h-40" />;
+
+  // Si no pudimos saber si ya tiene emprendimiento, no se arranca de cero: se duplicaría.
+  if (error) return <LoadError title="No pudimos revisar tu emprendimiento" onRetry={reload} />;
 
   const emprendimientoId = createdId ?? existingId ?? null;
   const currentStep: Step = step ?? (emprendimientoId ? (requested ?? "ubicacion") : "info");

@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
+import { loginHref } from "@/lib/auth/login-href";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useAsync } from "@/lib/hooks/use-async";
 import { ratingsRepository } from "@/lib/ratings/ratings-repository";
@@ -15,6 +17,7 @@ interface RatingFormProps {
 
 export function RatingForm({ productoId, onSuccess }: RatingFormProps) {
   const { user, loading: authLoading } = useAuth();
+  const pathname = usePathname();
 
   // Si la persona ya calificó, el formulario parte de su calificación y permite editarla.
   const { data: previous } = useAsync(() => ratingsRepository.myRatingForProduct(productoId), [user?.id, productoId], {
@@ -63,7 +66,7 @@ export function RatingForm({ productoId, onSuccess }: RatingFormProps) {
   if (!user) {
     return (
       <p className="rounded-control bg-info-soft px-4 py-3 text-sm text-info">
-        <Link href="/login" className="font-medium underline">
+        <Link href={loginHref(pathname)} className="font-medium underline">
           Ingresá
         </Link>{" "}
         para calificar este producto.
