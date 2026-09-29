@@ -13,6 +13,7 @@ import { UnpaidOrderActions } from "@/components/orders/unpaid-order-actions";
 import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PackageIcon, TruckIcon } from "@/components/ui/icons";
+import { DeliveryPinCard } from "@/components/orders/delivery-pin-card";
 import { PageLoading } from "@/components/ui/skeleton";
 
 async function loadOrder(orderId: string, userId: string) {
@@ -83,6 +84,7 @@ export default function PedidoDetallePage() {
 
         <aside className="space-y-4">
           {order.estado === "pendiente_pago" && <UnpaidOrderActions orderId={order.id} onCancelled={reload} />}
+          {["pagado", "en_preparacion", "listo", "en_camino"].includes(order.estado) && <DeliveryPinCard orderId={order.id} />}
           <div className="card space-y-4 p-6">
             <h2 className="text-heading">Resumen</h2>
             <dl className="space-y-2 text-sm">
