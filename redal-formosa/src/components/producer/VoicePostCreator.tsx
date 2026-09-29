@@ -69,8 +69,8 @@ export function VoicePostCreator({ emprendimientoId }: VoicePostCreatorProps) {
       await novedadesRepository.publish(emprendimientoId, contenido);
       setText("");
       reload();
-    } catch {
-      setError("No pudimos publicar la novedad. Intentá de nuevo.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No pudimos publicar la novedad. Intentá de nuevo.");
     } finally {
       setPublishing(false);
     }

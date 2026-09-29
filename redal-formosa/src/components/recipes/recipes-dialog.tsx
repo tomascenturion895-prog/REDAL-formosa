@@ -37,7 +37,7 @@ interface RecipesDialogProps {
 export function RecipesDialog({ emprendimientoId, productIds, label = "¿Qué puedo cocinar con esto?", className = "btn btn-secondary" }: RecipesDialogProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { addItem } = useCart();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -76,6 +76,7 @@ export function RecipesDialog({ emprendimientoId, productIds, label = "¿Qué pu
   };
 
   const start = () => {
+    if (authLoading) return;
     if (!user) {
       router.push(`/login?next=${encodeURIComponent(pathname)}`);
       return;
