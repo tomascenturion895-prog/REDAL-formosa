@@ -8,6 +8,7 @@ import { useAuthActions } from "@/lib/auth/use-auth-actions";
 import { authErrorMessage, safeNextPath } from "@/lib/auth/messages";
 import { PasswordInput } from "@/components/ui/password-input";
 import { SocialButtons } from "@/components/auth/social-buttons";
+import { Alert } from "@/components/ui/alert";
 
 export function LoginForm() {
   const router = useRouter();
@@ -48,9 +49,9 @@ export function LoginForm() {
       </p>
 
       {error && (
-        <div role="alert" className="mb-4 rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
+        <Alert tone="error" className="mb-4">
           {error}
-        </div>
+        </Alert>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">

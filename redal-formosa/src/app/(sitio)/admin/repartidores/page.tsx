@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TruckIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 const VEHICLES: { value: VehicleType; label: string }[] = [
   { value: "bicicleta", label: "Bicicleta" },
@@ -55,7 +56,7 @@ export default function AdminRepartidoresPage() {
   };
 
   if (loadError) return <Alert tone="error">No pudimos cargar los repartidores.</Alert>;
-  if (!couriers) return <div aria-busy="true" className="h-40" />;
+  if (!couriers) return <PageLoading compact />;
 
   return (
     <div className="space-y-6">

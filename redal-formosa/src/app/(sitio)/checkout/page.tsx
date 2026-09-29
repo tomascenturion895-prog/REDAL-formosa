@@ -15,6 +15,7 @@ import { CheckoutMercadoPago } from "@/components/payment/checkout-mercadopago";
 import { ProductImage } from "@/components/ui/product-image";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CartIcon, UserIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 function CheckoutContent() {
   const router = useRouter();
@@ -33,7 +34,7 @@ function CheckoutContent() {
   // Con una sola cesta no hace falta elegir; con varias, se paga la indicada en la URL.
   const group = groups.find((g) => g.emprendimientoId === cesta) ?? (groups.length === 1 ? groups[0] : undefined);
 
-  if (loading || !ready) return <div className="page-container py-section" aria-busy="true" />;
+  if (loading || !ready) return <PageLoading />;
 
   // 1. Si el pedido ya fue creado y estamos en proceso de pago con Mercado Pago:
   if (activeOrder) {
@@ -183,7 +184,7 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={<div className="page-container py-section" aria-busy="true" />}>
+    <Suspense fallback={<PageLoading />}>
       <CheckoutContent />
     </Suspense>
   );

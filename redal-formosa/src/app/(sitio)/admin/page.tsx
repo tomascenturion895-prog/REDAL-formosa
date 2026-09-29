@@ -8,6 +8,7 @@ import { formatPrice } from "@/lib/format";
 import { useAsync } from "@/lib/hooks/use-async";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 function TrendBadge({ value }: { value: Trend }) {
   if (value.percent === null) {
@@ -57,7 +58,7 @@ export default function AdminDashboard() {
       />
     );
   }
-  if (!stats || !summary) return <div aria-busy="true" className="h-40" />;
+  if (!stats || !summary) return <PageLoading compact />;
 
   const attention = [
     { label: "Productos por aprobar", value: summary.productos_pendientes, href: "/admin/productos", cta: "Revisar" },

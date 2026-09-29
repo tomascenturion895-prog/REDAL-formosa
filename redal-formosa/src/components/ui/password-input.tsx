@@ -30,9 +30,9 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(fu
         type="button"
         tabIndex={0}
         onClick={() => setShowPassword((prev) => !prev)}
-        aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+        aria-label="Mostrar contraseña"
         aria-pressed={showPassword}
-        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted hover:text-foreground hover:bg-surface-muted/60 focus-visible:outline-2 focus-visible:outline-ring transition-colors"
+        className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-control text-muted hover:text-foreground hover:bg-surface-muted/60 focus-visible:outline-2 focus-visible:outline-ring transition-colors"
       >
         {showPassword ? <EyeOffIcon size={19} /> : <EyeIcon size={19} />}
       </button>

@@ -20,6 +20,7 @@ import { Alert } from "@/components/ui/alert";
 import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MicIcon, PlusIcon, StoreIcon } from "@/components/ui/icons";
+import { PageLoading } from "@/components/ui/skeleton";
 
 export default function ProductorDashboard() {
   const router = useRouter();
@@ -52,7 +53,7 @@ export default function ProductorDashboard() {
     scope: user?.id,
   });
 
-  if (pending || (loading && !emprendimientos)) return <div aria-busy="true" className="h-40" />;
+  if (pending || (loading && !emprendimientos)) return <PageLoading compact />;
 
   // Un fallo de carga no es «no tenés emprendimiento»: ofrecer crear otro duplicaría el existente.
   if (error && !emprendimientos) return <LoadError title="No pudimos cargar tu emprendimiento" onRetry={reload} />;

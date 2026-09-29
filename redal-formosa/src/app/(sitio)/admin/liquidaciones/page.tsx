@@ -9,6 +9,7 @@ import { formatPrice } from "@/lib/format";
 import { useAsync } from "@/lib/hooks/use-async";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadError } from "@/components/ui/load-error";
+import { PageLoading } from "@/components/ui/skeleton";
 
 const bankName = (code: string) => BANKS.find(([c]) => c === code)?.[1] ?? code;
 
@@ -143,7 +144,7 @@ export default function AdminLiquidacionesPage() {
   if (error || commissionError) {
     return <LoadError title="No pudimos cargar las liquidaciones" onRetry={() => { reload(); reloadCommission(); }} />;
   }
-  if (!payouts || commission === undefined) return <div aria-busy="true" className="h-40" />;
+  if (!payouts || commission === undefined) return <PageLoading compact />;
 
   return (
     <div className="space-y-8">

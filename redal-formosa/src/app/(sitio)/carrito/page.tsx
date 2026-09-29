@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CartIcon, MinusIcon, PlusIcon, StoreIcon, TrashIcon } from "@/components/ui/icons";
 import { ProductImage } from "@/components/ui/product-image";
+import { PageLoading } from "@/components/ui/skeleton";
 
 export default function CarritoPage() {
   const { ready, groups, removeItem, updateQuantity, clearCart, clearStore } = useCart();
@@ -24,13 +25,14 @@ export default function CarritoPage() {
     enabled: storeIds.length > 0,
   });
 
-  if (!ready) return <div className="page-container py-section" aria-busy="true" />;
+  if (!ready) return <PageLoading />;
 
   if (groups.length === 0) {
     return (
       <div className="page-container py-section">
         <EmptyState
           icon={<CartIcon size={36} />}
+          as="h1"
           title="Tu carrito está vacío"
           description="Elegí productos de uno o más emprendimientos y armá tu pedido."
           action={
@@ -114,11 +116,11 @@ export default function CarritoPage() {
 
                         <div className="mt-auto flex items-center justify-between pt-3">
                           <div className="flex items-center gap-1" role="group" aria-label={`Cantidad de ${producto.nombre}`}>
-                            <button type="button" className="btn btn-secondary !p-1.5" onClick={() => updateQuantity(producto.id, cantidad - 1)} aria-label="Restar una unidad">
+                            <button type="button" className="btn btn-secondary !min-h-10 !min-w-10 !p-1.5" onClick={() => updateQuantity(producto.id, cantidad - 1)} aria-label="Restar una unidad">
                               <MinusIcon size={14} />
                             </button>
                             <span className="w-9 text-center font-semibold tabular-nums">{cantidad}</span>
-                            <button type="button" className="btn btn-secondary !p-1.5" onClick={() => updateQuantity(producto.id, cantidad + 1)} aria-label="Sumar una unidad">
+                            <button type="button" className="btn btn-secondary !min-h-10 !min-w-10 !p-1.5" onClick={() => updateQuantity(producto.id, cantidad + 1)} aria-label="Sumar una unidad">
                               <PlusIcon size={14} />
                             </button>
                           </div>

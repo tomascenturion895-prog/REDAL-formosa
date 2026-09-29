@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import { catalogRepository, type ProductSearchResult } from "@/lib/catalog/catalog-repository";
 import { useAsync } from "@/lib/hooks/use-async";
 import { PageHeader } from "@/components/layout/page-header";
@@ -79,7 +80,8 @@ function CatalogContent() {
   // Sin elección explícita: relevancia si hay búsqueda, novedades si no.
   const sort: SortKey = sortChoice ?? (q ? "relevancia" : "recientes");
 
-  const max = priceMax ? Number(priceMax) : undefined;
+  const debouncedPrice = useDebouncedValue(priceMax);
+  const max = debouncedPrice ? Number(debouncedPrice) : undefined;
   const { data, error, loading, reload } = useAsync(() => loadCatalog(q, max, onlyAvailable), [q, max, onlyAvailable]);
 
   const sorted = useMemo(() => (data ? [...data.products].sort(COMPARATORS[sort]) : null), [data, sort]);

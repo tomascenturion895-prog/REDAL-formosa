@@ -72,7 +72,7 @@ export function WishlistButton({ productId, favorite, onToggle, variant = "icon"
       aria-pressed={isFavorite}
       aria-label={label}
       title={label}
-      className="flex h-9 w-9 items-center justify-center rounded-full bg-surface/95 text-foreground shadow-card transition-colors hover:bg-surface disabled:opacity-60"
+      className="flex h-10 w-10 items-center justify-center rounded-full bg-surface/95 text-foreground shadow-card transition-colors hover:bg-surface disabled:opacity-60"
     >
       <HeartIcon size={18} filled={isFavorite} className={isFavorite ? "text-danger" : ""} />
     </button>
