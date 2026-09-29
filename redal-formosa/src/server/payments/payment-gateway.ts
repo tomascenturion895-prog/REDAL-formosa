@@ -41,6 +41,8 @@ export interface PaymentGateway {
   /** Consulta el pago directamente al proveedor: lo recibido por HTTP nunca se toma como verdad. */
   getPayment(paymentId: string): Promise<PaymentInfo>;
   verifyWebhook(proof: WebhookProof): boolean;
+  /** Devuelve el pago completo al comprador. Repetirlo sobre un pago ya reembolsado no debe cobrar ni devolver dos veces. */
+  refund(paymentId: string): Promise<void>;
 }
 
 export class PaymentsNotConfiguredError extends Error {

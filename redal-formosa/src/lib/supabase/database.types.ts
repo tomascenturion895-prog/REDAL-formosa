@@ -458,6 +458,23 @@ export type Database = {
           },
         ]
       }
+      liquidaciones: {
+        Row: {
+          cantidad_pedidos: number
+          comision: number
+          comision_pct: number
+          emprendimiento_id: string
+          id: string
+          monto_bruto: number
+          monto_neto: number
+          pagado_en: string
+          pagado_por: string
+          referencia: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       pagos: {
         Row: {
           actualizado_en: string | null
@@ -1699,6 +1716,37 @@ export type Database = {
         }[]
       }
       admin_resumen: { Args: never; Returns: Json }
+      admin_comision: { Args: never; Returns: number }
+      admin_liquidar: {
+        Args: { p_emprendimiento: string; p_referencia: string }
+        Returns: string
+      }
+      admin_liquidaciones_pendientes: {
+        Args: never
+        Returns: {
+          cantidad_pedidos: number
+          comision: number
+          comision_pct: number
+          emprendimiento_id: string
+          emprendimiento_nombre: string
+          monto_bruto: number
+          monto_neto: number
+          owner_id: string
+        }[]
+      }
+      admin_set_comision: { Args: { p_pct: number }; Returns: undefined }
+      productor_cobro_pendiente: {
+        Args: never
+        Returns: {
+          cantidad_pedidos: number
+          comision: number
+          comision_pct: number
+          emprendimiento_id: string
+          emprendimiento_nombre: string
+          monto_bruto: number
+          monto_neto: number
+        }[]
+      }
       admin_repartidores: {
         Args: never
         Returns: {
@@ -1793,6 +1841,14 @@ export type Database = {
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
       geometry: { Args: { "": string }; Returns: unknown }
+      has_received_delivery: {
+        Args: { p_repartidor: string }
+        Returns: boolean
+      }
+      has_received_product: {
+        Args: { p_producto: string }
+        Returns: boolean
+      }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: boolean

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 import { useRequireAuth } from "@/lib/auth/use-require-auth";
+import { useAuth } from "@/lib/auth/auth-context";
 import { useAsync } from "@/lib/hooks/use-async";
 import { sellerOrdersRepository } from "@/lib/orders/seller-orders-repository";
 import { producerRepository } from "@/lib/producer/producer-repository";
@@ -12,20 +13,28 @@ import { ProductForm } from "@/components/productor/product-form";
 import { ProductList } from "@/components/productor/product-list";
 import { ProductorForm } from "@/components/productor/productor-form";
 import { SucursalesForm } from "@/components/productor/sucursales-form";
-import { TodayPanel, type ChecklistItem } from "@/components/productor/today-panel";
-import { VoiceQuickAdd } from "@/components/productor/voice-quick-add";
+import { TodayPanel, type ChecklistItem } from "@/components/producer/today-panel";
+import { VoiceQuickAdd } from "@/components/producer/voice-quick-add";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MicIcon, PlusIcon, StoreIcon } from "@/components/ui/icons";
 
 export default function ProductorDashboard() {
   const { user, pending } = useRequireAuth();
+  const { role } = useAuth();
   const { data: emprendimientos, loading, reload } = useAsync(() => producerRepository.ownEmprendimientos(user!.id), [user?.id], {
     enabled: Boolean(user),
     scope: user?.id,
   });
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    if (role === "admin") {
+      window.location.href = "/admin";
+    }
+  }, [role]);
 
   const selected = emprendimientos?.find((e) => e.id === selectedId) ?? emprendimientos?.[0];
 
@@ -64,7 +73,6 @@ export default function ProductorDashboard() {
     { key: "verificacion", label: "Verificá tu identidad", done: payout?.verification === "approved" || payout?.verification === "pending_review", href: "/setup?paso=verificacion", cta: "Verificar" },
     { key: "cobro", label: "Cargá la cuenta donde cobrás", done: Boolean(payout?.hasBankAccount), href: "/setup?paso=cobro", cta: "Cargar cuenta" },
   ];
-  // Mientras se consulta el estado de cobro no se muestran como pendientes los pasos que dependen de él.
   const visibleChecklist = payout ? checklist : checklist.filter((item) => item.key === "ubicacion" || item.key === "producto");
 
   return (
@@ -119,7 +127,7 @@ export default function ProductorDashboard() {
         </div>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
+      <div className="grid gap-8 lg:grid-cols-[1fr 20rem]">
         <section aria-labelledby="products-title" className="space-y-4">
           <h2 id="products-title" className="text-heading">
             Mis productos

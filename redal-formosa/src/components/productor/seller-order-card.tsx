@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
+
 import { WhatsAppButton } from "@/components/contact/whatsapp-button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MapPinIcon } from "@/components/ui/icons";
 import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/domain/order-status";
-import { buyerMessage, canAssignCourier, extractBuyerPhone, NEXT_STEP, timeAgo, type CourierOption, type SellerOrder } from "@/lib/domain/seller-orders";
+import { buyerMessage, canAssignCourier, canCancelAndRefund, extractBuyerPhone, NEXT_STEP, timeAgo, type CourierOption, type SellerOrder } from "@/lib/domain/seller-orders";
 import { formatPrice } from "@/lib/format";
 
 interface SellerOrderCardProps {
@@ -15,11 +18,14 @@ interface SellerOrderCardProps {
   /** Repartidores disponibles; si es null/vacío no se ofrece elegir (entrega el propio emprendimiento). */
   couriers?: CourierOption[] | null;
   onAssign?: (order: SellerOrder, courierId: string | null) => void;
+  /** Cancela el pedido y devuelve el dinero; si no se pasa, no se ofrece. */
+  onCancel?: (order: SellerOrder) => void | Promise<void>;
 }
 
 const VEHICLE_LABEL: Record<string, string> = { bicicleta: "bici", moto: "moto", auto: "auto", camion: "camión" };
 
-export function SellerOrderCard({ order, busy, onAdvance, showStore, couriers, onAssign }: SellerOrderCardProps) {
+export function SellerOrderCard({ order, busy, onAdvance, showStore, couriers, onAssign, onCancel }: SellerOrderCardProps) {
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
   const step = NEXT_STEP[order.estado];
   const phone = extractBuyerPhone(order.nota_cliente);
   const note = order.nota_cliente?.replace(/Tel:\s*[+\d][\d\s().-]{5,}\s*(·\s*)?/i, "").trim();
@@ -95,6 +101,11 @@ export function SellerOrderCard({ order, busy, onAdvance, showStore, couriers, o
               className="!bg-surface !text-foreground border border-border-strong hover:!bg-surface-muted"
             />
           )}
+          {onCancel && canCancelAndRefund(order.estado) && (
+            <button type="button" onClick={() => setConfirmingCancel(true)} disabled={busy} className="btn btn-secondary btn-sm">
+              Cancelar y reembolsar
+            </button>
+          )}
           {step && (
             <button
               type="button"
@@ -108,6 +119,19 @@ export function SellerOrderCard({ order, busy, onAdvance, showStore, couriers, o
           )}
         </div>
       </footer>
+      <ConfirmDialog
+        isOpen={confirmingCancel}
+        onClose={() => setConfirmingCancel(false)}
+        onConfirm={async () => {
+          await onCancel?.(order);
+          setConfirmingCancel(false);
+        }}
+        isLoading={busy}
+        title={`¿Cancelar el pedido ${order.numero_pedido}?`}
+        description={`Le devolvemos ${formatPrice(order.monto_total)} a ${order.comprador_nombre} por Mercado Pago. Esta acción no se puede deshacer.`}
+        confirmText="Cancelar y reembolsar"
+        cancelText="Volver"
+      />
     </article>
   );
 }

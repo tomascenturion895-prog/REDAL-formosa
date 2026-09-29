@@ -36,6 +36,9 @@ export interface CourierOption {
 /** Mientras el pedido no salió todavía se puede elegir o cambiar quién lo lleva. */
 export const canAssignCourier = (estado: OrderStatus) => estado === "pagado" || estado === "en_preparacion" || estado === "listo";
 
+/** Mientras no salió, el vendedor puede cancelar el pedido (sin stock, por ejemplo) y se le devuelve el dinero al comprador. */
+export const canCancelAndRefund = (estado: OrderStatus) => estado === "pagado" || estado === "en_preparacion" || estado === "listo";
+
 /** Lo que el vendedor puede hacer con un pedido. Las dos últimas etapas cubren la entrega propia o el retiro. */
 export const NEXT_STEP: Partial<Record<OrderStatus, { estado: OrderStatus; label: string }>> = {
   pagado: { estado: "en_preparacion", label: "Empezar a preparar" },

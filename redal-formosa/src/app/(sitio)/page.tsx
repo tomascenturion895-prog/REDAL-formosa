@@ -42,7 +42,7 @@ export default function Home() {
 
           <div className="relative">
             <div
-              className="absolute -inset-3 -z-10 rotate-2 rounded-sheet bg-highlight/25 sm:-inset-4"
+              className="absolute -inset-2 -z-10 rotate-2 rounded-sheet bg-highlight/25 sm:-inset-4"
               aria-hidden="true"
             />
             <div className="relative isolate h-[22rem] overflow-hidden rounded-sheet border border-border shadow-pop sm:h-[26rem] lg:h-[30rem]">

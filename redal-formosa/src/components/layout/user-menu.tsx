@@ -99,9 +99,11 @@ export function UserMenu() {
           <Link role="menuitem" href="/configuracion/notificaciones" className={itemClass} onClick={() => setOpen(false)}>
             Notificaciones
           </Link>
-          <Link role="menuitem" href="/dashboard" className={itemClass} onClick={() => setOpen(false)}>
-            Mi emprendimiento
-          </Link>
+          {role !== "admin" && (
+            <Link role="menuitem" href="/dashboard" className={itemClass} onClick={() => setOpen(false)}>
+              Mi emprendimiento
+            </Link>
+          )}
           {courier?.activo && (
             <Link role="menuitem" href="/tracking" className={itemClass} onClick={() => setOpen(false)}>
               Mis entregas
