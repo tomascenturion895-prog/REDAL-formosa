@@ -1,5 +1,6 @@
 "use client";
 
+import { loginHref } from "@/lib/auth/login-href";
 import Link from "next/link";
 
 import { useAuth } from "@/lib/auth/auth-context";
@@ -20,7 +21,7 @@ export default function NotificationsSettingsPage() {
           icon={<UserIcon size={36} />}
           title="Ingresá para elegir tus avisos"
           action={
-            <Link href="/login" className="btn btn-primary">
+            <Link href={loginHref("/configuracion/notificaciones")} className="btn btn-primary">
               Ingresar
             </Link>
           }

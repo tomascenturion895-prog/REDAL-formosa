@@ -15,6 +15,7 @@ import { MercadoPagoBadge } from "@/components/payment/mercadopago-badge";
 import { OrderProgress } from "@/components/payment/order-progress";
 import { RedirectOverlay } from "@/components/payment/redirect-overlay";
 import { Alert } from "@/components/ui/alert";
+import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckIcon, PackageIcon, WalletIcon } from "@/components/ui/icons";
 
@@ -27,7 +28,7 @@ function ConfirmacionContent() {
   const returnStatus = params.get("status") || params.get("collection_status");
   const { user, pending } = useRequireAuth();
 
-  const { data: pedido, loading, reload } = useAsync(() => ordersRepository.getConfirmation(pedidoId!), [pedidoId], {
+  const { data: pedido, error, loading, reload } = useAsync(() => ordersRepository.getConfirmation(pedidoId!), [pedidoId], {
     enabled: Boolean(user && pedidoId),
   });
 
@@ -64,7 +65,16 @@ function ConfirmacionContent() {
     }
   };
 
-  if (pending || loading) return <div className="page-container py-section" aria-busy="true" />;
+  // Con `loading && !pedido` la pantalla no se vacía en cada recarga del sondeo.
+  if (pending || (loading && !pedido)) return <div className="page-container py-section" aria-busy="true" />;
+
+  if (error && !pedido) {
+    return (
+      <div className="page-container py-section">
+        <LoadError title="No pudimos cargar tu pedido" description="Tu pedido no se perdió: lo ves en Mis pedidos." onRetry={reload} />
+      </div>
+    );
+  }
 
   if (!pedido) {
     return (

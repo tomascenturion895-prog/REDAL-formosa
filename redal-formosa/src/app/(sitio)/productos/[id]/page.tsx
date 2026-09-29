@@ -16,6 +16,7 @@ import { RatingsList } from "@/components/ratings/ratings-list";
 import { WhatsAppButton } from "@/components/contact/whatsapp-button";
 import { WishlistButton } from "@/components/wishlist/wishlist-button";
 import { RecommendationsCarousel } from "@/components/recommendations/recommendations-carousel";
+import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckIcon, MinusIcon, PackageIcon, PlusIcon, StoreIcon } from "@/components/ui/icons";
 import { ProductImage } from "@/components/ui/product-image";
@@ -24,14 +25,14 @@ export default function ProductoDetailPage() {
   const { id: productoId } = useParams<{ id: string }>();
   const { addItem } = useCart();
 
-  const { data: producto, loading } = useAsync(() => catalogRepository.getProduct(productoId), [productoId]);
+  const { data: producto, error, loading, reload } = useAsync(() => catalogRepository.getProduct(productoId), [productoId]);
   const { data: stats, reload: reloadStats } = useAsync(() => ratingsRepository.statsForProduct(productoId), [productoId]);
 
   const [cantidad, setCantidad] = useState(1);
   const [added, setAdded] = useState(false);
   const [ratingsVersion, setRatingsVersion] = useState(0);
 
-  if (loading) {
+  if (loading && !producto) {
     return (
       <div className="page-container py-section">
         <div className="grid animate-pulse gap-10 lg:grid-cols-2" aria-hidden="true">
@@ -42,6 +43,14 @@ export default function ProductoDetailPage() {
             <div className="h-24 rounded bg-surface-muted" />
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (error && !producto) {
+    return (
+      <div className="page-container py-section">
+        <LoadError title="No pudimos cargar este producto" onRetry={reload} />
       </div>
     );
   }

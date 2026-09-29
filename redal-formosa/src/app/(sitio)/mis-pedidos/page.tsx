@@ -10,7 +10,7 @@ import { useAsync } from "@/lib/hooks/use-async";
 import { ordersRepository } from "@/lib/orders/orders-repository";
 import { PageHeader } from "@/components/layout/page-header";
 import { OrderCard } from "@/components/orders/order-card";
-import { Alert } from "@/components/ui/alert";
+import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PackageIcon } from "@/components/ui/icons";
 
@@ -23,9 +23,9 @@ export default function MisPedidosPage() {
   const { user, pending } = useRequireAuth();
   const [filter, setFilter] = useState<OrderStatus | null>(null);
 
-  const { data, error, loading } = useAsync(() => loadHistory(user!.id), [user?.id], { enabled: Boolean(user), scope: user?.id });
+  const { data, error, loading, reload } = useAsync(() => loadHistory(user!.id), [user?.id], { enabled: Boolean(user), scope: user?.id });
 
-  if (pending || loading) return <div className="page-container py-section" aria-busy="true" />;
+  if (pending || (loading && !data)) return <div className="page-container py-section" aria-busy="true" />;
 
   const orders = data?.orders ?? [];
   const stats = data?.stats;
@@ -37,7 +37,7 @@ export default function MisPedidosPage() {
       <PageHeader title="Mis pedidos" description="Seguí el estado de tus compras y revisá lo que pediste." />
 
       {error ? (
-        <Alert tone="error">No pudimos cargar tus pedidos. Intentá de nuevo en unos minutos.</Alert>
+        <LoadError title="No pudimos cargar tus pedidos" onRetry={reload} />
       ) : orders.length === 0 ? (
         <EmptyState
           icon={<PackageIcon size={36} />}

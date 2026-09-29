@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 
 import { catalogRepository } from "@/lib/catalog/catalog-repository";
@@ -10,12 +11,14 @@ import { CheckoutStepper } from "@/components/payment/checkout-stepper";
 import { RecipesDialog } from "@/components/recipes/recipes-dialog";
 import { PaymentTrust } from "@/components/payment/payment-methods";
 import { Alert } from "@/components/ui/alert";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CartIcon, MinusIcon, PlusIcon, StoreIcon, TrashIcon } from "@/components/ui/icons";
 import { ProductImage } from "@/components/ui/product-image";
 
 export default function CarritoPage() {
   const { ready, groups, removeItem, updateQuantity, clearCart, clearStore } = useCart();
+  const [confirmingClear, setConfirmingClear] = useState(false);
   const storeIds = groups.map((g) => g.emprendimientoId);
   const { data: names } = useAsync(() => catalogRepository.getEmprendimientoNames(storeIds), [storeIds.join(",")], {
     enabled: storeIds.length > 0,
@@ -47,7 +50,7 @@ export default function CarritoPage() {
       <CheckoutStepper current={0} />
       <div className="flex flex-wrap items-end justify-between gap-2 pb-6">
         <h1 className="text-title">Tu carrito</h1>
-        <button type="button" onClick={clearCart} className="text-sm font-medium text-muted hover:text-danger">
+        <button type="button" onClick={() => setConfirmingClear(true)} className="text-sm font-medium text-muted hover:text-danger">
           Vaciar todo
         </button>
       </div>
@@ -167,6 +170,19 @@ export default function CarritoPage() {
           Seguir comprando
         </Link>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmingClear}
+        onClose={() => setConfirmingClear(false)}
+        onConfirm={() => {
+          clearCart();
+          setConfirmingClear(false);
+        }}
+        title="¿Vaciar el carrito?"
+        description="Vas a sacar todos los productos de todas las cestas."
+        confirmText="Vaciar carrito"
+        cancelText="Volver"
+      />
     </div>
   );
 }
