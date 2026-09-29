@@ -1,10 +1,14 @@
 // Service worker de RedAL. Política deliberadamente conservadora:
-//  - Solo se cachean archivos estáticos inmutables (/_next/static, íconos).
+//  - Solo se cachea el ícono y la página sin conexión.
+//  - Los archivos de /_next/static NO se cachean acá: el navegador ya los guarda por su cuenta
+//    (llevan hash en el nombre) y, si el service worker los servía primero, tras cada despliegue o
+//    actualización quedaba código viejo en el navegador y la página fallaba al hidratarse.
 //  - Las páginas y las llamadas a datos NUNCA se cachean: contienen información de la
 //    persona con sesión y no deben quedar disponibles para otra en el mismo dispositivo.
 //  - Sin conexión, las navegaciones muestran /offline.html.
 
-const STATIC_CACHE = "redal-static-v2";
+// v3: al activarse borra el caché v2, que guardaba archivos de /_next/static.
+const STATIC_CACHE = "redal-static-v3";
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {
@@ -28,8 +32,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Archivos versionados por Next: el contenido nunca cambia bajo la misma URL.
-  if (url.pathname.startsWith("/_next/static/") || url.pathname === "/icon.svg") {
+  if (url.pathname === "/icon.svg") {
     event.respondWith(
       caches.match(request).then(
         (cached) =>
