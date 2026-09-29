@@ -9,7 +9,6 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { useAsync } from "@/lib/hooks/use-async";
 import { sellerOrdersRepository } from "@/lib/orders/seller-orders-repository";
 import { producerRepository } from "@/lib/producer/producer-repository";
-import { VoicePostCreator } from "@/components/producer/VoicePostCreator";
 import { ProductForm } from "@/components/productor/product-form";
 import { ProductList } from "@/components/productor/product-list";
 import { ProductorForm } from "@/components/productor/productor-form";
@@ -110,8 +109,6 @@ export default function ProductorDashboard() {
         inReview={list.filter((p) => !p.validado && !p.razon_rechazo).length}
         checklist={visibleChecklist}
       />
-
-      <VoicePostCreator key={selected.id} emprendimientoId={selected.id} />
 
       {showForm && (
         <div className="card space-y-4 p-6">
