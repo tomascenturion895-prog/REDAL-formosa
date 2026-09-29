@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { useAuth } from "@/lib/auth/auth-context";
 import { useCart } from "@/lib/cart/cart-context";
@@ -10,20 +10,68 @@ import { formatPrice } from "@/lib/format";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { CheckoutStepper } from "@/components/payment/checkout-stepper";
 import { PaymentTrust } from "@/components/payment/payment-methods";
+import { CheckoutMercadoPago } from "@/components/payment/checkout-mercadopago";
 import { ProductImage } from "@/components/ui/product-image";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CartIcon, UserIcon } from "@/components/ui/icons";
 
 function CheckoutContent() {
+  const router = useRouter();
   const { user, loading } = useAuth();
-  const { ready, groups } = useCart();
-  const cesta = useSearchParams().get("cesta");
+  const { ready, groups, clearStore } = useCart();
+  const searchParams = useSearchParams();
+  const cesta = searchParams.get("cesta");
+
+  const [activeOrder, setActiveOrder] = useState<{
+    id: string;
+    monto: number;
+    emprendimientoId: string;
+  } | null>(null);
 
   // Con una sola cesta no hace falta elegir; con varias, se paga la indicada en la URL.
   const group = groups.find((g) => g.emprendimientoId === cesta) ?? (groups.length === 1 ? groups[0] : undefined);
 
   if (loading || !ready) return <div className="page-container py-section" aria-busy="true" />;
 
+  // 1. Si el pedido ya fue creado y estamos en proceso de pago con Mercado Pago:
+  if (activeOrder) {
+    return (
+      <div className="page-container py-section">
+        <CheckoutStepper current={1} />
+        <h1 className="text-title pb-8 text-center sm:text-left">Completar pago con Mercado Pago</h1>
+
+        <div className="mx-auto max-w-xl space-y-6">
+          <CheckoutMercadoPago
+            ordenId={activeOrder.id}
+            monto={activeOrder.monto}
+            tituloItem="Pedido en REDAL Formosa"
+            onPagoAprobado={() => {
+              clearStore(activeOrder.emprendimientoId);
+              router.push(`/confirmacion?pedido=${activeOrder.id}&pago=aprobado`);
+            }}
+          />
+
+          <div className="flex flex-col items-center gap-2 pt-2 text-center text-sm">
+            <button
+              type="button"
+              onClick={() => {
+                clearStore(activeOrder.emprendimientoId);
+                router.push(`/confirmacion?pedido=${activeOrder.id}`);
+              }}
+              className="font-medium text-link hover:underline"
+            >
+              Ver estado del pedido (podés pagar más tarde)
+            </button>
+            <p className="text-xs text-muted">
+              Tu pedido ya quedó registrado con éxito en el sistema.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Si no hay cesta o hay varias sin seleccionar:
   if (groups.length > 1 && !group) {
     return (
       <div className="page-container py-section">
@@ -86,7 +134,7 @@ function CheckoutContent() {
       <h1 className="text-title pb-8">Finalizar pedido</h1>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
-        <CheckoutForm group={group} />
+        <CheckoutForm group={group} onOrderCreated={setActiveOrder} />
 
         <aside className="card h-fit space-y-4 p-6 lg:sticky lg:top-24">
           <h2 className="text-heading">Tu pedido</h2>
