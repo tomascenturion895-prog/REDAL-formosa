@@ -2,6 +2,7 @@ import { createClient, type Db } from "@/lib/supabase/client";
 import { RepositoryError, unwrap, unwrapOptional } from "@/lib/supabase/repository";
 import { DELIVERY_ACTIVE_STATUSES } from "@/lib/domain/order-status";
 import type { LatLng } from "@/lib/domain/geo";
+import { extractBuyerPhone, stripBuyerPhone } from "@/lib/domain/seller-orders";
 import type { OrderStatus } from "@/lib/supabase/types";
 
 export interface AssignedOrder {
@@ -11,6 +12,10 @@ export interface AssignedOrder {
   direccion_entrega: string | null;
   /** Destino exacto si el comprador compartió su ubicación. */
   entrega: LatLng | null;
+  /** Teléfono que el comprador dejó al pedir, para coordinar la entrega. */
+  telefono_comprador: string | null;
+  /** Indicaciones del comprador (timbre, horario…), sin el teléfono. */
+  nota: string | null;
 }
 
 export class DeliveryRepository {
@@ -28,14 +33,16 @@ export class DeliveryRepository {
     const rows = await unwrap(
       this.db
         .from("pedidos")
-        .select("id, numero_pedido, estado, direccion_entrega, entrega_lat, entrega_lng")
+        .select("id, numero_pedido, estado, direccion_entrega, entrega_lat, entrega_lng, nota_cliente")
         .eq("repartidor_id", repartidorId)
         .in("estado", [...DELIVERY_ACTIVE_STATUSES]),
       "listar pedidos asignados",
     );
-    return rows.map(({ entrega_lat, entrega_lng, ...order }) => ({
+    return rows.map(({ entrega_lat, entrega_lng, nota_cliente, ...order }) => ({
       ...order,
       entrega: entrega_lat !== null && entrega_lng !== null ? { lat: entrega_lat, lng: entrega_lng } : null,
+      telefono_comprador: extractBuyerPhone(nota_cliente),
+      nota: stripBuyerPhone(nota_cliente) || null,
     }));
   }
 
