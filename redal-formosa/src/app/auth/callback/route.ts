@@ -72,13 +72,13 @@ export async function GET(request: NextRequest) {
 
         if (fullName || avatarUrl) {
           try {
-            await supabase
-              .from("profiles")
-              .update({
-                ...(fullName ? { full_name: fullName } : {}),
-                ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
-              })
-              .eq("id", user.id);
+            // Solo completa lo que falta: si la persona ya cambió su nombre o su foto, no se pisa en cada ingreso.
+            const { data: profile } = await supabase.from("profiles").select("full_name, avatar_url").eq("id", user.id).maybeSingle();
+            const patch = {
+              ...(fullName && !profile?.full_name ? { full_name: fullName } : {}),
+              ...(avatarUrl && !profile?.avatar_url ? { avatar_url: avatarUrl } : {}),
+            };
+            if (Object.keys(patch).length > 0) await supabase.from("profiles").update(patch).eq("id", user.id);
           } catch (profileError) {
             // Error no fatal: el login sigue siendo válido
             console.error("[OAuth Profile Sync Error]", profileError);

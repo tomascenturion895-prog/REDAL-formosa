@@ -10,7 +10,7 @@ import { getVoiceCatalogService, limiters } from "@/server/container";
 export async function POST(req: NextRequest) {
   return handleRoute(async () => {
     const db = await createClient();
-    const { userId } = await requireRole(db, ["VENDEDOR", "ADMIN"]);
+    const { userId } = await requireRole(db, ["VENDEDOR"]);
     enforceRateLimit(limiters.voiceCatalog, userId);
 
     const form = await req.formData().catch(() => null);

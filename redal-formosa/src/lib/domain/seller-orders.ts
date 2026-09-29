@@ -1,3 +1,4 @@
+import type { PaymentMethod } from "@/lib/domain/payment-methods";
 import type { OrderStatus } from "./order-status";
 
 /** Pedido tal como lo ve el vendedor (ya pagado). Reglas puras: sin I/O. */
@@ -24,6 +25,8 @@ export interface SellerOrder {
   /** Repartidor asignado (null si entrega el propio emprendimiento o todavía no se eligió). */
   repartidor_id: string | null;
   repartidor_nombre: string | null;
+  /** Cómo paga el comprador: en efectivo, quien entrega tiene que cobrar el total en mano. */
+  metodo_pago: PaymentMethod;
 }
 
 /** Repartidor que un vendedor puede elegir. La base solo le muestra el primer nombre y el vehículo. */

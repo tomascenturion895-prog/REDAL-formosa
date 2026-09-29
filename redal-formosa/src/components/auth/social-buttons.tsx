@@ -43,6 +43,10 @@ const PROVIDERS: { id: SocialProvider; label: string; icon: React.ReactNode }[] 
   },
 ];
 
+// Solo se ofrecen los proveedores habilitados en Supabase (Authentication → Providers). Por defecto, Google.
+// Para sumar otros: NEXT_PUBLIC_SOCIAL_PROVIDERS=google,facebook,twitter (se aplica al compilar).
+const ENABLED = (process.env.NEXT_PUBLIC_SOCIAL_PROVIDERS ?? "google").split(",").map((p) => p.trim());
+
 interface SocialButtonsProps {
   onError: (message: string) => void;
   next?: string;
@@ -72,7 +76,7 @@ export function SocialButtons({ onError, next = "/" }: SocialButtonsProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      {PROVIDERS.map(({ id, label, icon }) => {
+      {PROVIDERS.filter(({ id }) => ENABLED.includes(id)).map(({ id, label, icon }) => {
         const isCurrent = pending === id;
         return (
           <button

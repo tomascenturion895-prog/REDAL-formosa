@@ -69,8 +69,8 @@ export function VoicePostCreator({ emprendimientoId }: VoicePostCreatorProps) {
       await novedadesRepository.publish(emprendimientoId, contenido);
       setText("");
       reload();
-    } catch {
-      setError("No pudimos publicar la novedad. Intentá de nuevo.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No pudimos publicar la novedad. Intentá de nuevo.");
     } finally {
       setPublishing(false);
     }
@@ -131,12 +131,12 @@ export function VoicePostCreator({ emprendimientoId }: VoicePostCreatorProps) {
       </form>
 
       {own && own.length > 0 && (
-        <ul className="divide-y divide-border border-t border-border text-sm">
+        <ul className="divide-y divide-border border-t border-border">
           {own.map((novedad) => (
             <li key={novedad.id} className="flex items-start gap-3 py-3">
-              <p className="min-w-0 flex-1">
+              <p className="min-w-0 flex-1 text-base">
                 «{novedad.contenido}»
-                <span className="ml-2 text-xs text-muted">{dateFormat.format(new Date(novedad.createdAt))}</span>
+                <span className="ml-2 text-sm text-muted">{dateFormat.format(new Date(novedad.createdAt))}</span>
               </p>
               <button type="button" onClick={() => remove(novedad.id)} aria-label="Borrar novedad" className="btn btn-ghost btn-sm shrink-0">
                 <TrashIcon size={16} />

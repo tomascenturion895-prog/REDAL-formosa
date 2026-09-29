@@ -1,6 +1,7 @@
 import { createClient, type Db } from "@/lib/supabase/client";
 import { RepositoryError, unwrap, unwrapOptional } from "@/lib/supabase/repository";
 import type { LatLng } from "@/lib/domain/geo";
+import { DEFAULT_PAYMENT_METHOD, isPaymentMethod, type PaymentMethod } from "@/lib/domain/payment-methods";
 import type { Database, OrderStatus } from "@/lib/supabase/types";
 
 type OrderViewRow = Database["public"]["Views"]["usuario_pedidos"]["Row"];
@@ -15,6 +16,7 @@ export interface OrderSummary {
   monto_envio: number;
   created_at: string;
   total_unidades: number;
+  metodo_pago: PaymentMethod;
 }
 
 export interface OrderDetail {
@@ -43,6 +45,7 @@ export interface OrderConfirmation {
   direccion_entrega: string | null;
   nota_cliente: string | null;
   repartidor_id: string | null;
+  metodo_pago: PaymentMethod;
   /** Destino de la entrega, si la persona compartió su ubicación al comprar. */
   entrega: LatLng | null;
 }
@@ -54,6 +57,8 @@ export interface NewOrderInput {
   nota?: string;
   /** Ubicación de entrega (opcional): permite mostrar el recorrido exacto en el mapa. */
   ubicacion?: LatLng;
+  /** Medio de pago elegido; por defecto, tarjeta. */
+  metodo?: PaymentMethod;
 }
 
 export interface CreatedOrder {
@@ -61,6 +66,8 @@ export interface CreatedOrder {
   numero: string;
   monto: number;
 }
+
+const toMethod = (value: unknown): PaymentMethod => (isPaymentMethod(value) ? value : DEFAULT_PAYMENT_METHOD);
 
 // Las vistas devuelven todas las columnas como nullable; el mapeo las normaliza una sola vez.
 const toSummary = (r: OrderViewRow): OrderSummary => ({
@@ -72,6 +79,7 @@ const toSummary = (r: OrderViewRow): OrderSummary => ({
   monto_envio: Number(r.monto_envio ?? 0),
   created_at: r.created_at ?? "",
   total_unidades: Number(r.total_unidades ?? 0),
+  metodo_pago: toMethod(r.metodo_pago),
 });
 
 const toDetail = (r: OrderDetailRow): OrderDetail => ({
@@ -146,7 +154,7 @@ export class OrdersRepository {
     const row = await unwrapOptional(
       this.db
         .from("pedidos")
-        .select("id, numero_pedido, estado, monto_total, direccion_entrega, nota_cliente, repartidor_id, entrega_lat, entrega_lng")
+        .select("id, numero_pedido, estado, monto_total, direccion_entrega, nota_cliente, repartidor_id, metodo_pago, entrega_lat, entrega_lng")
         .eq("id", orderId)
         .maybeSingle(),
       "cargar confirmación del pedido",
@@ -155,6 +163,7 @@ export class OrdersRepository {
     const { entrega_lat, entrega_lng, ...rest } = row;
     return {
       ...rest,
+      metodo_pago: toMethod(rest.metodo_pago),
       monto_total: Number(rest.monto_total),
       entrega: entrega_lat !== null && entrega_lng !== null ? { lat: entrega_lat, lng: entrega_lng } : null,
     };
@@ -185,6 +194,7 @@ export class OrdersRepository {
         p_nota: input.nota,
         p_lat: input.ubicacion?.lat,
         p_lng: input.ubicacion?.lng,
+        p_metodo: input.metodo,
       }),
       "crear pedido",
     );

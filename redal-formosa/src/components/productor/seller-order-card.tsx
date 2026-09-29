@@ -4,9 +4,10 @@ import { useState } from "react";
 
 import { WhatsAppButton } from "@/components/contact/whatsapp-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { MapPinIcon } from "@/components/ui/icons";
+import { CashIcon, MapPinIcon } from "@/components/ui/icons";
+import { isCash } from "@/lib/domain/payment-methods";
 import { isCompletePin, PIN_LENGTH, PIN_MESSAGE, sanitizePin, type PinResult } from "@/lib/domain/delivery-pin";
-import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/domain/order-status";
+import { ORDER_STATUS_TONE, statusLabel } from "@/lib/domain/order-status";
 import { buyerMessage, canAssignCourier, canCancelAndRefund, extractBuyerPhone, NEXT_STEP, stripBuyerPhone, timeAgo, type CourierOption, type SellerOrder } from "@/lib/domain/seller-orders";
 import { formatPrice } from "@/lib/format";
 
@@ -57,7 +58,7 @@ export function SellerOrderCard({ order, busy, onAdvance, showStore, couriers, o
             {showStore && <> · {order.emprendimiento_nombre}</>}
           </p>
         </div>
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ORDER_STATUS_TONE[order.estado]}`}>{ORDER_STATUS_LABEL[order.estado]}</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ORDER_STATUS_TONE[order.estado]}`}>{statusLabel(order.estado, order.metodo_pago)}</span>
       </header>
 
       <ul className="divide-y divide-border rounded-control border border-border text-sm">
@@ -70,6 +71,16 @@ export function SellerOrderCard({ order, busy, onAdvance, showStore, couriers, o
           </li>
         ))}
       </ul>
+
+      {isCash(order.metodo_pago) && order.estado !== "entregado" && order.estado !== "cancelado" && (
+        <p className="flex items-start gap-2 rounded-control bg-warning-soft p-3 text-sm font-medium text-warning">
+          <CashIcon size={18} className="mt-0.5 shrink-0" />
+          <span>
+            Paga en efectivo: quien entrega cobra {formatPrice(order.monto_total)} en mano.
+            {order.repartidor_nombre ? ` Lo entrega ${order.repartidor_nombre}.` : ""}
+          </span>
+        </p>
+      )}
 
       {(order.direccion_entrega || note) && (
         <div className="space-y-1 text-sm">

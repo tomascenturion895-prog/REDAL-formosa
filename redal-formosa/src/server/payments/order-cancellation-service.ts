@@ -1,6 +1,7 @@
 import type { Db } from "@/lib/supabase/types";
 import { ServiceError } from "@/server/errors";
 import type { PaymentGateway } from "./payment-gateway";
+import { isCash } from "@/lib/domain/payment-methods";
 import { logError } from "@/server/logger";
 
 /** Estados en los que el pedido está pago pero todavía no salió: el único momento en que se puede cancelar y devolver el dinero. */
@@ -21,7 +22,7 @@ export class OrderCancellationService {
     // La política de lectura del vendedor limita esta consulta a pedidos de sus emprendimientos.
     const { data: order } = await sellerDb
       .from("pedidos")
-      .select("id, estado, emprendimiento:emprendimientos!inner(owner_id)")
+      .select("id, estado, metodo_pago, emprendimiento:emprendimientos!inner(owner_id)")
       .eq("id", orderId)
       .maybeSingle();
     if (!order || order.emprendimiento?.owner_id !== sellerId) throw new ServiceError("not_found", "Pedido no encontrado");
@@ -29,6 +30,19 @@ export class OrderCancellationService {
     if (order.estado === "cancelado") return; // ya estaba cancelado: repetir no cambia nada
     if (!(CANCELLABLE as readonly string[]).includes(order.estado)) {
       throw new ServiceError("conflict", "Este pedido ya salió o todavía no se pagó: no se puede cancelar desde acá.");
+    }
+
+    // En efectivo no se cobró nada online: cancelar es solo cerrar el pedido, sin reembolso.
+    if (isCash(order.metodo_pago as never)) {
+      const { data: closed, error: cashError } = await this.adminDb
+        .from("pedidos")
+        .update({ estado: "cancelado" })
+        .eq("id", order.id)
+        .in("estado", [...CANCELLABLE])
+        .select("id");
+      if (cashError || !closed?.length) throw new ServiceError("conflict", "El pedido cambió de estado y ya no se puede cancelar desde acá.");
+      await this.adminDb.from("pagos").update({ estado: "fallido" }).eq("pedido_id", order.id).eq("estado", "pendiente");
+      return;
     }
 
     const { data: payment } = await this.adminDb

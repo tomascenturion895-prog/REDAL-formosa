@@ -9,17 +9,15 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { useAsync } from "@/lib/hooks/use-async";
 import { sellerOrdersRepository } from "@/lib/orders/seller-orders-repository";
 import { producerRepository } from "@/lib/producer/producer-repository";
-import { VoicePostCreator } from "@/components/producer/VoicePostCreator";
 import { ProductForm } from "@/components/productor/product-form";
 import { ProductList } from "@/components/productor/product-list";
 import { ProductorForm } from "@/components/productor/productor-form";
 import { SucursalesForm } from "@/components/productor/sucursales-form";
 import { TodayPanel, type ChecklistItem } from "@/components/producer/today-panel";
-import { VoiceQuickAdd } from "@/components/producer/voice-quick-add";
 import { Alert } from "@/components/ui/alert";
 import { LoadError } from "@/components/ui/load-error";
 import { EmptyState } from "@/components/ui/empty-state";
-import { MicIcon, PlusIcon, StoreIcon } from "@/components/ui/icons";
+import { PlusIcon, StoreIcon } from "@/components/ui/icons";
 import { PageLoading } from "@/components/ui/skeleton";
 
 export default function ProductorDashboard() {
@@ -76,7 +74,7 @@ export default function ProductorDashboard() {
   const list = products ?? [];
   const checklist: ChecklistItem[] = [
     { key: "ubicacion", label: "Ubicá tu emprendimiento en el mapa", done: selected.latitud != null && selected.longitud != null, href: "#ubicacion", cta: "Ubicar" },
-    { key: "producto", label: "Cargá tu primer producto", done: list.length > 0, href: "#cargar-por-voz", cta: "Cargar" },
+    { key: "producto", label: "Cargá tu primer producto", done: list.length > 0, href: "#productos", cta: "Cargar" },
     { key: "verificacion", label: "Verificá tu identidad", done: payout?.verification === "approved" || payout?.verification === "pending_review", href: "/setup?paso=verificacion", cta: "Verificar" },
     { key: "cobro", label: "Cargá la cuenta donde cobrás", done: Boolean(payout?.hasBankAccount), href: "/setup?paso=cobro", cta: "Cargar cuenta" },
   ];
@@ -134,10 +132,6 @@ export default function ProductorDashboard() {
         inReview={list.filter((p) => !p.validado && !p.razon_rechazo).length}
         checklist={visibleChecklist}
       />
-
-      <VoiceQuickAdd emprendimientoId={selected.id} onCreated={reloadProducts} />
-
-      <VoicePostCreator key={selected.id} emprendimientoId={selected.id} />
 
       {showForm && (
         <div className="card space-y-4 p-6">
@@ -202,13 +196,7 @@ export default function ProductorDashboard() {
         </aside>
       </div>
 
-      <a
-        href="#cargar-por-voz"
-        aria-label="Cargar un producto por voz"
-        className="btn btn-primary fixed bottom-5 right-5 z-30 !h-14 !w-14 !rounded-full !p-0 shadow-pop lg:hidden"
-      >
-        <MicIcon size={24} />
-      </a>
+
     </div>
   );
 }

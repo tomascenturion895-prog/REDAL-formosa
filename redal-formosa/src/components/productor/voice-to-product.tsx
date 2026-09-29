@@ -22,7 +22,7 @@ export function VoiceToProduct({ onDraft }: VoiceToProductProps) {
     try {
       const body = new FormData();
       body.append("audio", audio);
-      const response = await fetch("/api/producer/voice-to-product", { method: "POST", body });
+      const response = await fetch("/api/producer/voice-to-product", { method: "POST", body, credentials: "include" });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         setError(typeof data.error === "string" ? data.error : "No pudimos procesar el audio. Intentá de nuevo.");
