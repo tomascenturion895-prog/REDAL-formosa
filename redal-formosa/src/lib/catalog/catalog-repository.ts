@@ -30,6 +30,8 @@ export interface RatingSummary {
 }
 
 const PRICE_CEILING = 999_999_999;
+/** Tope de filas por listado público: evita traer tablas enteras cuando el catálogo crezca. */
+const LIST_LIMIT = 200;
 
 /** Lectura del catálogo público: productos, emprendimientos y sus calificaciones. */
 export class CatalogRepository {
@@ -62,7 +64,7 @@ export class CatalogRepository {
 
   async listEmprendimientos(): Promise<Emprendimiento[]> {
     return await unwrap(
-      this.db.from("emprendimientos").select("*").eq("activo", true).order("created_at", { ascending: false }),
+      this.db.from("emprendimientos").select("*").eq("activo", true).order("created_at", { ascending: false }).limit(LIST_LIMIT),
       "listar emprendimientos",
     );
   }
@@ -76,7 +78,7 @@ export class CatalogRepository {
 
   async listAvailableProducts(emprendimientoId: string): Promise<Product[]> {
     return await unwrap(
-      this.db.from("productos").select("*").eq("emprendimiento_id", emprendimientoId).eq("disponible", true),
+      this.db.from("productos").select("*").eq("emprendimiento_id", emprendimientoId).eq("disponible", true).limit(LIST_LIMIT),
       "listar productos del emprendimiento",
     );
   }
