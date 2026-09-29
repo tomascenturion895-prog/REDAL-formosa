@@ -182,7 +182,7 @@ y `admin_set_role`.
 
 | Componente | Requisito |
 | --- | --- |
-| Node.js | **20 o superior** (la imagen Docker usa `node:20-alpine`; el cliente de Supabase avisa que Node 20 dejará de soportarse, por lo que se recomienda planificar el paso a 22). |
+| Node.js | **22 o superior** (`.nvmrc` y `engines` en `package.json`; la imagen Docker usa `node:22-alpine`). |
 | npm | Incluido con Node (el proyecto usa `package-lock.json`). |
 | Docker (opcional) | Docker Desktop o Engine con Compose v2. |
 | Cuenta de Supabase | Un proyecto propio (URL, clave pública y, para funciones de servidor, la clave de servicio). |
@@ -226,12 +226,7 @@ Las variables `NEXT_PUBLIC_*` se **incrustan al compilar**; si se modifican, hay
 
 ### 4.3 Base de datos (Supabase)
 
-Las migraciones están en `supabase/migrations/` (00 a 15). Para un proyecto nuevo o existente hay dos caminos:
-
-**Opción A — SQL Editor.** Pegar y ejecutar una sola vez `supabase/pending-migrations.sql` (migraciones 02 a 15).
-Las migraciones 00 y 01 deben estar aplicadas antes.
-
-**Opción B — CLI de Supabase.**
+Las migraciones están en `supabase/migrations/` y se numeran en orden (`00`, `01`, …). Se aplican con la CLI de Supabase:
 
 ```bash
 npx supabase login
@@ -332,8 +327,7 @@ redal-formosa/
 │   │   └── container.ts          Raíz de composición
 │   └── proxy.ts                  Refresco de sesión de Supabase en cada request
 ├── supabase/
-│   ├── migrations/               Migraciones 00 a 15
-│   ├── pending-migrations.sql    Migraciones 02 a 15 en un solo archivo
+│   ├── migrations/               Migraciones numeradas (se aplican con `supabase db push`)
 │   └── dev-make-admin.sql        Script de pruebas para crear un admin
 ├── tests/                        Pruebas E2E (Playwright)
 ├── scripts/make-admin.mjs        Utilidad de pruebas

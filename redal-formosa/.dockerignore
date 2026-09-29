@@ -4,6 +4,6 @@ out
 .git
 .gitignore
 .env*
-!.env.local.example
+!.env.example
 npm-debug.log*
 README.md

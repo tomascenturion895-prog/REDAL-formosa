@@ -48,3 +48,7 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# artefactos que no van al repo
+*.whl
+.claude/scheduled_tasks.lock
