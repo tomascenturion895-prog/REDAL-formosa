@@ -37,7 +37,18 @@ async function transcribeWithWhisper(req: Request) {
 export async function POST(req: Request) {
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
 
-  if (!apiKey) return transcribeWithWhisper(req);
+  if (!apiKey) {
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        {
+          error:
+            "No se encontró ASSEMBLYAI_API_KEY ni OPENAI_API_KEY en las variables de entorno. Configurá alguna de ellas en el archivo .env.",
+        },
+        { status: 503 }
+      );
+    }
+    return transcribeWithWhisper(req);
+  }
 
   try {
     const formData = await req.formData();

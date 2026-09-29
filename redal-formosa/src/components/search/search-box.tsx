@@ -15,6 +15,7 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
 
   const recorderRef = useRef<any>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   // Limpiar recursos si el componente se desmonta
   useEffect(() => {
@@ -34,6 +35,12 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
   };
 
   const cleanupAudio = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch {}
+      recognitionRef.current = null;
+    }
     if (recorderRef.current) {
       recorderRef.current.stopRecording();
       recorderRef.current = null;
@@ -47,6 +54,14 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
   const stopVoiceSearch = async () => {
     setIsRecording(false);
 
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
+      return;
+    }
+
     if (!recorderRef.current) return;
 
     setIsProcessing(true);
@@ -56,9 +71,9 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
         const blob = recorderRef.current.getBlob();
         cleanupAudio();
 
-        // Enviar al servidor para procesar con AssemblyAI
+        // Enviar al servidor para procesar con AssemblyAI / Whisper
         const formData = new FormData();
-        formData.append("audio", blob, "audio.webm");
+        formData.append("audio", blob, "audio.wav");
 
         const res = await fetch("/api/assemblyai/transcribe", {
           method: "POST",
@@ -67,8 +82,8 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
 
         if (!res.ok) {
           const errData = await res.json().catch(() => null);
-          const detail = errData?.details || errData?.error || res.statusText;
-          throw new Error(`Error del servidor (${res.status}): ${detail}`);
+          const detail = errData?.error || errData?.details || res.statusText;
+          throw new Error(detail || `Error del servidor (${res.status})`);
         }
 
         const data = await res.json();
@@ -79,16 +94,16 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
           const q = data.text.trim();
           router.push(q ? `/productos?q=${encodeURIComponent(q)}` : "/productos");
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
-        setErrorMsg("Error al procesar el audio");
+        setErrorMsg(err?.message || "Error al procesar el audio");
       } finally {
         setIsProcessing(false);
       }
     });
   };
 
-  const startVoiceSearch = async () => {
+  const startRecordingFallback = async () => {
     try {
       setErrorMsg("");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -100,22 +115,98 @@ export function SearchBox({ placeholder = "Buscar productos", id = "header-searc
 
       const recorder = new RecordRTC(stream, {
         type: "audio",
-        mimeType: "audio/webm",
+        mimeType: "audio/wav",
         recorderType: StereoAudioRecorder,
         numberOfAudioChannels: 1,
-        desiredSampRate: 16000
+        desiredSampRate: 16000,
       });
 
       recorder.startRecording();
       recorderRef.current = recorder;
       setIsRecording(true);
-      setQuery(""); // Clear the input for the voice transcription
+      setQuery("");
     } catch (err) {
       console.error(err);
       setIsRecording(false);
       setErrorMsg("Permiso denegado o error de micrófono");
       cleanupAudio();
     }
+  };
+
+  const startVoiceSearch = async () => {
+    setErrorMsg("");
+
+    const SpeechRecognition =
+      typeof window !== "undefined" &&
+      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = "es-AR";
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+        recognitionRef.current = recognition;
+
+        recognition.onstart = () => {
+          setIsRecording(true);
+          setErrorMsg("");
+          setQuery("");
+        };
+
+        recognition.onresult = (event: any) => {
+          let interimTranscript = "";
+          let finalTranscript = "";
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript;
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+
+          const current = finalTranscript || interimTranscript;
+          if (current) {
+            setQuery(current);
+          }
+
+          if (finalTranscript) {
+            setIsRecording(false);
+            recognitionRef.current = null;
+            const q = finalTranscript.trim();
+            if (q) {
+              router.push(`/productos?q=${encodeURIComponent(q)}`);
+            }
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn("SpeechRecognition error:", event.error);
+          setIsRecording(false);
+          recognitionRef.current = null;
+          if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+            setErrorMsg("Permiso denegado para el micrófono");
+          } else if (event.error !== "no-speech") {
+            void startRecordingFallback();
+          }
+        };
+
+        recognition.onend = () => {
+          setIsRecording(false);
+          recognitionRef.current = null;
+        };
+
+        recognition.start();
+        return;
+      } catch (e) {
+        console.warn("SpeechRecognition falló al iniciar, usando fallback de grabación:", e);
+      }
+    }
+
+    await startRecordingFallback();
   };
 
   const toggleVoiceSearch = () => {

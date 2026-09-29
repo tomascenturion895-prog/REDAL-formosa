@@ -13,12 +13,19 @@ export function VoicePostCreator() {
 
   const recorderRef = useRef<any>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     return () => cleanupAudio();
   }, []);
 
   const cleanupAudio = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch {}
+      recognitionRef.current = null;
+    }
     if (recorderRef.current) {
       recorderRef.current.stopRecording();
       recorderRef.current = null;
@@ -31,6 +38,15 @@ export function VoicePostCreator() {
 
   const stopVoiceSearch = async () => {
     setIsRecording(false);
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
+      return;
+    }
+
     if (!recorderRef.current) return;
     setIsProcessing(true);
 
@@ -40,29 +56,33 @@ export function VoicePostCreator() {
         cleanupAudio();
 
         const formData = new FormData();
-        formData.append("audio", blob, "audio.webm");
+        formData.append("audio", blob, "audio.wav");
 
         const res = await fetch("/api/assemblyai/transcribe", {
           method: "POST",
           body: formData,
         });
 
-        if (!res.ok) throw new Error("Error en la transcripción");
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          const detail = errData?.error || errData?.details || res.statusText;
+          throw new Error(detail || `Error del servidor (${res.status})`);
+        }
 
         const data = await res.json();
         if (data.text) {
           setContent((prev) => (prev ? prev + " " + data.text : data.text));
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
-        setErrorMsg("Error al procesar el audio");
+        setErrorMsg(err?.message || "Error al procesar el audio");
       } finally {
         setIsProcessing(false);
       }
     });
   };
 
-  const startVoiceSearch = async () => {
+  const startRecordingFallback = async () => {
     try {
       setErrorMsg("");
       setSuccessMsg("");
@@ -75,10 +95,10 @@ export function VoicePostCreator() {
 
       const recorder = new RecordRTC(stream, {
         type: "audio",
-        mimeType: "audio/webm",
+        mimeType: "audio/wav",
         recorderType: StereoAudioRecorder,
         numberOfAudioChannels: 1,
-        desiredSampRate: 16000
+        desiredSampRate: 16000,
       });
 
       recorder.startRecording();
@@ -90,6 +110,66 @@ export function VoicePostCreator() {
       setErrorMsg("Permiso denegado o error de micrófono");
       cleanupAudio();
     }
+  };
+
+  const startVoiceSearch = async () => {
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    const SpeechRecognition =
+      typeof window !== "undefined" &&
+      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = "es-AR";
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognitionRef.current = recognition;
+
+        recognition.onstart = () => {
+          setIsRecording(true);
+        };
+
+        recognition.onresult = (event: any) => {
+          let finalTranscript = "";
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            }
+          }
+
+          if (finalTranscript) {
+            setContent((prev) => (prev ? prev + " " + finalTranscript : finalTranscript));
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn("SpeechRecognition error:", event.error);
+          setIsRecording(false);
+          recognitionRef.current = null;
+          if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+            setErrorMsg("Permiso denegado para el micrófono");
+          } else if (event.error !== "no-speech") {
+            void startRecordingFallback();
+          }
+        };
+
+        recognition.onend = () => {
+          setIsRecording(false);
+          recognitionRef.current = null;
+        };
+
+        recognition.start();
+        return;
+      } catch (e) {
+        console.warn("SpeechRecognition falló al iniciar:", e);
+      }
+    }
+
+    await startRecordingFallback();
   };
 
   const toggleRecording = () => {
