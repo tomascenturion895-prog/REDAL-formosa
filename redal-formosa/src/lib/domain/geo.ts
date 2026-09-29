@@ -17,3 +17,12 @@ export function distanceKm(a: LatLng, b: LatLng): number {
     Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
   return 2 * EARTH_RADIUS_KM * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
+
+/**
+ * Enlace para abrir «Cómo llegar» en la app de mapas del celular. Con coordenadas exactas va al punto;
+ * si no las hay, busca la dirección escrita (en Formosa, para no caer en otra ciudad).
+ */
+export function directionsUrl(destino: LatLng | null, direccion: string | null): string | null {
+  const target = destino ? `${destino.lat},${destino.lng}` : direccion?.trim() ? `${direccion.trim()}, Formosa, Argentina` : null;
+  return target ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(target)}` : null;
+}

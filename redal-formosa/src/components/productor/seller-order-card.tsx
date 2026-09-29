@@ -6,7 +6,7 @@ import { WhatsAppButton } from "@/components/contact/whatsapp-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MapPinIcon } from "@/components/ui/icons";
 import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/domain/order-status";
-import { buyerMessage, canAssignCourier, canCancelAndRefund, extractBuyerPhone, NEXT_STEP, timeAgo, type CourierOption, type SellerOrder } from "@/lib/domain/seller-orders";
+import { buyerMessage, canAssignCourier, canCancelAndRefund, extractBuyerPhone, NEXT_STEP, stripBuyerPhone, timeAgo, type CourierOption, type SellerOrder } from "@/lib/domain/seller-orders";
 import { formatPrice } from "@/lib/format";
 
 interface SellerOrderCardProps {
@@ -28,7 +28,7 @@ export function SellerOrderCard({ order, busy, onAdvance, showStore, couriers, o
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const step = NEXT_STEP[order.estado];
   const phone = extractBuyerPhone(order.nota_cliente);
-  const note = order.nota_cliente?.replace(/Tel:\s*[+\d][\d\s().-]{5,}\s*(·\s*)?/i, "").trim();
+  const note = stripBuyerPhone(order.nota_cliente);
 
   return (
     <article className="card space-y-4 p-5">

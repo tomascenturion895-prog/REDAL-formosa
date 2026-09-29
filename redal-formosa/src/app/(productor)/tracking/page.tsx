@@ -5,14 +5,14 @@ import { useState } from "react";
 import { useRequireAuth } from "@/lib/auth/use-require-auth";
 import { deliveryRepository } from "@/lib/delivery/delivery-repository";
 import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE } from "@/lib/domain/order-status";
-import { FORMOSA_CENTER } from "@/lib/domain/geo";
+import { directionsUrl, FORMOSA_CENTER } from "@/lib/domain/geo";
 import { useAsync } from "@/lib/hooks/use-async";
 import { PageHeader } from "@/components/layout/page-header";
 import { RepartidorTracker } from "@/components/tracking/repartidor-tracker";
 import { Alert } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TruckIcon } from "@/components/ui/icons";
+import { MapPinIcon, PhoneIcon, TruckIcon } from "@/components/ui/icons";
 
 async function loadAssignments(userId: string) {
   const courier = await deliveryRepository.findByUser(userId);
@@ -86,6 +86,31 @@ export default function RepartidorTrackingPage() {
               </li>
             ))}
           </ul>
+
+          <section aria-label="Datos de la entrega" className="card space-y-3 p-4">
+            <p className="flex items-start gap-2 text-sm">
+              <MapPinIcon size={18} className="mt-0.5 shrink-0 text-muted" />
+              <span>{selected.direccion_entrega ?? "Sin dirección"}</span>
+            </p>
+            {selected.nota && <p className="text-sm text-muted">Indicaciones: {selected.nota}</p>}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              {directionsUrl(selected.entrega, selected.direccion_entrega) && (
+                <a
+                  href={directionsUrl(selected.entrega, selected.direccion_entrega)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary flex-1"
+                >
+                  <MapPinIcon size={18} /> Cómo llegar
+                </a>
+              )}
+              {selected.telefono_comprador && (
+                <a href={`tel:${selected.telefono_comprador.replace(/[^\d+]/g, "")}`} className="btn btn-secondary flex-1">
+                  <PhoneIcon size={18} /> Llamar al comprador
+                </a>
+              )}
+            </div>
+          </section>
 
           {actionError && <Alert tone="error">{actionError}</Alert>}
           {selected.estado === "listo" && (
